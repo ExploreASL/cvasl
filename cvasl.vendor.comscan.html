@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>cvasl.vendor.comscan package &#8212; cvasl 0.0.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+    <link rel="stylesheet" type="text/css" href="_static/basic_mod.css?v=a0b6f7b1" />
+    <script src="_static/documentation_options.js?v=47de8214"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <script src="_static/js/petite-vue.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="cvasl.vendor.neurocombat package" href="cvasl.vendor.neurocombat.html" />
+    <link rel="prev" title="cvasl.vendor package" href="cvasl.vendor.html" /> 
+  </head><body data-dark_mode_code_blocks="true">
+
+<div id="top_nav">
+    
+
+    <nav>
+        
+            
+        
+
+        <p id="toggle_sidebar">
+            <a href="#" title="Toggle sidebar">|||</a>
+        </p>
+        <h1><a href="index.html" title="Go to homepage">cvasl 0.0.3 documentation</a></h1>
+
+        <a id="mode_toggle" href="#" @click.prevent="handleClick" :title="mode">
+    <template v-if="mode == 'light'">
+        <svg width="100%" height="100%" viewBox="0 0 79 80" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g id="mode_light"><rect id="Bounds" x="0" y="-0" width="78.623" height="79.049" style="fill:none;"/><circle cx="39.311" cy="39.524" r="15.734" style="fill:#fff;"/><g id="beams"><g id="beam"><path id="beam1" serif:id="beam" d="M44.212,4.901c0,-2.705 -2.196,-4.901 -4.901,-4.901c-2.704,-0 -4.9,2.196 -4.9,4.901l-0,9.614c-0,2.705 2.196,4.901 4.9,4.901c2.705,0 4.901,-2.196 4.901,-4.901l0,-9.614Z" style="fill:#fff;"/></g><g id="beam2" serif:id="beam"><path id="beam3" serif:id="beam" d="M67.48,18.073c1.913,-1.912 1.913,-5.018 0,-6.931c-1.912,-1.912 -5.018,-1.912 -6.931,0l-6.798,6.799c-1.912,1.912 -1.912,5.018 0,6.931c1.913,1.912 5.018,1.912 6.931,-0l6.798,-6.799Z" style="fill:#fff;"/></g><g id="beam4" serif:id="beam"><path id="beam5" serif:id="beam" d="M25.728,61.108c1.912,-1.913 1.912,-5.018 -0,-6.931c-1.913,-1.913 -5.019,-1.913 -6.931,-0l-6.799,6.798c-1.912,1.913 -1.912,5.019 0,6.931c1.913,1.913 5.019,1.913 6.931,0l6.799,-6.798Z" style="fill:#fff;"/></g><g id="beam6" serif:id="beam"><path id="beam7" serif:id="beam" d="M60.682,54.177c-1.913,-1.913 -5.018,-1.913 -6.931,-0c-1.912,1.913 -1.912,5.018 0,6.931l6.798,6.798c1.913,1.913 5.019,1.913 6.931,0c1.913,-1.912 1.913,-5.018 0,-6.931l-6.798,-6.798Z" style="fill:#fff;"/></g><g id="beam8" serif:id="beam"><path id="beam9" serif:id="beam" d="M4.901,34.623c-2.705,0 -4.901,2.196 -4.901,4.901c0,2.705 2.196,4.901 4.901,4.901l9.614,0c2.705,0 4.901,-2.196 4.901,-4.901c0,-2.705 -2.196,-4.901 -4.901,-4.901l-9.614,0Z" style="fill:#fff;"/></g><g id="beam10" serif:id="beam"><path id="beam11" serif:id="beam" d="M44.212,64.534c0,-2.705 -2.196,-4.901 -4.901,-4.901c-2.704,-0 -4.9,2.196 -4.9,4.901l-0,9.614c-0,2.705 2.196,4.901 4.9,4.901c2.705,-0 4.901,-2.196 4.901,-4.901l0,-9.614Z" style="fill:#fff;"/></g><g id="beam12" serif:id="beam"><path id="beam13" serif:id="beam" d="M18.929,11.142c-1.912,-1.912 -5.018,-1.912 -6.931,0c-1.912,1.913 -1.912,5.019 0,6.931l6.799,6.799c1.912,1.912 5.018,1.912 6.931,-0c1.912,-1.913 1.912,-5.019 -0,-6.931l-6.799,-6.799Z" style="fill:#fff;"/></g><g id="beam14" serif:id="beam"><path id="beam15" serif:id="beam" d="M64.108,34.623c-2.705,0 -4.901,2.196 -4.901,4.901c-0,2.705 2.196,4.901 4.901,4.901l9.614,0c2.705,0 4.901,-2.196 4.901,-4.901c-0,-2.705 -2.196,-4.901 -4.901,-4.901l-9.614,0Z" style="fill:#fff;"/></g></g></g></svg>
+    </template>
+
+    <template v-if="mode == 'dark'">
+        <svg width="100%" height="100%" viewBox="0 0 79 80" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g id="mode_dark"><rect id="Bounds" x="0" y="-0" width="78.623" height="79.049" style="fill:none;"/><circle cx="39.311" cy="39.524" r="15.734" style="fill:#fff;"/><g id="beams"><g id="beam"><path id="beam1" serif:id="beam" d="M44.212,14.515c0,-2.705 -2.196,-4.901 -4.901,-4.901c-2.704,0 -4.901,2.196 -4.901,4.901c0,2.705 2.197,4.901 4.901,4.901c2.705,0 4.901,-2.196 4.901,-4.901Z" style="fill:#fff;"/></g><g id="beam2" serif:id="beam"><path id="beam3" serif:id="beam" d="M60.662,24.892c1.902,-1.902 1.902,-4.99 0,-6.892l-0.04,-0.039c-1.901,-1.902 -4.989,-1.902 -6.891,-0c-1.901,1.901 -1.901,4.989 0,6.891l0.04,0.04c1.902,1.901 4.989,1.901 6.891,-0Z" style="fill:#fff;"/></g><g id="beam4" serif:id="beam"><path id="beam5" serif:id="beam" d="M25.732,61.103c1.91,-1.91 1.91,-5.011 0,-6.921l-0.009,-0.01c-1.91,-1.91 -5.012,-1.91 -6.921,-0c-1.91,1.91 -1.91,5.011 -0,6.921l0.01,0.01c1.909,1.91 5.011,1.91 6.92,-0Z" style="fill:#fff;"/></g><g id="beam6" serif:id="beam"><path id="beam7" serif:id="beam" d="M60.672,54.167c-1.907,-1.907 -5.004,-1.907 -6.911,0l-0.02,0.02c-1.907,1.907 -1.907,5.004 0,6.911c1.907,1.907 5.004,1.907 6.911,-0l0.02,-0.02c1.907,-1.907 1.907,-5.004 0,-6.911Z" style="fill:#fff;"/></g><g id="beam8" serif:id="beam"><path id="beam9" serif:id="beam" d="M14.52,34.623c-2.702,0 -4.896,2.194 -4.896,4.896l0,0.01c0,2.702 2.194,4.896 4.896,4.896c2.702,0 4.896,-2.194 4.896,-4.896l-0,-0.01c-0,-2.702 -2.194,-4.896 -4.896,-4.896Z" style="fill:#fff;"/></g><g id="beam10" serif:id="beam"><path id="beam11" serif:id="beam" d="M44.212,64.534c0,-2.705 -2.196,-4.901 -4.901,-4.901c-2.704,-0 -4.901,2.196 -4.901,4.901c0,2.704 2.197,4.9 4.901,4.9c2.705,0 4.901,-2.196 4.901,-4.9Z" style="fill:#fff;"/></g><g id="beam12" serif:id="beam"><path id="beam13" serif:id="beam" d="M25.73,17.943c-1.911,-1.911 -5.015,-1.911 -6.926,0l-0.005,0.005c-1.911,1.911 -1.911,5.015 0,6.926c1.911,1.911 5.015,1.911 6.926,0l0.005,-0.005c1.911,-1.911 1.911,-5.014 -0,-6.926Z" style="fill:#fff;"/></g><g id="beam14" serif:id="beam"><path id="beam15" serif:id="beam" d="M64.098,34.623c-2.699,0 -4.891,2.192 -4.891,4.892l-0,0.019c-0,2.699 2.192,4.891 4.891,4.891c2.7,0 4.892,-2.192 4.892,-4.891l0,-0.019c0,-2.7 -2.192,-4.892 -4.892,-4.892Z" style="fill:#fff;"/></g></g></g></svg>
+    </template>
+
+    <template v-if="mode == 'darkest'">
+        <svg width="100%" height="100%" viewBox="0 0 79 80" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g id="mode_darkest"><rect id="Bounds" x="0" y="-0" width="78.623" height="79.049" style="fill:none;"/><path d="M39.315,23.791c8.684,-0 15.734,7.05 15.734,15.733c0,8.684 -7.05,15.734 -15.734,15.734c-8.683,0 -15.733,-7.05 -15.733,-15.734c-0,-8.683 7.05,-15.733 15.733,-15.733Zm0,4.737c6.069,0 10.997,4.927 10.997,10.996c-0,6.069 -4.928,10.996 -10.997,10.996c-6.068,0 -10.996,-4.927 -10.996,-10.996c0,-6.069 4.928,-10.996 10.996,-10.996Z" style="fill:#fff;"/><g id="beams"><g id="beam"><path id="beam1" serif:id="beam" d="M44.216,14.515c0,-2.705 -2.196,-4.901 -4.901,-4.901c-2.704,0 -4.9,2.196 -4.9,4.901c-0,2.705 2.196,4.901 4.9,4.901c2.705,0 4.901,-2.196 4.901,-4.901Z" style="fill:#fff;"/></g><g id="beam2" serif:id="beam"><path id="beam3" serif:id="beam" d="M60.666,24.892c1.902,-1.902 1.902,-4.99 0,-6.892l-0.04,-0.039c-1.901,-1.902 -4.989,-1.902 -6.891,-0c-1.901,1.901 -1.901,4.989 0,6.891l0.04,0.04c1.902,1.901 4.99,1.901 6.891,-0Z" style="fill:#fff;"/></g><g id="beam4" serif:id="beam"><path id="beam5" serif:id="beam" d="M25.737,61.103c1.909,-1.91 1.909,-5.011 -0,-6.921l-0.01,-0.01c-1.91,-1.91 -5.011,-1.91 -6.921,-0c-1.91,1.91 -1.91,5.011 -0,6.921l0.01,0.01c1.91,1.91 5.011,1.91 6.921,-0Z" style="fill:#fff;"/></g><g id="beam6" serif:id="beam"><path id="beam7" serif:id="beam" d="M60.676,54.167c-1.907,-1.907 -5.004,-1.907 -6.911,0l-0.02,0.02c-1.907,1.907 -1.907,5.004 0,6.911c1.907,1.907 5.004,1.907 6.911,-0l0.02,-0.02c1.907,-1.907 1.907,-5.004 0,-6.911Z" style="fill:#fff;"/></g><g id="beam8" serif:id="beam"><path id="beam9" serif:id="beam" d="M14.524,34.623c-2.702,0 -4.896,2.194 -4.896,4.896l0,0.01c0,2.702 2.194,4.896 4.896,4.896c2.702,0 4.896,-2.194 4.896,-4.896l0,-0.01c0,-2.702 -2.194,-4.896 -4.896,-4.896Z" style="fill:#fff;"/></g><g id="beam10" serif:id="beam"><path id="beam11" serif:id="beam" d="M44.216,64.534c0,-2.705 -2.196,-4.901 -4.901,-4.901c-2.704,-0 -4.9,2.196 -4.9,4.901c-0,2.704 2.196,4.9 4.9,4.9c2.705,0 4.901,-2.196 4.901,-4.9Z" style="fill:#fff;"/></g><g id="beam12" serif:id="beam"><path id="beam13" serif:id="beam" d="M25.734,17.943c-1.911,-1.911 -5.015,-1.911 -6.926,0l-0.005,0.005c-1.911,1.911 -1.911,5.015 0,6.926c1.911,1.911 5.015,1.911 6.926,0l0.005,-0.005c1.911,-1.911 1.911,-5.014 0,-6.926Z" style="fill:#fff;"/></g><g id="beam14" serif:id="beam"><path id="beam15" serif:id="beam" d="M64.103,34.623c-2.7,0 -4.892,2.192 -4.892,4.892l-0,0.019c-0,2.699 2.192,4.891 4.892,4.891c2.699,0 4.891,-2.192 4.891,-4.891l0,-0.019c0,-2.7 -2.192,-4.892 -4.891,-4.892Z" style="fill:#fff;"/></g></g></g></svg>
+    </template>
+</a>
+
+<script>
+(function() {
+    const LOCAL_STORAGE_KEY = 'piccoloThemeMode'
+
+    var initialMode = localStorage.getItem(LOCAL_STORAGE_KEY)
+
+    if (initialMode) {
+        // Make sure the value in local storage is valid
+        if (['light', 'dark', 'darkest'].indexOf(initialMode) == -1) {
+            initialMode = 'light'
+            localStorage.setItem(LOCAL_STORAGE_KEY, initialMode)
+        }
+    } else {
+        // Check if the client prefers dark mode
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            initialMode = 'dark'
+        } else {
+            initialMode = 'light'
+        }
+        localStorage.setItem(LOCAL_STORAGE_KEY, initialMode)
+    }
+
+    document.documentElement.dataset.mode = initialMode
+
+    PetiteVue.createApp({
+        'mode': initialMode,
+        handleClick() {
+            let currentMode = this.mode
+
+            if (currentMode == 'light') {
+                this.mode = 'dark'
+            } else if (currentMode == 'dark') {
+                this.mode = 'darkest'
+            } else if (currentMode == 'darkest') {
+                this.mode = 'light'
+            }
+
+            document.documentElement.dataset.mode = this.mode
+            localStorage.setItem(LOCAL_STORAGE_KEY, this.mode)
+
+            console.log(this.mode)
+        }
+    }).mount('#mode_toggle')
+})()
+</script>
+            <p class="mobile_search_link">
+                <a href="search.html" title="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 65 64" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2">
+                        <path d="M14.873 40.009c-2.315-3.943-3.642-8.532-3.642-13.429C11.231 11.91 23.141 0 37.811 0s26.58 11.91 26.58 26.58-11.91 26.58-26.58 26.58a26.44 26.44 0 0 1-14.277-4.161L9.739 62.794a3.12 3.12 0 0 1-4.413 0L.913 58.382c-1.217-1.218-1.217-3.196 0-4.413l13.96-13.96zM37.811 8.054c10.225 0 18.526 8.301 18.526 18.526s-8.301 18.526-18.526 18.526-18.526-8.301-18.526-18.526S27.586 8.054 37.811 8.054z" fill="#fff" />
+                    </svg>
+                </a>
+            </p>
+        
+
+        <div class="searchbox_wrapper">
+            
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+    </nav>
+</div>
+
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper"><p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">cvasl</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="cvasl.html">cvasl package</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="cvasl.carve.html">cvasl.carve module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cvasl.cli.html">cvasl.cli module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cvasl.file_handler.html">cvasl.file_handler module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cvasl.harmony.html">cvasl.harmony module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cvasl.mold.html">cvasl.mold module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cvasl.seperated.html">cvasl.seperated module</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="cvasl.vendor.html">cvasl.vendor package</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="developers.html">Developer’s Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="medical-professionals.html">Medical Professional Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="cvasl-vendor-comscan-package">
+<h1>cvasl.vendor.comscan package<a class="headerlink" href="#cvasl-vendor-comscan-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-cvasl.vendor.comscan.clustering">
+<span id="cvasl-vendor-comscan-clustering-module"></span><h2>cvasl.vendor.comscan.clustering module<a class="headerlink" href="#module-cvasl.vendor.comscan.clustering" title="Link to this heading">¶</a></h2>
+<div class="line-block">
+<div class="line">Author: Alexandre CARRE </div>
+<div class="line">Created on: Jan 14, 2021</div>
+</div>
+<dl class="py class">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KElbowVisualizer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.clustering.</span></span><span class="sig-name descname"><span class="pre">KElbowVisualizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">estimator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'distortion'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">locate_elbow</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pre_dispatch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'2*n_jobs'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KElbowVisualizer" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ClusteringScoreVisualizer</span></code></p>
+<p>The K-Elbow Visualizer implements the “elbow” method of selecting the
+optimal number of clusters for K-means clustering. K-means is a simple
+unsupervised machine learning algorithm that groups data into a specified
+number (k) of clusters. Because the user must specify in advance what k to
+choose, the algorithm is somewhat naive – it assigns all members to k
+clusters even if that is not the right k for the dataset.</p>
+<p>The elbow method runs k-means clustering on the dataset for a range of
+values for k (say from 1-10) and then for each value of k computes an
+average score for all clusters. By default, the <code class="docutils literal notranslate"><span class="pre">distortion</span></code> score is
+computed, the sum of square distances from each point to its assigned
+center. Other metrics can also be used such as the <code class="docutils literal notranslate"><span class="pre">silhouette</span></code> score,
+the mean silhouette coefficient for all samples or the
+<code class="docutils literal notranslate"><span class="pre">calinski_harabasz</span></code> score, which computes the ratio of dispersion between
+and within clusters.</p>
+<p>When these overall metrics for each model are plotted, it is possible to
+visually determine the best value for k. If the line chart looks like an
+arm, then the “elbow” (the point of inflection on the curve) is the best
+value of k. The “arm” can be either up or down, but if there is a strong
+inflection point, it is a good indication that the underlying model fits
+best at that point.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<div class="line-block">
+<div class="line">yellowbrick.cluster.elbow</div>
+<div class="line">Implements the elbow method for determining the optimal number of clusters.</div>
+</div>
+<div class="line-block">
+<div class="line">Author:   Benjamin Bengfort</div>
+<div class="line">Created:  Thu Mar 23 22:36:31 2017 -0400</div>
+</div>
+<div class="line-block">
+<div class="line">Copyright (C) 2016 The scikit-yb developers</div>
+<div class="line">For license information, see LICENSE.txt</div>
+</div>
+<div class="line-block">
+<div class="line">ID: elbow.py [5a370c8] <a class="reference external" href="mailto:benjamin&#37;&#52;&#48;bengfort&#46;com">benjamin<span>&#64;</span>bengfort<span>&#46;</span>com</a></div>
+</div>
+</div>
+<section id="parameters">
+<h3>Parameters<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h3>
+<dl>
+<dt>estimator<span class="classifier">a scikit-learn clusterer</span></dt><dd><p>Should be an instance of an unfitted clusterer, specifically <code class="docutils literal notranslate"><span class="pre">KMeans</span></code> or
+<code class="docutils literal notranslate"><span class="pre">MiniBatchKMeans</span></code>. If it is not a clusterer, an exception is raised.</p>
+</dd>
+<dt>ax<span class="classifier">matplotlib Axes, default: None</span></dt><dd><p>The axes to plot the figure on. If None is passed in the current axes
+will be used (or generated if required).</p>
+</dd>
+<dt>k<span class="classifier">integer, tuple, or iterable</span></dt><dd><p>The k values to compute silhouette scores for. If a single integer
+is specified, then will compute the range (2,k). If a tuple of 2
+integers is specified, then k will be in np.arange(k[0], k[1]).
+Otherwise, specify an iterable of integers to use as values for k.</p>
+</dd>
+<dt>metric<span class="classifier">string, default: <code class="docutils literal notranslate"><span class="pre">&quot;distortion&quot;</span></code></span></dt><dd><p>Select the scoring metric to evaluate the clusters. The default is the
+mean distortion, defined by the sum of squared distances between each
+observation and its closest centroid. Other metrics include:</p>
+<ul class="simple">
+<li><p><strong>distortion</strong>: mean sum of squared distances to centers</p></li>
+<li><p><strong>silhouette</strong>: mean ratio of intra-cluster and nearest-cluster distance</p></li>
+<li><p><strong>calinski_harabasz</strong>: ratio of within to between cluster dispersion</p></li>
+</ul>
+</dd>
+<dt>timings<span class="classifier">bool, default: True</span></dt><dd><p>Display the fitting time per k to evaluate the amount of time required
+to train the clustering model.</p>
+</dd>
+<dt>locate_elbow<span class="classifier">bool, default: True</span></dt><dd><p>Automatically find the “elbow” or “knee” which likely corresponds to the optimal
+value of k using the “knee point detection algorithm”. The knee point detection
+algorithm finds the point of maximum curvature, which in a well-behaved
+clustering problem also represents the pivot of the elbow curve. The point is
+labeled with a dashed line and annotated with the score and k values.</p>
+</dd>
+<dt>n_jobs<span class="classifier">int, default: None</span></dt><dd><p>Number of jobs to run in parallel. Training the estimator and computing
+the score are parallelized over the cross-validation splits.
+<code class="docutils literal notranslate"><span class="pre">None</span></code> means 1 unless in a <code class="xref py py-obj docutils literal notranslate"><span class="pre">joblib.parallel_backend</span></code> context.
+<code class="docutils literal notranslate"><span class="pre">-1</span></code> means using all processors.</p>
+</dd>
+<dt>verbose<span class="classifier">int, default: 0</span></dt><dd><p>The verbosity level.</p>
+</dd>
+<dt>pre_dispatch<span class="classifier">int or str, default: ‘2*n_jobs’</span></dt><dd><p>Controls the number of jobs that get dispatched during parallel
+execution. Reducing this number can be useful to avoid an
+explosion of memory consumption when more jobs get dispatched
+than CPUs can process. This parameter can be:
+- None, in which case all the jobs are immediately
+created and spawned. Use this for lightweight and
+fast-running jobs, to avoid delays due to on-demand
+spawning of the jobs
+- An int, giving the exact number of total jobs that are
+spawned
+- A str, giving an expression as a function of n_jobs,
+as in ‘2*n_jobs’</p>
+</dd>
+<dt>kwargs<span class="classifier">dict</span></dt><dd><p>Keyword arguments that are passed to the base class and may influence
+the visualization as defined in other Visualizers.</p>
+</dd>
+</dl>
+</section>
+<section id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Link to this heading">¶</a></h3>
+<dl>
+<dt>k_scores_<span class="classifier">array of shape (n,) where n is no. of k values</span></dt><dd><p>The silhouette score corresponding to each k value.</p>
+</dd>
+<dt>k_timers_<span class="classifier">array of shape (n,) where n is no. of k values</span></dt><dd><p>The time taken to fit n KMeans model corresponding to each k value.</p>
+</dd>
+<dt>elbow_value_<span class="classifier">integer</span></dt><dd><p>The optimal value of k.</p>
+</dd>
+<dt>elbow_score_<span class="classifier">float</span></dt><dd><p>The silhouette score corresponding to the optimal value of k.</p>
+</dd>
+<dt>estimators_<span class="classifier"><code class="docutils literal notranslate"><span class="pre">BaseEstimator</span></code></span></dt><dd><p>a scikit-learn fitted estimator</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h3>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">yellowbrick.cluster</span> <span class="kn">import</span> <span class="n">KElbowVisualizer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">KMeans</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">KElbowVisualizer</span><span class="p">(</span><span class="n">KMeans</span><span class="p">(),</span> <span class="n">k</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">... </span>              <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="notes">
+<h3>Notes<a class="headerlink" href="#notes" title="Link to this heading">¶</a></h3>
+<p>Modification from yellowbrick consist of get the best_estimator based
+on the finded elbow_value</p>
+<p>If you get a visualizer that doesn’t have an elbow or inflection point,
+then this method may not be working. The elbow method does not work well
+if the data is not very clustered; in this case, you might see a smooth
+curve and the value of k is unclear. Other scoring methods, such as BIC or
+SSE, also can be used to explore if clustering is a correct choice.</p>
+<p>For a discussion on the Elbow method, read more at
+<a class="reference external" href="https://bl.ocks.org/rpgove/0060ff3b656618e9136b">Robert Gove’s Block website</a>.
+For more on the knee point detection algorithm see the paper <a class="reference external" href="https://raghavan.usc.edu//papers/kneedle-simplex11.pdf">“Finding a “kneedle”
+in a Haystack”</a>.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>The scikit-learn documentation for the <a class="reference external" href="https://bit.ly/2LYWjYb">silhouette_score</a> and <a class="reference external" href="https://bit.ly/2ItAgts">calinski_harabasz_score</a>. The default, <code class="docutils literal notranslate"><span class="pre">distortion_score</span></code>, is
+implemented in <code class="docutils literal notranslate"><span class="pre">yellowbrick.cluster.elbow</span></code>.</p>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KElbowVisualizer.draw">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KElbowVisualizer.draw" title="Link to this definition">¶</a></dt>
+<dd><p>Draw the elbow curve for the specified scores and values of K.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KElbowVisualizer.finalize">
+<span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KElbowVisualizer.finalize" title="Link to this definition">¶</a></dt>
+<dd><p>Prepare the figure for rendering by setting the title as well as the
+X and Y axis labels and adding the legend.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KElbowVisualizer.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KElbowVisualizer.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Fits n KMeans models where n is the length of <code class="docutils literal notranslate"><span class="pre">self.k_values_</span></code>,
+storing the silhouette scores in the <code class="docutils literal notranslate"><span class="pre">self.k_scores_</span></code> attribute.
+The “elbow” and silhouette score corresponding to it are stored in
+<code class="docutils literal notranslate"><span class="pre">self.elbow_value</span></code> and <code class="docutils literal notranslate"><span class="pre">self.elbow_score</span></code> respectively.
+This method finishes up by calling draw to create the plot.</p>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KMeansConstrainedMissing">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.clustering.</span></span><span class="sig-name descname"><span class="pre">KMeansConstrainedMissing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_clusters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">em_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_init</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features_reduction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy_x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">TransformerMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ClusterMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code></p>
+<p>K-Means clustering with minimum and maximum cluster size constraints with possible missing values</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>inspired of <a class="reference external" href="https://stackoverflow.com/questions/35611465/python-scikit-learn-clustering-with-missing-data">https://stackoverflow.com/questions/35611465/python-scikit-learn-clustering-with-missing-data</a></p>
+</div>
+<section id="id1">
+<h3>Parameters<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<dl>
+<dt>n_clusters<span class="classifier">int, optional, default: 8</span></dt><dd><p>The number of clusters to form as well as the number of
+centroids to generate.</p>
+</dd>
+<dt>size_min<span class="classifier">int, optional, default: None</span></dt><dd><p>Constrain the label assignment so that each cluster has a minimum
+size of size_min. If None, no constrains will be applied</p>
+</dd>
+<dt>size_max<span class="classifier">int, optional, default: None</span></dt><dd><p>Constrain the label assignment so that each cluster has a maximum
+size of size_max. If None, no constrains will be applied</p>
+</dd>
+<dt>em_iter<span class="classifier">int, default: 10</span></dt><dd><p>expectation–maximization (EM) iteration for convergence of missing
+values. Use when no features reduction is applied and missing values.</p>
+</dd>
+<dt>n_init<span class="classifier">int, default: 10</span></dt><dd><p>Number of times the k-means algorithm will be run with different
+centroid seeds. The final results will be the best output of
+n_init consecutive runs in terms of inertia.</p>
+</dd>
+<dt>max_iter<span class="classifier">int, default: 300</span></dt><dd><p>Maximum number of iterations of the k-means algorithm for a
+single run.</p>
+</dd>
+<dt>features_reduction<span class="classifier">str, default: None</span></dt><dd><p>Method for reduction of the embedded space with n_components. Can be pca or umap.</p>
+</dd>
+<dt>n_components<span class="classifier">int, default: 2</span></dt><dd><p>Dimension of the embedded space for features reduction.</p>
+</dd>
+<dt>tol<span class="classifier">float, default: 1e-4</span></dt><dd><p>Relative tolerance with regards to inertia to declare convergence</p>
+</dd>
+<dt>verbose<span class="classifier">int, default: 0</span></dt><dd><p>Verbosity mode.</p>
+</dd>
+<dt>random_state<span class="classifier">int, RandomState instance or None, optional, default: None</span></dt><dd><p>If int, random_state is the seed used by the random number generator;
+If RandomState instance, random_state is the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</p>
+</dd>
+<dt>copy_x<span class="classifier">boolean, default: True</span></dt><dd><p>When pre-computing distances it is more numerically accurate to center
+the data first.  If copy_x is True, then the original data is not
+modified.  If False, the original data is modified, and put back before
+the function returns, but small numerical differences may be introduced
+by subtracting and then adding the data mean.</p>
+</dd>
+<dt>n_jobs<span class="classifier">int, default: 1</span></dt><dd><p>The number of jobs to use for the computation. This works by computing
+each of the n_init runs in parallel.</p>
+<p>If -1 all CPUs are used. If 1 is given, no parallel computing code is
+used at all, which is useful for debugging. For n_jobs below -1,
+(n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one
+are used.</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h3>Attributes<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>cluster_centers_<span class="classifier">array, [n_clusters, n_features]</span></dt><dd><p>Coordinates of cluster centers</p>
+</dd>
+<dt>labels_ :</dt><dd><p>Labels of each point</p>
+</dd>
+<dt>inertia_<span class="classifier">float</span></dt><dd><p>Sum of squared distances of samples to their closest cluster center.</p>
+</dd>
+</dl>
+<p>cls_ : KMeansConstrained classifier object</p>
+<p>cls_features_reduction_ : PCA or UMAP reduction object</p>
+<dl class="simple">
+<dt>centroids_: array</dt><dd><p>Centroids found at the last iteration of k-means.</p>
+</dd>
+<dt>X_hat_<span class="classifier">array</span></dt><dd><p>Copy of X with the missing values filled in.</p>
+</dd>
+</dl>
+<p>mu_ : Columns means</p>
+</section>
+<section id="id3">
+<h3>Examples<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">... </span>               <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">KMeansConstrainedMissing</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">n_clusters</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">size_min</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">size_max</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="go">array([0, 0, 0, 1, 1, 1], dtype=int32)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">cluster_centers_</span>
+<span class="go">array([[ 1.,  2.],</span>
+<span class="go">       [ 4.,  2.]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span><span class="o">.</span><span class="n">labels_</span>
+<span class="go">array([0, 0, 0, 1, 1, 1], dtype=int32)</span>
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h3>Notes<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<p>K-means problem constrained with a minimum and/or maximum size for each cluster.</p>
+<p>The constrained assignment is formulated as a Minimum Cost Flow (MCF) linear network optimisation
+problem. This is then solved using a cost-scaling push-relabel algorithm. The implementation used is
+Google’s Operations Research tools’s <cite>SimpleMinCostFlow</cite>.</p>
+<dl class="simple">
+<dt>Ref:</dt><dd><p>1. Bradley, P. S., K. P. Bennett, and Ayhan Demiriz. “Constrained k-means clustering.”
+Microsoft Research, Redmond (2000): 1-8.
+2. Google’s SimpleMinCostFlow implementation:
+<a class="reference external" href="https://github.com/google/or-tools/blob/master/ortools/graph/min_cost_flow.h">https://github.com/google/or-tools/blob/master/ortools/graph/min_cost_flow.h</a></p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Compute k-means clustering with given constants.</p>
+<section id="id5">
+<h4>Parameters<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">array-like, shape=(n_samples, n_features)</span></dt><dd><p>Training instances to cluster.</p>
+</dd>
+</dl>
+<p>y : Ignored</p>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.fit_predict">
+<span class="sig-name descname"><span class="pre">fit_predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.fit_predict" title="Link to this definition">¶</a></dt>
+<dd><p>Compute cluster centers and predict cluster index for each sample.</p>
+<p>Equivalent to calling fit(X) followed by predict(X) but also more efficient.</p>
+<section id="id6">
+<h4>Parameters<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">{array-like, sparse matrix}, shape = [n_samples, n_features]</span></dt><dd><p>New data to transform.</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h4>Returns<a class="headerlink" href="#returns" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>labels<span class="classifier">array, shape [n_samples,]</span></dt><dd><p>Index of the cluster each sample belongs to.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'init'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'init'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.predict" title="Link to this definition">¶</a></dt>
+<dd><p>Predict the closest cluster each sample in X belongs to given the provided constraints.
+The constraints can be temporally overridden when determining which cluster each datapoint is assigned to.</p>
+<p>Only computes the assignment step. It does not re-fit the cluster positions.</p>
+<section id="id7">
+<h4>Parameters<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">array-like, shape = [n_samples, n_features]</span></dt><dd><p>New data to predict.</p>
+</dd>
+<dt>size_min<span class="classifier">int, optional, default: size_min provided with initialisation</span></dt><dd><p>Constrain the label assignment so that each cluster has a minimum
+size of size_min. If None, no constrains will be applied.
+If ‘init’ the value provided during initialisation of the
+class will be used.</p>
+</dd>
+<dt>size_max<span class="classifier">int, optional, default: size_max provided with initialisation</span></dt><dd><p>Constrain the label assignment so that each cluster has a maximum
+size of size_max. If None, no constrains will be applied.
+If ‘init’ the value provided during initialisation of the
+class will be used.</p>
+</dd>
+</dl>
+</section>
+<section id="id8">
+<h4>Returns<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>labels<span class="classifier">array, shape [n_samples,]</span></dt><dd><p>Index of the cluster each sample belongs to.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.set_predict_request">
+<span class="sig-name descname"><span class="pre">set_predict_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'$UNCHANGED$'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'$UNCHANGED$'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing" title="cvasl.vendor.comscan.clustering.KMeansConstrainedMissing"><span class="pre">KMeansConstrainedMissing</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.set_predict_request" title="Link to this definition">¶</a></dt>
+<dd><p>Request metadata passed to the <code class="docutils literal notranslate"><span class="pre">predict</span></code> method.</p>
+<p>Note that this method is only relevant if
+<code class="docutils literal notranslate"><span class="pre">enable_metadata_routing=True</span></code> (see <code class="xref py py-func docutils literal notranslate"><span class="pre">sklearn.set_config()</span></code>).
+Please see <span class="xref std std-ref">User Guide</span> on how the routing
+mechanism works.</p>
+<p>The options for each parameter are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">True</span></code>: metadata is requested, and passed to <code class="docutils literal notranslate"><span class="pre">predict</span></code> if provided. The request is ignored if metadata is not provided.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">False</span></code>: metadata is not requested and the meta-estimator will not pass it to <code class="docutils literal notranslate"><span class="pre">predict</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">None</span></code>: metadata is not requested, and the meta-estimator will raise an error if the user provides it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">str</span></code>: metadata should be passed to the meta-estimator with this given alias instead of the original name.</p></li>
+</ul>
+<p>The default (<code class="docutils literal notranslate"><span class="pre">sklearn.utils.metadata_routing.UNCHANGED</span></code>) retains the
+existing request. This allows you to change the request for some
+parameters and not others.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 1.3.</span></p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method is only relevant if this estimator is used as a
+sub-estimator of a meta-estimator, e.g. used inside a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code>. Otherwise it has no effect.</p>
+</div>
+<section id="id9">
+<h4>Parameters<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>size_max<span class="classifier">str, True, False, or None,                     default=sklearn.utils.metadata_routing.UNCHANGED</span></dt><dd><p>Metadata routing for <code class="docutils literal notranslate"><span class="pre">size_max</span></code> parameter in <code class="docutils literal notranslate"><span class="pre">predict</span></code>.</p>
+</dd>
+<dt>size_min<span class="classifier">str, True, False, or None,                     default=sklearn.utils.metadata_routing.UNCHANGED</span></dt><dd><p>Metadata routing for <code class="docutils literal notranslate"><span class="pre">size_min</span></code> parameter in <code class="docutils literal notranslate"><span class="pre">predict</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="id10">
+<h4>Returns<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>self<span class="classifier">object</span></dt><dd><p>The updated object.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.clustering.optimal_clustering">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.clustering.</span></span><span class="sig-name descname"><span class="pre">optimal_clustering</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'distortion'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features_reduction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visualize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.12)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">KMeansConstrained</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">UMAP</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">PCA</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.12)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cvasl.vendor.comscan.clustering.optimal_clustering" title="Link to this definition">¶</a></dt>
+<dd><p>Function to find the optimal clustering using a constrained k means. Two method are available to find the optimal
+number of cluster <code class="docutils literal notranslate"><span class="pre">silhouette</span></code> or <code class="docutils literal notranslate"><span class="pre">elbow</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> – array-like or DataFrame of floats, shape (n_samples, n_features)
+The observations to cluster.</p></li>
+<li><p><strong>size_min</strong> – Constrain the label assignment so that each cluster has a minimum size of size_min.
+If None, no constrains will be applied. default: None</p></li>
+<li><p><strong>metric</strong> – Select the scoring metric to evaluate the clusters.
+The default is the mean distortion, defined by the sum of squared distances between each observation
+and its closest centroid. Other metrics include:
+- distortion: mean sum of squared distances to centers
+- silhouette: mean ratio of intra-cluster and nearest-cluster distance
+- calinski_harabasz: ratio of within to between cluster dispersion</p></li>
+<li><p><strong>features_reduction</strong> – Method for reduction of the embedded space with n_components. Can be pca or umap.
+Default: None</p></li>
+<li><p><strong>n_components</strong> – Dimension of the embedded space for features reduction. Default 2.</p></li>
+<li><p><strong>n_jobs</strong> – int
+The number of jobs to use for the computation. This works by computing
+each of the n_init runs in parallel.
+If -1 all CPUs are used. If 1 is given, no parallel computing code is
+used at all, which is useful for debugging. For n_jobs below -1,
+(n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one
+are used.</p></li>
+<li><p><strong>random_state</strong> – int, RandomState instance or None, optional, default: None
+If int, random_state is the seed used by the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</p></li>
+<li><p><strong>visualize</strong> – bool, default: False
+If True, calls <code class="docutils literal notranslate"><span class="pre">show()</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>cls:
+KMeansConstrained classifier object</p></li>
+<li><p>cls_features_reduction:
+PCA or UMAP reduction object</p></li>
+<li><p>cluster_nb:
+optimal number of cluster</p></li>
+<li><p>labels:
+label[i] is the code or index of the centroid the i’th observation is closest to.</p></li>
+<li><p>ref_label:
+cluster label with the minimal within-cluster sum-of-squares.</p></li>
+<li><p>wicss_clusters:
+within-cluster sum-of-squares for each cluster</p></li>
+<li><p>best_wicss_cluster:
+minimal wicss.</p></li>
+<li><p>centroid:
+Centroids found at the last iteration of k-means.</p></li>
+<li><p>X_hat:
+Copy of X with the missing values filled in.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-cvasl.vendor.comscan.neurocombat">
+<span id="cvasl-vendor-comscan-neurocombat-module"></span><h2>cvasl.vendor.comscan.neurocombat module<a class="headerlink" href="#module-cvasl.vendor.comscan.neurocombat" title="Link to this heading">¶</a></h2>
+<div class="line-block">
+<div class="line">Author: Alexandre CARRE </div>
+<div class="line">Created on: Jan 14, 2021</div>
+</div>
+<dl class="py class">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.AutoCombat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.neurocombat.</span></span><span class="sig-name descname"><span class="pre">AutoCombat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'distortion'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_ref_site</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scaler_clustering</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StandardScaler()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discrete_cluster_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">continuous_cluster_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features_reduction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_missing_sites_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_site_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discrete_combat_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">continuous_combat_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">empirical_bayes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parametric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_only</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_only_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">123</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.AutoCombat" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.Combat" title="cvasl.vendor.comscan.neurocombat.Combat"><code class="xref py py-class docutils literal notranslate"><span class="pre">Combat</span></code></a></p>
+<p>Harmonize/normalize features using Combat’s parametric empirical Bayes framework.</p>
+<p>Combat need to have well-known acquisition sites or scanner to harmonize features.
+It is sometimes difficult to define an imaging acquisition site if on two sites imaging parameters
+can be really similar. ComScan gives the possibility to automatically determine the number of sites
+and their association based on imaging features (e.g. dicom tags) by clustering.
+Thus ComScan can be used on data not seen during training because it can predict which imager best matches
+the one it has seen during training.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5845848">Fortin, Jean-Philippe, et al. “Harmonization of cortical thickness
+measurements across scanners and sites.” Neuroimage 167 (2018): 104-1</a></p>
+</div>
+<section id="id11">
+<h3>Parameters<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
+<p>features : Target features to be harmonized.</p>
+<p>sites_features : Target variable for define (acquisition sites or scanner) by clustering.</p>
+<dl class="simple">
+<dt>sites<span class="classifier">Target variable for ComScan problems (e.g. acquisition sites or scanner).</span></dt><dd><p>This argument is Optional. If this argument is provided will run traditional ComBat else AutoCombat.
+In this case args: sites_features, size_min, method, scaler_clustering, discrete_cluster_features,
+continuous_cluster_features, threshold_missing_sites_features, drop_site_columns
+are unused.</p>
+</dd>
+</dl>
+<p>size_min : Constraint of the minimum size of site for clustering.</p>
+<dl class="simple">
+<dt>metric<span class="classifier">“distortion”, “silhouette” or “calinski_harabasz”.</span></dt><dd><p>Metric to define the optimal number of cluster. Default: distortion.</p>
+</dd>
+<dt>use_ref_site<span class="classifier">Use a ref site to be used as reference for batch adjustment. The ref site used is the cluster</span></dt><dd><p>with the minimal inertia. i.e minimizing within-cluster sum-of-squares.</p>
+</dd>
+<dt>scaler_clustering<span class="classifier">Scaler to use for continuous site features. Need to be a scikit learn scaler.</span></dt><dd><p>Default is <code class="xref py py-class docutils literal notranslate"><span class="pre">StandardScaler()</span></code>.</p>
+</dd>
+</dl>
+<p>discrete_cluster_features : Target sites_features which are categorical to one-hot (e.g. ManufacturerModelName).</p>
+<p>continuous_cluster_features : Target sites_features which are continuous to scale (e.g. EchoTime).</p>
+<dl class="simple">
+<dt>features_reduction<span class="classifier">Method for reduction of the embedded space with n_components. Can be ‘pca’ or ‘umap’.</span></dt><dd><p>Default is None.</p>
+</dd>
+<dt>n_components<span class="classifier">Dimension of the embedded space for features reduction.</span></dt><dd><p>Default is 2.</p>
+</dd>
+<dt>threshold_missing_sites_features<span class="classifier">Threshold of acceptable missing features for sites features clustering.</span></dt><dd><p>25 specify that 75% of all samples need to have this features.
+Default is 25.</p>
+</dd>
+<dt>drop_site_columns<span class="classifier">Drop sites columns find by clustering in return.</span></dt><dd><p>Default is False.</p>
+</dd>
+</dl>
+<p>discrete_combat_covariates : Target covariates which are categorical (e.g. male or female).</p>
+<p>continuous_combat_covariates : Target covariates which are continuous (e.g. age).</p>
+<dl class="simple">
+<dt>empirical_bayes<span class="classifier">Performed empirical bayes.</span></dt><dd><p>Default is True.</p>
+</dd>
+<dt>parametric<span class="classifier">Performed parametric adjustements.</span></dt><dd><p>Default is True.</p>
+</dd>
+<dt>mean_only<span class="classifier">Adjust only the mean (no scaling)</span></dt><dd><p>Default is False.</p>
+</dd>
+<dt>return_only_features<span class="classifier">Return only features.</span></dt><dd><p>Default is False.</p>
+</dd>
+<dt>n_jobs: The number of jobs to use for the computation. This works by computing each of the n_init runs in parallel.</dt><dd><p>If -1 all CPUs are used. If 1 is given, no parallel computing code is
+used at all, which is useful for debugging. For n_jobs below -1,
+(n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one
+are used.
+Default is 1.</p>
+</dd>
+<dt>random_state<span class="classifier">int, RandomState instance or None, optional, default: 123</span></dt><dd><p>If int, random_state is the seed used by the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</p>
+</dd>
+<dt>copy<span class="classifier">Set to False to perform inplace row normalization and avoid a copy (if the input is already a numpy array).</span></dt><dd><p>Default is True.</p>
+</dd>
+</dl>
+</section>
+<section id="id12">
+<h3>Attributes<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h3>
+<p>cls_ : clustering classifier object</p>
+<dl class="simple">
+<dt>info_clustering_<span class="classifier">Dictionary that stores info of clustering from sites_features with cluster_nb, labels, ref_label</span></dt><dd><p>wicss_clusters, best_wicss_cluster</p>
+</dd>
+</dl>
+<p>cls_feature_reduction_ : feature reduction object</p>
+<p>clustering_data_features_mean_ : dict of mean for clustering data (use for imputation)</p>
+<p>X_hat_ : array after fit</p>
+<p>clustering_data_features_ : column features for clustering from train (after encoding + scaling)</p>
+<p>clustering_data_discrete_features_: column features for clustering after one-hot encoding</p>
+<p>dict_cls_fitted: dict of columns of fitted cls used for fitted clustering data</p>
+</section>
+<section id="id13">
+<h3>Examples<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h3>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([{</span><span class="s2">&quot;features_1&quot;</span><span class="p">:</span> <span class="mf">0.97</span><span class="p">,</span> <span class="s2">&quot;site_features_0&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;site_features_1&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">{</span><span class="s2">&quot;features_1&quot;</span><span class="p">:</span> <span class="mf">1.35</span><span class="p">,</span> <span class="s2">&quot;site_features_0&quot;</span><span class="p">:</span> <span class="mf">1.01</span><span class="p">,</span> <span class="s2">&quot;site_features_1&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">{</span><span class="s2">&quot;features_1&quot;</span><span class="p">:</span> <span class="mf">1.43</span><span class="p">,</span> <span class="s2">&quot;site_features_0&quot;</span><span class="p">:</span> <span class="mf">1.09</span><span class="p">,</span> <span class="s2">&quot;site_features_1&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">{</span><span class="s2">&quot;features_1&quot;</span><span class="p">:</span> <span class="mf">0.85</span><span class="p">,</span> <span class="s2">&quot;site_features_0&quot;</span><span class="p">:</span> <span class="mf">2.3</span><span class="p">,</span> <span class="s2">&quot;site_features_1&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">auto_combat</span> <span class="o">=</span> <span class="n">AutoCombat</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;features_1&quot;</span><span class="p">],</span> <span class="n">sites_features</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;site_features_0&quot;</span><span class="p">,</span> <span class="s2">&quot;site_features_1&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">continuous_cluster_features</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;site_features_0&quot;</span><span class="p">,</span> <span class="s2">&quot;site_features_1&quot;</span><span class="p">],</span> <span class="n">size_min</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">auto_combat</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+<span class="go">AutoCombat(continuous_cluster_features=[&#39;site_features_0&#39;, &#39;site_features_1&#39;],</span>
+<span class="go">       discrete_cluster_features=[], features=[&#39;features_1&#39;],</span>
+<span class="go">       sites=[&#39;sites&#39;],</span>
+<span class="go">       sites_features=[&#39;site_features_0&#39;, &#39;site_features_1&#39;], size_min=2))</span>
+</pre></div>
+</div>
+</section>
+<section id="id14">
+<h3>Notes<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h3>
+<p>NaNs values are not treated.</p>
+<section id="warning">
+<h4>Warning<a class="headerlink" href="#warning" title="Link to this heading">¶</a></h4>
+<p>Be sure to have the same sites features between fit and transform. The choice has not been to imposed
+an entry format to check a colum name or a slice.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.AutoCombat.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.AutoCombat" title="cvasl.vendor.comscan.neurocombat.AutoCombat"><span class="pre">AutoCombat</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.AutoCombat.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Compute sites, ref_site using clustering. Then compute the stand mean, var pooled, gamma star, delta star
+to be used for later adjusted data from Combat.</p>
+<section id="id15">
+<h5>Parameters<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h5>
+<dl class="simple">
+<dt>X<span class="classifier">array-like or DataFrame of shape (n_samples, n_features).</span></dt><dd><p>Requires the columns needed by the ComScan().
+The data used to find adjustments.</p>
+</dd>
+<dt>*y<span class="classifier">y in scikit learn: None</span></dt><dd><p>Ignored.</p>
+</dd>
+</dl>
+</section>
+<section id="id16">
+<h5>Returns<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h5>
+<dl class="simple">
+<dt>self<span class="classifier">object</span></dt><dd><p>Fitted ComScan estimator.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.AutoCombat.transform">
+<span class="sig-name descname"><span class="pre">transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.AutoCombat.transform" title="Link to this definition">¶</a></dt>
+<dd><p>Scale features of X according to combat estimator.</p>
+<section id="id17">
+<h5>Parameters<a class="headerlink" href="#id17" title="Link to this heading">¶</a></h5>
+<dl class="simple">
+<dt>X<span class="classifier">array-like or DataFrame of shape (n_samples, n_features). Requires the columns needed by the Combat().</span></dt><dd><p>Input data that will be transformed.</p>
+</dd>
+</dl>
+</section>
+<section id="id18">
+<h5>Returns<a class="headerlink" href="#id18" title="Link to this heading">¶</a></h5>
+<dl class="simple">
+<dt>Xt<span class="classifier">array-like of shape (n_samples, n_features)</span></dt><dd><p>Transformed data.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+</section>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.Combat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.neurocombat.</span></span><span class="sig-name descname"><span class="pre">Combat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">discrete_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">continuous_covariates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_site</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">empirical_bayes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parametric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_only</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_only_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_ref_site</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.Combat" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">TransformerMixin</span></code></p>
+<p>Harmonize/normalize features using Combat’s parametric
+empirical Bayes framework</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5845848">Fortin, Jean-Philippe, et al. “Harmonization of cortical thickness
+measurements across scanners and sites.” Neuroimage 167 (2018): 104-1</a></p>
+</div>
+<section id="id19">
+<h3>Parameters<a class="headerlink" href="#id19" title="Link to this heading">¶</a></h3>
+<p>features : Target features to be harmonized</p>
+<dl class="simple">
+<dt>sites<span class="classifier">Target variable for ComScan problems</span></dt><dd><p>(e.g. acquisition sites or scanner).</p>
+</dd>
+<dt>discrete_covariates<span class="classifier">Target covariates which are</span></dt><dd><p>categorical (e.g. male or female).</p>
+</dd>
+<dt>continuous_covariates<span class="classifier">Target covariates</span></dt><dd><p>which are continuous (e.g. age).</p>
+</dd>
+<dt>ref_site<span class="classifier">Variable value (acquisition sites or scanner)</span></dt><dd><p>to be used as reference for batch adjustment.
+Default is False.</p>
+</dd>
+<dt>empirical_bayes<span class="classifier">Performed empirical bayes.</span></dt><dd><p>Default is True.</p>
+</dd>
+<dt>parametric<span class="classifier">Performed parametric adjustements.</span></dt><dd><p>Default is True.</p>
+</dd>
+<dt>mean_only<span class="classifier">Adjust only the mean (no scaling).</span></dt><dd><p>Default is False.</p>
+</dd>
+<dt>return_only_features<span class="classifier">Return only features.</span></dt><dd><p>Default is False.</p>
+</dd>
+<dt>raise_ref_site<span class="classifier">raise when the reference site pass as arguments not exist, else set to no reference.</span></dt><dd><p>Default is True.</p>
+</dd>
+<dt>copy<span class="classifier">Set to False to perform inplace row normalization and avoid a copy (if the input is already a numpy array).</span></dt><dd><p>Default is True.</p>
+</dd>
+</dl>
+</section>
+<section id="id20">
+<h3>Attributes<a class="headerlink" href="#id20" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>info_dict_fit_<span class="classifier">dictionary that stores batch info of fitted data with:</span></dt><dd><p>batch_levels, ref_level, n_batch, n_sample, sample_per_batch, batch_info</p>
+</dd>
+<dt>stand_mean_<span class="classifier">array-like</span></dt><dd><p>Standardized mean</p>
+</dd>
+<dt>var_pooled_<span class="classifier">array-like</span></dt><dd><p>Variance pooled</p>
+</dd>
+<dt>mod_mean_<span class="classifier">array-like</span></dt><dd><p>Mod mean</p>
+</dd>
+<dt>gamma_star_<span class="classifier">array-like</span></dt><dd><p>Adjustement gamma star</p>
+</dd>
+<dt>delta_star_<span class="classifier">array-like</span></dt><dd><p>Adjustement delta star</p>
+</dd>
+<dt>info_dict_transform_<span class="classifier">dictionary that stores batch info of transformed data with</span></dt><dd><p>batch_levels, ref_level, n_batch, n_sample, sample_per_batch, batch_info</p>
+</dd>
+</dl>
+</section>
+<section id="id21">
+<h3>Examples<a class="headerlink" href="#id21" title="Link to this heading">¶</a></h3>
+</section>
+<section id="id22">
+<h3>Notes<a class="headerlink" href="#id22" title="Link to this heading">¶</a></h3>
+<p>NaNs values are not treated.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.Combat.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.Combat" title="cvasl.vendor.comscan.neurocombat.Combat"><span class="pre">Combat</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.Combat.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the stand mean, var pooled, gamma star, delta star to be used for later adjusted data.</p>
+<section id="id23">
+<h4>Parameters<a class="headerlink" href="#id23" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">array-like or DataFrame of shape (n_samples, n_features).</span></dt><dd><p>Requires the columns needed by the Combat().
+The data used to find adjustments.</p>
+</dd>
+<dt>*y<span class="classifier">y in scikit learn: None</span></dt><dd><p>Ignored.</p>
+</dd>
+</dl>
+</section>
+<section id="id24">
+<h4>Returns<a class="headerlink" href="#id24" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>self<span class="classifier">object</span></dt><dd><p>Fitted combat estimator.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.Combat.load_fit">
+<span class="sig-name descname"><span class="pre">load_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.Combat.load_fit" title="Link to this definition">¶</a></dt>
+<dd><p>load a fitted model attribute <code class="xref py py-obj docutils literal notranslate"><span class="pre">info_dict_fit_</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">stand_mean_</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">var_pooled_</span></code>,
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">gamma_star_</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">delta_star_</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filepath</strong> – filepath of the pkl file to load</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.Combat.save_fit">
+<span class="sig-name descname"><span class="pre">save_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.Combat.save_fit" title="Link to this definition">¶</a></dt>
+<dd><p>save a fitted model attribute <code class="xref py py-obj docutils literal notranslate"><span class="pre">info_dict_fit_</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">stand_mean_</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">var_pooled_</span></code>,
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">gamma_star_</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">delta_star_</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filepath</strong> – filepath were to save. if no extension .pkl will add it</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.Combat.transform">
+<span class="sig-name descname"><span class="pre">transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.Combat.transform" title="Link to this definition">¶</a></dt>
+<dd><p>Scale features of X according to combat estimator.</p>
+<section id="id25">
+<h4>Parameters<a class="headerlink" href="#id25" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">array-like or DataFrame of shape (n_samples, n_features). Requires the columns needed by the Combat().</span></dt><dd><p>Input data that will be transformed.</p>
+</dd>
+</dl>
+</section>
+<section id="id26">
+<h4>Returns<a class="headerlink" href="#id26" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Xt<span class="classifier">array-like of shape (n_samples, n_features)</span></dt><dd><p>Transformed data.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.ImageCombat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.neurocombat.</span></span><span class="sig-name descname"><span class="pre">ImageCombat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_path:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_features:</span> <span class="pre">~typing.List[str]</span> <span class="pre">|</span> <span class="pre">~typing.List[int]</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path_fit:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'fit_data'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path_transform:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'transform_data'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_min:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'silhouette'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_ref_site:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scaler_clustering=StandardScaler()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discrete_cluster_features:</span> <span class="pre">~typing.List[str]</span> <span class="pre">|</span> <span class="pre">~typing.List[int]</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">continuous_cluster_features:</span> <span class="pre">~typing.List[str]</span> <span class="pre">|</span> <span class="pre">~typing.List[int]</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features_reduction:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_missing_sites_features=25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_site_columns:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discrete_combat_covariates:</span> <span class="pre">~typing.List[str]</span> <span class="pre">|</span> <span class="pre">~typing.List[int]</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">continuous_combat_covariates:</span> <span class="pre">~typing.List[str]</span> <span class="pre">|</span> <span class="pre">~typing.List[int]</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">empirical_bayes:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parametric:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_only:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">123</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flattened_dtype:</span> <span class="pre">~numpy.dtype</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;class</span> <span class="pre">'numpy.float16'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dtype:</span> <span class="pre">~numpy.dtype</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;class</span> <span class="pre">'numpy.float32'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.ImageCombat" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.AutoCombat" title="cvasl.vendor.comscan.neurocombat.AutoCombat"><code class="xref py py-class docutils literal notranslate"><span class="pre">AutoCombat</span></code></a></p>
+<p>Harmonize/normalize features using Combat’s parametric empirical Bayes framework directly on image.</p>
+<p>ImageCombat allow the possibility to Harmonize/normalize a set of NIFTI images.
+All images must have the same dimensions and orientation. A common mask is created based on an heuristic
+proposed by T.Nichols. Images are then vectorizing for ComScan.
+ImageCombat allows the possibily to use Combat (well-defined site) or AutoCombat (clustering for sites finding)</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5845848">Fortin, Jean-Philippe, et al. “Harmonization of cortical thickness
+measurements across scanners and sites.” Neuroimage 167 (2018): 104-1</a></p>
+</div>
+<section id="id27">
+<h3>Parameters<a class="headerlink" href="#id27" title="Link to this heading">¶</a></h3>
+<p>image_path : image_path of nifti files.</p>
+<p>sites_features : Target variable for define (acquisition sites or scanner) by clustering.</p>
+<dl class="simple">
+<dt>sites<span class="classifier">Target variable for ComScan problems (e.g. acquisition sites or scanner).</span></dt><dd><p>This argument is Optional. If this argument is provided will run traditional ComBat.
+In this case args: sites_features, size_min, method, scaler_clustering, discrete_cluster_features,
+continuous_cluster_features, threshold_missing_sites_features, drop_site_columns are unused.</p>
+</dd>
+</dl>
+<p>size_min : Constraint of the minimum size of site for clustering.</p>
+<dl class="simple">
+<dt>method<span class="classifier">“silhouette” or “elbow”. Method to define the optimal number of cluster.</span></dt><dd><p>Default is silhouette.</p>
+</dd>
+<dt>use_ref_site: Use a ref site to be used as reference for batch adjustment. The ref site used is the cluster</dt><dd><p>with the minimal inertia. i.e minimizing within-cluster sum-of-squares.
+Default is False.</p>
+</dd>
+<dt>scaler_clustering: Scaler to use for continuous site features. Need to be a scikit learn scaler.</dt><dd><p>Default is <code class="xref py py-class docutils literal notranslate"><span class="pre">StandardScaler()</span></code>.</p>
+</dd>
+</dl>
+<p>discrete_cluster_features: Target sites_features which are categorical to one-hot (e.g. ManufacturerModelName).</p>
+<p>continuous_cluster_features: Target sites_features which are continuous to scale (e.g. EchoTime).</p>
+<dl class="simple">
+<dt>features_reduction: Method for reduction of the embedded space with n_components. Can be ‘pca’ or ‘umap’.</dt><dd><p>Default is None.</p>
+</dd>
+<dt>n_components: Dimension of the embedded space for features reduction.</dt><dd><p>Default is 2.</p>
+</dd>
+<dt>threshold_missing_sites_features: Threshold of acceptable missing features for sites features clustering.</dt><dd><p>25 specify that 75% of all samples need to have this features.
+Default is 25.</p>
+</dd>
+</dl>
+<p>drop_site_columns: Drop sites columns find by clustering in return.</p>
+<p>discrete_combat_covariates : Target covariates which are categorical (e.g. male or female).</p>
+<p>continuous_combat_covariates : Target covariates which are continuous (e.g. age).</p>
+<dl class="simple">
+<dt>empirical_bayes<span class="classifier">Performed empirical bayes.</span></dt><dd><p>Default is True.</p>
+</dd>
+<dt>parametric<span class="classifier">Performed parametric adjustements.</span></dt><dd><p>Default is True.</p>
+</dd>
+<dt>mean_only<span class="classifier">Adjust only the mean (no scaling)</span></dt><dd><p>Default is False.</p>
+</dd>
+<dt>random_state: int, RandomState instance or None, optional, default: 123</dt><dd><p>If int, random_state is the seed used by the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</p>
+</dd>
+<dt>copy<span class="classifier">Set to False to perform inplace row normalization and avoid a copy (if the input is already a numpy array).</span></dt><dd><p>Default is True.</p>
+</dd>
+</dl>
+</section>
+<section id="id28">
+<h3>Attributes<a class="headerlink" href="#id28" title="Link to this heading">¶</a></h3>
+<p>mask_ : array-like of the common brain mask</p>
+<p>flattened_array_ : flattened array of all the training set</p>
+</section>
+<section id="id29">
+<h3>Notes<a class="headerlink" href="#id29" title="Link to this heading">¶</a></h3>
+<p>NaNs values are not treated.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.ImageCombat.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.ImageCombat" title="cvasl.vendor.comscan.neurocombat.ImageCombat"><span class="pre">ImageCombat</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.ImageCombat.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Compute sites, ref_site using clustering. Then compute the stand mean, var pooled, gamma star, delta star
+to be used for later adjusted data from Combat.</p>
+<section id="id30">
+<h4>Parameters<a class="headerlink" href="#id30" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">array-like or DataFrame of shape (n_samples, n_features).</span></dt><dd><p>Requires the columns needed by the ComScan().
+The data used to find adjustments.</p>
+</dd>
+<dt>*y<span class="classifier">y in scikit learn: None</span></dt><dd><p>Ignored.</p>
+</dd>
+</dl>
+</section>
+<section id="id31">
+<h4>Returns<a class="headerlink" href="#id31" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>self<span class="classifier">object</span></dt><dd><p>Fitted ComScan estimator.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.neurocombat.ImageCombat.transform">
+<span class="sig-name descname"><span class="pre">transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.neurocombat.ImageCombat.transform" title="Link to this definition">¶</a></dt>
+<dd><p>Scale image according to combat estimator and save it.</p>
+<section id="id32">
+<h4>Parameters<a class="headerlink" href="#id32" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">array-like or DataFrame of shape (n_samples, n_features). Requires the columns needed by the ImageCombat().</span></dt><dd><p>Input data that will be transformed.</p>
+</dd>
+</dl>
+</section>
+<section id="id33">
+<h4>Returns<a class="headerlink" href="#id33" title="Link to this heading">¶</a></h4>
+<blockquote>
+<div><p>None, save transformed image</p>
+</div></blockquote>
+</section>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+</section>
+<section id="module-cvasl.vendor.comscan.nifti">
+<span id="cvasl-vendor-comscan-nifti-module"></span><h2>cvasl.vendor.comscan.nifti module<a class="headerlink" href="#module-cvasl.vendor.comscan.nifti" title="Link to this heading">¶</a></h2>
+<div class="line-block">
+<div class="line">Author: Alexandre CARRE </div>
+<div class="line">Created on: Jan 14, 2021</div>
+</div>
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.nifti.flatten_nifti_files">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.nifti.</span></span><span class="sig-name descname"><span class="pre">flatten_nifti_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">input_path:</span> <span class="pre">~typing.List[str],</span> <span class="pre">mask:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">output_flattened_array_path:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'flattened_array',</span> <span class="pre">dtype:</span> <span class="pre">[&lt;class</span> <span class="pre">'numpy.dtype'&gt;,</span> <span class="pre">typing.Callable]</span> <span class="pre">=</span> <span class="pre">&lt;class</span> <span class="pre">'numpy.float16'&gt;,</span> <span class="pre">save:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True,</span> <span class="pre">compress_save:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.nifti.flatten_nifti_files" title="Link to this definition">¶</a></dt>
+<dd><p>Flattened list of nifti files to a flattened array [n_images, n_masked_voxels] and save to .npy or .npz if compressed</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_path</strong> – List of nifti files path</p></li>
+<li><p><strong>mask</strong> – path of mask or array</p></li>
+<li><p><strong>output_flattened_array_path</strong> – path of the output flattened array. No extension is needed. Will be save as
+.npy if no compression, else .npz</p></li>
+<li><p><strong>save</strong> – save the flattened array</p></li>
+<li><p><strong>dtype</strong> – dtype of the output flattened array. Default is float 16 to save memory</p></li>
+<li><p><strong>compress_save</strong> – If true compress the numpy array into .npz</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>flattened array [n_images, n_masked_voxels]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-cvasl.vendor.comscan.utils">
+<span id="cvasl-vendor-comscan-utils-module"></span><h2>cvasl.vendor.comscan.utils module<a class="headerlink" href="#module-cvasl.vendor.comscan.utils" title="Link to this heading">¶</a></h2>
+<div class="line-block">
+<div class="line">Author: Alexandre CARRE </div>
+<div class="line">Created on: Jan 14, 2021</div>
+</div>
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.check_exist_vars">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">check_exist_vars</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">_vars</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.check_exist_vars" title="Link to this definition">¶</a></dt>
+<dd><p>Check that a list of columns name exist in a DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a DataFrame</p></li>
+<li><p><strong>_vars</strong> – List of columns name to check</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>index of columns name</p>
+</dd>
+<dt class="field-odd">Raise<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ValueError if missing features</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.check_is_nii_exist">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">check_is_nii_exist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.check_is_nii_exist" title="Link to this definition">¶</a></dt>
+<dd><p>Check if a directory exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_file_path</strong> – string of the path of the nii or nii.gz.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>string if exist, else raise Error.</p>
+</dd>
+<dt class="field-odd">Raise<span class="colon">:</span></dt>
+<dd class="field-odd"><p>FileNotFoundError or FileExistsError</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.column_var_dtype">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">column_var_dtype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">identify_dtypes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.12)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('object',)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.column_var_dtype" title="Link to this definition">¶</a></dt>
+<dd><p>identify type of columns in DataFrame</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – input dataframe</p></li>
+<li><p><strong>identify_dtypes</strong> – pandas dtype</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>see <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#basics-dtypes">https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#basics-dtypes</a> for pandas dtype</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>summary df with col index and col name for all identify_dtypes vars</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.fix_columns">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">fix_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_nans</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.fix_columns" title="Link to this definition">¶</a></dt>
+<dd><p>Fix columns for the test set. When the train was encoded with <code class="xref py py-obj docutils literal notranslate"><span class="pre">pd.get_dummies</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>inspired from: <a class="reference external" href="http://fastml.com/how-to-use-pd-dot-get-dummies-with-the-test-set">http://fastml.com/how-to-use-pd-dot-get-dummies-with-the-test-set</a></p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – input dataframe</p></li>
+<li><p><strong>columns</strong> – columns of the original dataframe</p></li>
+<li><p><strong>inplace</strong> – If False, return a copy. Otherwise, do operation inplace and return None</p></li>
+<li><p><strong>extra_nans</strong> – put extra columns as nans based on one hot encoding columns</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the corrected version of DataFrame for test set</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.get_column_index">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">get_column_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.get_column_index" title="Link to this definition">¶</a></dt>
+<dd><p>Get columns index from columns name</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – input dataframe</p></li>
+<li><p><strong>query_cols</strong> – List name of colunns</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>array of column index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.load_nifty_volume_as_array">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">load_nifty_volume_as_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_path_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.12)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.12)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.12)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.12)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.12)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.load_nifty_volume_as_array" title="Link to this definition">¶</a></dt>
+<dd><p>Load nifty image into numpy array [z,y,x] axis order.
+The output array shape is like [Depth, Height, Width].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_path_file</strong> – input path file, should be ‘<em>.nii’ or ‘</em>.nii.gz’</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a numpy data array, (with header)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.mat_to_bytes">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">mat_to_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nrows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'GB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.mat_to_bytes" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the size of a numpy array in bytes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>code from: <a class="reference external" href="https://gist.github.com/dimalik/f4609661fb83e3b5d22e7550c1776b90">https://gist.github.com/dimalik/f4609661fb83e3b5d22e7550c1776b90</a></p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nrows</strong> – the number of rows of the matrix.</p></li>
+<li><p><strong>ncols</strong> – the number of columns of the matrix.</p></li>
+<li><p><strong>dtype</strong> – the size of each element in the matrix. Defaults to 32bits.</p></li>
+<li><p><strong>out</strong> – the output unit. Defaults to gigabytes (GB)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the size of the matrix in the given unit</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.one_hot_encoder">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">one_hot_encoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dummy_na</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_nan_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.one_hot_encoder" title="Link to this definition">¶</a></dt>
+<dd><p>Encoding categorical feature in the dataframe, allow possibility to keep NaN.
+The categorical feature index and name are from cat_var function. These columns need to be “object” dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – input dataframe</p></li>
+<li><p><strong>columns</strong> – List of columns to encode</p></li>
+<li><p><strong>drop_column</strong> – Set to True to drop the original column after encoding. Default to True.</p></li>
+<li><p><strong>dummy_na</strong> – Add a column to indicate NaNs, if False NaNs are ignored.</p></li>
+<li><p><strong>add_nan_columns</strong> – Add a empty nan columns if not create (can be used are other categories)</p></li>
+<li><p><strong>inplace</strong> – If False, return a copy. Otherwise, do operation inplace and return None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>new dataframe where columns are one hot encoded</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.save_to_nii">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">save_to_nii</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im:</span> <span class="pre">~numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header:</span> <span class="pre">(&lt;class</span> <span class="pre">'tuple'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">&lt;class</span> <span class="pre">'tuple'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">&lt;class</span> <span class="pre">'tuple'&gt;)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'image'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gzip:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.save_to_nii" title="Link to this definition">¶</a></dt>
+<dd><p>Save numpy array to nii.gz format to submit.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im</strong> – array numpy</p></li>
+<li><p><strong>header</strong> – header metadata (origin, spacing, direction).</p></li>
+<li><p><strong>output_dir</strong> – Output directory.</p></li>
+<li><p><strong>filename</strong> – Filename of the output file.</p></li>
+<li><p><strong>mode</strong> – save as ‘image’ or ‘label’</p></li>
+<li><p><strong>gzip</strong> – zip nii (ie, nii.gz)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.scaler_encoder">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">scaler_encoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scaler</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StandardScaler()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.scaler_encoder" title="Link to this definition">¶</a></dt>
+<dd><p>Apply sklearn scaler to columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – input dataframe</p></li>
+<li><p><strong>columns</strong> – List of columns to encode</p></li>
+<li><p><strong>scaler</strong> – scaler object from sklearn</p></li>
+<li><p><strong>inplace</strong> – If False, return a copy. Otherwise, do operation inplace and return None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>df:
+DataFrame scaled</p></li>
+<li><p>dict_cls_fitted:
+dict by col of fitted cls</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.split_filename">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">split_filename</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.12)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cvasl.vendor.comscan.utils.split_filename" title="Link to this definition">¶</a></dt>
+<dd><p>Split file_name into folder path name, basename, and extension name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file_name</strong> – full path</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>path name, basename, extension name</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.tsne">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">tsne</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">123</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.utils.tsne" title="Link to this definition">¶</a></dt>
+<dd><p>t-distributed Stochastic Neighbor Embedding.</p>
+<p>t-SNE is a tool to visualize high-dimensional data. It converts
+similarities between data points to joint probabilities and tries
+to minimize the Kullback-Leibler divergence between the joint
+probabilities of the low-dimensional embedding and the
+high-dimensional data. t-SNE has a cost function that is not convex,
+i.e. with different initializations we can get different results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – input dataframe</p></li>
+<li><p><strong>columns</strong> – List of columns to use</p></li>
+<li><p><strong>n_components</strong> – Dimension of the embedded space. Default 2.</p></li>
+<li><p><strong>random_state</strong> – int, RandomState instance or None, optional, default: 123
+If int, random_state is the seed used by the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</p></li>
+<li><p><strong>n_jobs</strong> – default=-1
+The number of parallel jobs to run for neighbors search. This parameter
+has no impact when <code class="docutils literal notranslate"><span class="pre">metric=&quot;precomputed&quot;</span></code> or
+(<code class="docutils literal notranslate"><span class="pre">metric=&quot;euclidean&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">method=&quot;exact&quot;</span></code>).
+<code class="docutils literal notranslate"><span class="pre">None</span></code> means 1 unless in a <code class="xref py py-obj docutils literal notranslate"><span class="pre">joblib.parallel_backend</span></code> context.
+<code class="docutils literal notranslate"><span class="pre">-1</span></code> means using all processors.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>array-like with projections</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.vendor.comscan.utils.u_map">
+<span class="sig-prename descclassname"><span class="pre">cvasl.vendor.comscan.utils.</span></span><span class="sig-name descname"><span class="pre">u_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><span class="pre">DataFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">123</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.vendor.comscan.utils.u_map" title="Link to this definition">¶</a></dt>
+<dd><p>Just like t-SNE, UMAP is a dimensionality reduction specifically designed for visualizing complex data in
+low dimensions (2D or 3D). As the number of data points increase, UMAP becomes more time efficient compared to TSNE.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – input dataframe</p></li>
+<li><p><strong>columns</strong> – List of columns to use</p></li>
+<li><p><strong>n_components</strong> – Dimension of the embedded space. Default 2.</p></li>
+<li><p><strong>random_state</strong> – int, RandomState instance or None, optional, default: 123
+If int, random_state is the seed used by the random number generator;
+If None, the random number generator is the RandomState instance used
+by <cite>np.random</cite>.</p></li>
+<li><p><strong>n_jobs</strong> – default=-1
+The number of parallel jobs to run for neighbors search. This parameter
+has no impact when <code class="docutils literal notranslate"><span class="pre">metric=&quot;precomputed&quot;</span></code> or
+(<code class="docutils literal notranslate"><span class="pre">metric=&quot;euclidean&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">method=&quot;exact&quot;</span></code>).
+<code class="docutils literal notranslate"><span class="pre">None</span></code> means 1 unless in a <code class="xref py py-obj docutils literal notranslate"><span class="pre">joblib.parallel_backend</span></code> context.
+<code class="docutils literal notranslate"><span class="pre">-1</span></code> means using all processors.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>array-like with projections</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-cvasl.vendor.comscan">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-cvasl.vendor.comscan" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+    
+        <div id="show_right_sidebar">
+            <p><a class="toggle_right_sidebar" href="#"><span class="icon">&lt;</span><span>Page contents</span></a></p>
+        </div>
+
+        <div id="right_sidebar">
+            <p><a class="toggle_right_sidebar" href="#"><span class="icon">&gt;</span><span>Page contents:</span></a></p>
+            <div class="page_toc">
+                <ul>
+<li><a class="reference internal" href="#">cvasl.vendor.comscan package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-cvasl.vendor.comscan.clustering">cvasl.vendor.comscan.clustering module</a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KElbowVisualizer"><code class="docutils literal notranslate"><span class="pre">KElbowVisualizer</span></code></a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KElbowVisualizer.draw"><code class="docutils literal notranslate"><span class="pre">KElbowVisualizer.draw()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KElbowVisualizer.finalize"><code class="docutils literal notranslate"><span class="pre">KElbowVisualizer.finalize()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KElbowVisualizer.fit"><code class="docutils literal notranslate"><span class="pre">KElbowVisualizer.fit()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing"><code class="docutils literal notranslate"><span class="pre">KMeansConstrainedMissing</span></code></a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.fit"><code class="docutils literal notranslate"><span class="pre">KMeansConstrainedMissing.fit()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.fit_predict"><code class="docutils literal notranslate"><span class="pre">KMeansConstrainedMissing.fit_predict()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.predict"><code class="docutils literal notranslate"><span class="pre">KMeansConstrainedMissing.predict()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.KMeansConstrainedMissing.set_predict_request"><code class="docutils literal notranslate"><span class="pre">KMeansConstrainedMissing.set_predict_request()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.clustering.optimal_clustering"><code class="docutils literal notranslate"><span class="pre">optimal_clustering()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-cvasl.vendor.comscan.neurocombat">cvasl.vendor.comscan.neurocombat module</a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.AutoCombat"><code class="docutils literal notranslate"><span class="pre">AutoCombat</span></code></a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.AutoCombat.fit"><code class="docutils literal notranslate"><span class="pre">AutoCombat.fit()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.AutoCombat.transform"><code class="docutils literal notranslate"><span class="pre">AutoCombat.transform()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.Combat"><code class="docutils literal notranslate"><span class="pre">Combat</span></code></a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.Combat.fit"><code class="docutils literal notranslate"><span class="pre">Combat.fit()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.Combat.load_fit"><code class="docutils literal notranslate"><span class="pre">Combat.load_fit()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.Combat.save_fit"><code class="docutils literal notranslate"><span class="pre">Combat.save_fit()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.Combat.transform"><code class="docutils literal notranslate"><span class="pre">Combat.transform()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.ImageCombat"><code class="docutils literal notranslate"><span class="pre">ImageCombat</span></code></a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.ImageCombat.fit"><code class="docutils literal notranslate"><span class="pre">ImageCombat.fit()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.neurocombat.ImageCombat.transform"><code class="docutils literal notranslate"><span class="pre">ImageCombat.transform()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-cvasl.vendor.comscan.nifti">cvasl.vendor.comscan.nifti module</a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.nifti.flatten_nifti_files"><code class="docutils literal notranslate"><span class="pre">flatten_nifti_files()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-cvasl.vendor.comscan.utils">cvasl.vendor.comscan.utils module</a><ul>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.check_exist_vars"><code class="docutils literal notranslate"><span class="pre">check_exist_vars()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.check_is_nii_exist"><code class="docutils literal notranslate"><span class="pre">check_is_nii_exist()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.column_var_dtype"><code class="docutils literal notranslate"><span class="pre">column_var_dtype()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.fix_columns"><code class="docutils literal notranslate"><span class="pre">fix_columns()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.get_column_index"><code class="docutils literal notranslate"><span class="pre">get_column_index()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.load_nifty_volume_as_array"><code class="docutils literal notranslate"><span class="pre">load_nifty_volume_as_array()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.mat_to_bytes"><code class="docutils literal notranslate"><span class="pre">mat_to_bytes()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.one_hot_encoder"><code class="docutils literal notranslate"><span class="pre">one_hot_encoder()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.save_to_nii"><code class="docutils literal notranslate"><span class="pre">save_to_nii()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.scaler_encoder"><code class="docutils literal notranslate"><span class="pre">scaler_encoder()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.split_filename"><code class="docutils literal notranslate"><span class="pre">split_filename()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.tsne"><code class="docutils literal notranslate"><span class="pre">tsne()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.vendor.comscan.utils.u_map"><code class="docutils literal notranslate"><span class="pre">u_map()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-cvasl.vendor.comscan">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+        </div>
+    
+
+      <div class="clearer"></div>
+    </div>
+    <div class="button_nav_wrapper">
+        <div class="button_nav">
+            <div class="left">
+                
+                <a href="cvasl.vendor.html">
+                    <span class="icon">&lt;</span><span>cvasl.vendor package</span></a>
+                
+            </div>
+
+            <div class="right">
+                
+                    <a href="cvasl.vendor.neurocombat.html"><span>cvasl.vendor.neurocombat package</span><span class="icon">&gt;</span></a>
+                
+            </div>
+        </div>
+    </div>
+
+
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2023, c.moore@esciencecenter.nl.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.0.2.
+    </div>
+
+<p id="theme_credit">Styled using the <a href="https://github.com/piccolo-orm/piccolo_theme">Piccolo Theme</a></p>
+  </body>
+</html>
