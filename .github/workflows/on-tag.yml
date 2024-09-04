@@ -28,17 +28,11 @@ jobs:
       - run: .venv/bin/python -m pip install wheel twine
       - run: .venv/bin/python -m pip install build
       - run: .venv/bin/python -m build
-
-  PublishArtifacts:
-    runs-on: ubuntu-latest
-    needs: [PyPIBuild]
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          path: dist
       - uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUBTOKEN }}"
           prerelease: false
           files: |
-            ./dist/pypi-build/*.whl
+            ./dist/*.whl
+
+  
