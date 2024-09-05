@@ -5,10 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>cvasl package &#8212; cvasl 0.0.7 documentation</title>
+    <title>cvasl package &#8212; cvasl 0.0.3 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
     <link rel="stylesheet" type="text/css" href="_static/basic_mod.css?v=a0b6f7b1" />
-    <script src="_static/documentation_options.js?v=bbaf98b3"></script>
+    <script src="_static/documentation_options.js?v=47de8214"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -30,7 +30,7 @@
         <p id="toggle_sidebar">
             <a href="#" title="Toggle sidebar">|||</a>
         </p>
-        <h1><a href="index.html" title="Go to homepage">cvasl 0.0.7 documentation</a></h1>
+        <h1><a href="index.html" title="Go to homepage">cvasl 0.0.3 documentation</a></h1>
 
         <a id="mode_toggle" href="#" @click.prevent="handleClick" :title="mode">
     <template v-if="mode == 'light'">
@@ -128,7 +128,6 @@
 <li class="toctree-l3"><a class="reference internal" href="cvasl.harmony.html">cvasl.harmony module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cvasl.mold.html">cvasl.mold module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cvasl.seperated.html">cvasl.seperated module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cvasl.vendor.html">cvasl.vendor package</a></li>
 </ul>
 </li>
 </ul>
@@ -256,6 +255,7 @@
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.check_identical_columns"><code class="docutils literal notranslate"><span class="pre">check_identical_columns()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.check_sex_dimorph_expectations"><code class="docutils literal notranslate"><span class="pre">check_sex_dimorph_expectations()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.concat_double_header"><code class="docutils literal notranslate"><span class="pre">concat_double_header()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.deal_with_readout_and_labelling"><code class="docutils literal notranslate"><span class="pre">deal_with_readout_and_labelling()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.derived_function"><code class="docutils literal notranslate"><span class="pre">derived_function()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.drop_columns_folder"><code class="docutils literal notranslate"><span class="pre">drop_columns_folder()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.drop_y"><code class="docutils literal notranslate"><span class="pre">drop_y()</span></code></a></li>
@@ -279,34 +279,6 @@
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.static_bin_age"><code class="docutils literal notranslate"><span class="pre">static_bin_age()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.stratified_cat_and_cont_categories_shuffle_split"><code class="docutils literal notranslate"><span class="pre">stratified_cat_and_cont_categories_shuffle_split()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="cvasl.seperated.html#cvasl.seperated.stratified_one_category_shuffle_split"><code class="docutils literal notranslate"><span class="pre">stratified_one_category_shuffle_split()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="cvasl.vendor.html">cvasl.vendor package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="cvasl.vendor.html#subpackages">Subpackages</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="cvasl.vendor.comscan.html">cvasl.vendor.comscan package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.comscan.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.comscan.html#module-cvasl.vendor.comscan.clustering">cvasl.vendor.comscan.clustering module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.comscan.html#module-cvasl.vendor.comscan.neurocombat">cvasl.vendor.comscan.neurocombat module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.comscan.html#module-cvasl.vendor.comscan.nifti">cvasl.vendor.comscan.nifti module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.comscan.html#module-cvasl.vendor.comscan.utils">cvasl.vendor.comscan.utils module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.comscan.html#module-cvasl.vendor.comscan">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="cvasl.vendor.neurocombat.html">cvasl.vendor.neurocombat package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.neurocombat.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.neurocombat.html#module-cvasl.vendor.neurocombat.neurocombat">cvasl.vendor.neurocombat.neurocombat module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.neurocombat.html#module-cvasl.vendor.neurocombat">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="cvasl.vendor.open_nested_combat.html">cvasl.vendor.open_nested_combat package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.open_nested_combat.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.open_nested_combat.html#module-cvasl.vendor.open_nested_combat.nest">cvasl.vendor.open_nested_combat.nest module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="cvasl.vendor.open_nested_combat.html#module-cvasl.vendor.open_nested_combat">Module contents</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="cvasl.vendor.html#module-cvasl.vendor">Module contents</a></li>
 </ul>
 </li>
 </ul>

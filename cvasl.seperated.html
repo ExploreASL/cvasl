@@ -5,17 +5,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>cvasl.seperated module &#8212; cvasl 0.0.7 documentation</title>
+    <title>cvasl.seperated module &#8212; cvasl 0.0.3 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
     <link rel="stylesheet" type="text/css" href="_static/basic_mod.css?v=a0b6f7b1" />
-    <script src="_static/documentation_options.js?v=bbaf98b3"></script>
+    <script src="_static/documentation_options.js?v=47de8214"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <script src="_static/js/petite-vue.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="cvasl.vendor package" href="cvasl.vendor.html" />
+    <link rel="next" title="Developer’s Guide" href="developers.html" />
     <link rel="prev" title="cvasl.mold module" href="cvasl.mold.html" /> 
   </head><body data-dark_mode_code_blocks="true">
 
@@ -30,7 +30,7 @@
         <p id="toggle_sidebar">
             <a href="#" title="Toggle sidebar">|||</a>
         </p>
-        <h1><a href="index.html" title="Go to homepage">cvasl 0.0.7 documentation</a></h1>
+        <h1><a href="index.html" title="Go to homepage">cvasl 0.0.3 documentation</a></h1>
 
         <a id="mode_toggle" href="#" @click.prevent="handleClick" :title="mode">
     <template v-if="mode == 'light'">
@@ -128,7 +128,6 @@
 <li class="toctree-l3"><a class="reference internal" href="cvasl.harmony.html">cvasl.harmony module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cvasl.mold.html">cvasl.mold module</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">cvasl.seperated module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cvasl.vendor.html">cvasl.vendor package</a></li>
 </ul>
 </li>
 </ul>
@@ -224,6 +223,29 @@ in a given dataframe.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><cite>~pandas.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cvasl.seperated.deal_with_readout_and_labelling">
+<span class="sig-prename descclassname"><span class="pre">cvasl.seperated.</span></span><span class="sig-name descname"><span class="pre">deal_with_readout_and_labelling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataframes_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">droppies</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cvasl.seperated.deal_with_readout_and_labelling" title="Link to this definition">¶</a></dt>
+<dd><p>This function takes a list of asl containing dataframes
+of extracted MRI parameters and converts some of the ASL
+parameters to numerical values so they can be used for
+machine learning.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataframes_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><em>list</em></a>) – list of dataframes</p></li>
+<li><p><strong>droppies</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><em>list</em></a>) – list of columns to drop</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of dataframes transformed</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)">list</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -725,6 +747,7 @@ the results should be reproducible.</p>
 <li><a class="reference internal" href="#cvasl.seperated.check_identical_columns"><code class="docutils literal notranslate"><span class="pre">check_identical_columns()</span></code></a></li>
 <li><a class="reference internal" href="#cvasl.seperated.check_sex_dimorph_expectations"><code class="docutils literal notranslate"><span class="pre">check_sex_dimorph_expectations()</span></code></a></li>
 <li><a class="reference internal" href="#cvasl.seperated.concat_double_header"><code class="docutils literal notranslate"><span class="pre">concat_double_header()</span></code></a></li>
+<li><a class="reference internal" href="#cvasl.seperated.deal_with_readout_and_labelling"><code class="docutils literal notranslate"><span class="pre">deal_with_readout_and_labelling()</span></code></a></li>
 <li><a class="reference internal" href="#cvasl.seperated.derived_function"><code class="docutils literal notranslate"><span class="pre">derived_function()</span></code></a></li>
 <li><a class="reference internal" href="#cvasl.seperated.drop_columns_folder"><code class="docutils literal notranslate"><span class="pre">drop_columns_folder()</span></code></a></li>
 <li><a class="reference internal" href="#cvasl.seperated.drop_y"><code class="docutils literal notranslate"><span class="pre">drop_y()</span></code></a></li>
@@ -769,7 +792,7 @@ the results should be reproducible.</p>
 
             <div class="right">
                 
-                    <a href="cvasl.vendor.html"><span>cvasl.vendor package</span><span class="icon">&gt;</span></a>
+                    <a href="developers.html"><span>Developer’s Guide</span><span class="icon">&gt;</span></a>
                 
             </div>
         </div>
