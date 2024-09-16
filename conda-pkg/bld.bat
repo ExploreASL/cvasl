@@ -1,2 +1,2 @@
-"%PYTHON%" setup.py sdist_conda
+"%PYTHON%" -m build .
 if errorlevel 1 exit 1

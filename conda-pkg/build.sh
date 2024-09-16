@@ -1,3 +1,3 @@
-#!sh
+#!/bin/sh
 set -xe
-$PYTHON setup.py sdist_conda
+$PYTHON -m build .
