@@ -27,16 +27,11 @@ readme = {file = "README.md", content-type = "text/markdown"}
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
-    # Unfortunately, in later versions this library decided to cap
-    # its version requirements for Pillow, which breaks installation
-    # of other tools, which will install Pillow before we install
-    # scikit-image and its dependencies
-    "imageio<=2.31.5",
     "k_means_constrained>=0.5.2",
     "kneed",
     "matplotlib",
     "nipy",
-    "numpy==1.26.4",
+    "numpy<2",
     "pandas>=1.2.0",
     "patsy",
     "pyxdf",
