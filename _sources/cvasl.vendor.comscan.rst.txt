@@ -1,0 +1,45 @@
+cvasl.vendor.comscan package
+============================
+
+Submodules
+----------
+
+cvasl.vendor.comscan.clustering module
+--------------------------------------
+
+.. automodule:: cvasl.vendor.comscan.clustering
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cvasl.vendor.comscan.neurocombat module
+---------------------------------------
+
+.. automodule:: cvasl.vendor.comscan.neurocombat
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cvasl.vendor.comscan.nifti module
+---------------------------------
+
+.. automodule:: cvasl.vendor.comscan.nifti
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cvasl.vendor.comscan.utils module
+---------------------------------
+
+.. automodule:: cvasl.vendor.comscan.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: cvasl.vendor.comscan
+   :members:
+   :undoc-members:
+   :show-inheritance:
