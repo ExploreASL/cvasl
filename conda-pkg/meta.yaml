@@ -37,6 +37,7 @@ requirements:
     - matplotlib
     - matplotlib-inline
     - nibabel
+    - nipy
     - notebook
     - numpy<2
     - pandas>=1.2.0
