@@ -6,9 +6,10 @@ package:
   version: {{ version }}
 
 source:
-  git_url: https://github.com/brainspinner/{{ name }}.git
-  git_rev: "pyproject"
-  git_depth: 1
+  path: ../
+
+  # git_url: https://github.com/brainspinner/{{ name }}.git
+  # git_rev: "pyproject"
 
   # url: https://github.com/brainspinner/cvasl/archive/v{{ version }}.tar.gz
   # sha256: 239403e4937e9b4854f60b979ac4ca0eb4eb57aa39c449c6c095a8385814ee45
@@ -26,6 +27,7 @@ requirements:
     - wheel
     - python-build
     - pip
+    - conda-verify
   run:
     - python
     - ipympl
