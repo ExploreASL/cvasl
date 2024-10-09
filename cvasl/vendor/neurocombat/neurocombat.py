@@ -244,7 +244,7 @@ def standardize_across_features(X, design, info_dict):
     ref_level = info_dict['ref_level']
 
     def get_beta_with_nan(yy, mod):
-        wh = np.isfinite(yy)
+        wh = np.isfinite(yy.tolist())
         mod = mod[wh, :]
         yy = yy[wh]
         B = np.dot(np.dot(la.inv(np.dot(mod.T, mod)), mod.T), yy.T)
