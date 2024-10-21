@@ -463,6 +463,118 @@ class HarmComscanNeuroCombat:
 
         return mri_datasets
 
+class HarmAutoCombat:
+    def __init__(
+        self,
+        features_to_harmonize,
+        sites,
+        discrete_covariates=None,
+        continuous_covariates=None,
+        metric = 'distortion',
+        features_reduction = None,
+        feature_reduction_dimensions = 2,
+       
+    ):
+        """
+        Initializes the HarmAutoCombat harmonization class.
+
+        Args:
+            features_to_harmonize (list): List of features to be harmonized.
+            sites (list): List containing the name of the site column.  Should be a list even if only one site column.
+            discrete_covariates (list, optional): List of discrete covariates. Defaults to None.
+            continuous_covariates (list, optional): List of continuous covariates. Defaults to None.
+            unharm_features (list, optional): List of features *not* to be harmonized but to be included in the final output. Defaults to None.
+        """
+        self.features_to_harmonize = features_to_harmonize
+        self.sites = sites
+        self.discrete_covariates = (
+            discrete_covariates if discrete_covariates is not None else []
+        )
+        self.continuous_covariates = (
+            continuous_covariates if continuous_covariates is not None else []
+        )
+        self.metric = metric
+        self.features_reduction = features_reduction
+        self.features_reduction_dimensions = feature_reduction_dimensions
+        
+
+    def harmonize(self, mri_datasets):
+        """
+        Performs ComBat harmonization on the input data.
+
+        Args:
+            data (pd.DataFrame): Input DataFrame containing the features, site, and covariate information.
+
+        Returns:
+            pd.DataFrame: Harmonized DataFrame.  Returns original dataframe if `features_to_harmonize` is empty.
+        """
+
+        if (
+            not self.features_to_harmonize
+        ):  # Handle the case where no features need harmonization
+            return None
+
+        data = pd.concat([dataset.data for dataset in mri_datasets])
+        print('============================================',data.shape)
+
+        # Instantiate ComBat object
+        combat = cvaslneurocombat.AutoCombat(
+            features = self.features_to_harmonize,
+            metric = self.metric,
+            sites_features=self.sites,
+            discrete_combat_covariates = self.discrete_covariates,
+            continuous_combat_covariates = self.continuous_covariates,
+            continuous_cluster_features=self.sites,
+            size_min=2,
+            features_reduction = self.features_reduction,
+            n_components =self.features_reduction_dimensions,
+            )
+
+        # Select relevant data for harmonization
+        data_to_harmonize = data[
+            self.features_to_harmonize
+            + self.sites
+            + self.discrete_covariates
+            + self.continuous_covariates
+        ].copy()
+
+        # Transform the data using ComBat
+        harmonized_data = combat.fit(data_to_harmonize)
+        harmonized_data = combat.transform(data_to_harmonize)
+
+        # Create harmonized DataFrame
+        harmonized_df = pd.DataFrame(
+            harmonized_data, columns=self.features_to_harmonize
+        )
+
+        # Add back covariates and unharmonized features
+        covariates = self.sites + self.discrete_covariates + self.continuous_covariates
+        harmonized_df = pd.concat(
+            [harmonized_df, data_to_harmonize[covariates].reset_index(drop=True)],
+            axis=1,
+        )
+
+        
+        harmonized_df = pd.concat(
+                [harmonized_df, data[[i for i in data.columns if i not in harmonized_df.columns]].reset_index(drop=True)],
+                axis=1,
+            )
+
+        # Reorder columns to maintain original order as much as possible while putting harmonized features first
+        original_order = list(data.columns)
+        new_order = self.features_to_harmonize + [
+            col for col in original_order if col not in self.features_to_harmonize
+        ]
+        harmonized_df = harmonized_df[
+            [col for col in new_order if col in harmonized_df.columns]
+        ]
+
+        for _, dataset in enumerate(mri_datasets):
+            site_value = dataset.site_id
+            adjusted_data = harmonized_df[harmonized_df["site"] == site_value]
+            dataset.data = adjusted_data
+
+        return mri_datasets
 
 class HarmCovbat:
     def __init__(
