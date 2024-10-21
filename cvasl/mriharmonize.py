@@ -5,7 +5,7 @@ import numpy as np
 import patsy
 from sklearn.preprocessing import LabelEncoder
 import cvasl.vendor.covbat.covbat as covbat
-import cvasl.vendor.comscan.neurocombat as autocombat
+import cvasl.vendor.comscan.neurocombat as cvaslneurocombat
 import cvasl.vendor.neurocombat.neurocombat as neurocombat
 import cvasl.vendor.open_nested_combat.nest as nest
 from neuroHarmonize import harmonizationLearn
@@ -362,7 +362,7 @@ class HarmNeuroHarmonize:
         return mri_datasets
 
 
-class HarmAutoCombat:
+class HarmComscanNeuroCombat:
     def __init__(
         self,
         features_to_harmonize,
@@ -372,7 +372,7 @@ class HarmAutoCombat:
        
     ):
         """
-        Initializes the HarmAutoCombat harmonization class.
+        Initializes the HarmComscanNeuroCombat harmonization class.
 
         Args:
             features_to_harmonize (list): List of features to be harmonized.
@@ -410,7 +410,7 @@ class HarmAutoCombat:
         data = pd.concat([dataset.data for dataset in mri_datasets])
 
         # Instantiate ComBat object
-        combat = autocombat.Combat(
+        combat = cvaslneurocombat.Combat(
             features=self.features_to_harmonize,
             sites=self.sites,
             discrete_covariates=self.discrete_covariates,

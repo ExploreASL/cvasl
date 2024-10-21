@@ -1,11 +1,11 @@
 # %%
 import pandas as pd
 import numpy as np
-import cvasl.vendor.covbat.covbat as covbat
-import cvasl.vendor.comscan.neurocombat as autocombat
-import cvasl.vendor.neurocombat.neurocombat as neurocombat
-import cvasl.vendor.open_nested_combat.nest as nest
-from neuroHarmonize import harmonizationLearn
+# import cvasl.vendor.covbat.covbat as covbat
+# import cvasl.vendor.comscan.neurocombat as cvaslneurocombat
+# import cvasl.vendor.neurocombat.neurocombat as neurocombat
+# import cvasl.vendor.open_nested_combat.nest as nest
+# from neuroHarmonize import harmonizationLearn
 from cvasl.mriharmonize import *
 
 
@@ -17,7 +17,7 @@ sabre = SABREdataset('/Users/sabaamiri/Library/CloudStorage/OneDrive-Netherlands
 topmri = TOPdataset(['/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_TOP.csv','/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_StrokeMRI.csv'], site_id=3, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 insight46 = Insight46dataset('/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_Insight46.csv', site_id=4, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 
-method = 'autocombat'
+method = 'comscanneuroharmonize'
 
 
 if method == 'neuroharmonize':
@@ -61,13 +61,13 @@ elif method == 'nestedcombat':
     harmonizer = HarmNestedComBat(to_be_harmonized_or_covar = to_be_harmonized_or_covar,  batch_testing_list = ['site'], categorical_testing_cols = ['sex'], continuous_testing_cols = ['age'], intermediate_results_path = '.', return_extended = False)
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
-elif method == 'autocombat':
+elif method == 'comscanneuroharmonize':
 
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 
                              'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
     discrete_covariates = ['sex']
     continuous_covariates = ['decade']
-    harmonizer = HarmAutoCombat(features_to_harmonize,['site'],discrete_covariates,continuous_covariates) 
+    harmonizer = HarmComscanNeuroCombat(features_to_harmonize,['site'],discrete_covariates,continuous_covariates) 
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 
