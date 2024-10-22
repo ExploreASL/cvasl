@@ -1,5 +1,7 @@
 import os
 import sys
+sys.path.insert(0, '../../')
+sys.path.insert(0, '../')
 import pandas as pd
 import numpy as np
 import patsy
@@ -9,7 +11,9 @@ import cvasl.vendor.comscan.neurocombat as cvaslneurocombat
 import cvasl.vendor.neurocombat.neurocombat as neurocombat
 import cvasl.vendor.open_nested_combat.nest as nest
 from neuroHarmonize import harmonizationLearn
-
+import cvasl.harmony as har
+import rpy2.robjects as robjects
+from rpy2.robjects.packages import importr
 
 class MRIdataset:
     def __init__(
@@ -528,7 +532,7 @@ class HarmAutoCombat:
             size_min=2,
             features_reduction = self.features_reduction,
             n_components =self.features_reduction_dimensions,
-            )
+            n_jobs = -1)
 
         # Select relevant data for harmonization
         data_to_harmonize = data[
@@ -860,3 +864,96 @@ class HarmNestedComBat:
             mri_datasets,write_testing_df,dat_testing_input,covars_testing_final
         else:
             return mri_datasets
+
+class HarmRELIEF:
+    def __init__(
+        self, features_to_harmonize, covars, intermediate_results_path = '.'
+    ):
+        self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
+        self.intermediate_results_path = intermediate_results_path
+        self.covars = covars
+
+    def _make_topper(self, bt, row_labels):
+        topper = (
+            bt.head(len(row_labels))
+            .rename_axis(None, axis="columns")
+            .reset_index(drop=False)
+        )
+        topper = topper.rename(columns={"index": "char"})
+        topper["char"] = row_labels
+        return topper
+
+    def harmonize(self, mri_datasets):
+
+        curr_path = os.getcwd()
+
+        relief_r_driver = f"""
+            rm(list = ls())
+            source('CVASL_RELIEF.R')            
+            library(MASS)
+            library(Matrix)
+            options(repos = c(CRAN = "https://cran.r-project.org"))
+            install.packages("denoiseR", dependencies = TRUE, quiet = TRUE)
+            library(denoiseR)
+            install.packages("RcppCNPy", dependencies = TRUE, quiet = TRUE)
+            library(RcppCNPy)
+            data5 <- npyLoad("{self.intermediate_results_path}/dat_var_for_RELIEF5.npy")
+            covars5 <- read.csv('{self.intermediate_results_path}/bath_and_mod_forRELIEF5.csv')
+            covars_only5  <- covars5[,-(1:2)]   
+            covars_only_matrix5 <-data.matrix(covars_only5)
+            relief.harmonized = relief(
+                dat=data5,
+                batch=covars5$batch,
+                mod=covars_only_matrix5
+            )
+            outcomes_harmonized5 <- relief.harmonized$dat.relief
+            write.csv(outcomes_harmonized5, "{self.intermediate_results_path}/relief1_for5_results.csv")
+        """
+        
+        all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = har.prep_for_neurocombat_5way(*[_d.data for _d in mri_datasets])
+        all_togetherF.to_csv(f'{self.intermediate_results_path}/all_togeherf5.csv')
+        ftF.to_csv(f'{self.intermediate_results_path}/ftF_top5.csv')
+        data = np.genfromtxt(f'{self.intermediate_results_path}/ftF_top5.csv', delimiter=",", skip_header=1)
+        data = data[:, 1:]
+        np.save(f'{self.intermediate_results_path}/dat_var_for_RELIEF5.npy', data)
+        
+        first_columns_as_one = [1] * len1
+        second_columns_as_two = [2] * len2
+        third_columns_as_three = [3] * len3
+        fourth_columns_as_four = [4] * len4
+        fifth_columns_as_five = [5] * len5
+        covars = {'batch':first_columns_as_one + second_columns_as_two + third_columns_as_three + fourth_columns_as_four + fifth_columns_as_five}
+        for _c in self.covars:
+            covars[_c] = all_togetherF.loc[_c, :].values.tolist()
+        covars = pd.DataFrame(covars)
+        covars.to_csv(f'{self.intermediate_results_path}/bath_and_mod_forRELIEF5.csv')
+        topperF = self._make_topper(btF,self.covars)
+        r = robjects.r
+        r(relief_r_driver)
+        bottom = pd.read_csv(f'{self.intermediate_results_path}/relief1_for5_results.csv', index_col=0).reset_index(drop=False).rename(columns={"index": "char"})
+        bottom.columns = topperF.columns
+        back_together = pd.concat([topperF, bottom])
+        back_together = back_together.T
+        new_header = back_together.iloc[0] #grab the first row for the header
+        back_together.columns = new_header #set the header row as the df header
+        back_together = back_together[1:]
+        
+        mri_datasets[0].data = back_together.head(len1)
+        mri_datasets[1].data =back_together.head(len1+len2).tail(len2)
+        mri_datasets[2].data = back_together.head(len1+len2+ len3).tail(len3)
+        mri_datasets[3].data = back_together.head(len1+len2+ len3 +len4).tail(len4)
+        mri_datasets[4].data = back_together.head(len1+len2+ len3 +len4+ len5).tail(len5)
+        new_feature_dict =  har.increment_keys(feature_dictF)
+        mri_datasets[0].data = mri_datasets[0].data.rename(new_feature_dict, axis='columns')
+        mri_datasets[2].data = mri_datasets[2].data.rename(new_feature_dict, axis='columns')
+        mri_datasets[3].data = mri_datasets[3].data.rename(new_feature_dict, axis='columns')
+        mri_datasets[4].data = mri_datasets[4].data.rename(new_feature_dict, axis='columns')
+        mri_datasets[1].data = mri_datasets[1].data.rename(new_feature_dict, axis='columns')
+
+        mri_datasets[2].data   = mri_datasets[2].data.reset_index().rename(columns={"index": "participant_id"})
+        mri_datasets[1].data = mri_datasets[1].data.reset_index().rename(columns={"index": "participant_id"})
+        mri_datasets[3].data  = mri_datasets[3].data.reset_index().rename(columns={"index": "participant_id"})
+        mri_datasets[0].data = mri_datasets[0].data.reset_index().rename(columns={"index": "participant_id"})
+        mri_datasets[4].data   = mri_datasets[4].data.reset_index().rename(columns={"index": "participant_id"})
+        
+        return mri_datasets
