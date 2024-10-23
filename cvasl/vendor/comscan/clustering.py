@@ -688,7 +688,7 @@ def optimal_clustering(X: Union[pd.DataFrame, np.ndarray],
                        random_state: Optional[int] = None,
                        visualize: bool = False) \
         -> Tuple[KMeansConstrained, Union[umap.UMAP, PCA], int, np.ndarray, int, Sequence[
-            np.float], np.float, np.ndarray, np.ndarray, np.ndarray]:
+            float], float, np.ndarray, np.ndarray, np.ndarray]:
     """
     Function to find the optimal clustering using a constrained k means. Two method are available to find the optimal
     number of cluster ``silhouette`` or ``elbow``.

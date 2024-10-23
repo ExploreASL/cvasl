@@ -13,6 +13,7 @@ Submodules
    cvasl.harmony
    cvasl.mold
    cvasl.seperated
+   cvasl.vendor
 
 Module contents
 ---------------
