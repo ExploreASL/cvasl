@@ -12,8 +12,11 @@ import cvasl.vendor.neurocombat.neurocombat as neurocombat
 import cvasl.vendor.open_nested_combat.nest as nest
 from neuroHarmonize import harmonizationLearn
 import cvasl.harmony as har
-import rpy2.robjects as robjects
-from rpy2.robjects.packages import importr
+# import rpy2.robjects as robjects
+# from rpy2.robjects.packages import importr
+import subprocess
+
+
 
 class MRIdataset:
     def __init__(
@@ -928,8 +931,10 @@ class HarmRELIEF:
         covars = pd.DataFrame(covars)
         covars.to_csv(f'{self.intermediate_results_path}/bath_and_mod_forRELIEF5.csv')
         topperF = self._make_topper(btF,self.covars)
-        r = robjects.r
-        r(relief_r_driver)
+        subprocess.run(['Rscript', 'CVASL_RELIEF_DRIVER.R'])
+        
+        # r = robjects.r
+        # r(relief_r_driver)
         bottom = pd.read_csv(f'{self.intermediate_results_path}/relief1_for5_results.csv', index_col=0).reset_index(drop=False).rename(columns={"index": "char"})
         bottom.columns = topperF.columns
         back_together = pd.concat([topperF, bottom])
