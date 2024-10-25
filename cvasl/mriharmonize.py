@@ -662,24 +662,42 @@ class HarmNeuroCombat:
         #self.not_harmonized = [a.lower() for a in not_harmonized]
         self.batch_col = batch_col
 
-    def _prep_for_neurocombat(self, dataframes):
-        all_together = pd.concat(
-            [df.set_index("participant_id").T for df in dataframes],
-            axis=1,
-            join="inner",
-        )
-        features_only = all_together.drop(
-            index=[
-                f.lower()
-                for f in self.features_to_harmonize
-                if f.lower() in all_together.index
-            ]
-        )  # drop the features we don't want to harmonize
-        feature_dict = {i: col for i, col in enumerate(features_only.T.columns)}
-        ft = features_only.reset_index(drop=True).dropna()
-        bt = all_together.reset_index(drop=True).dropna()
-        lengths = [len(df) for df in dataframes]
-        return all_together, ft, bt, feature_dict, lengths
+    def _prep_for_neurocombat(
+            self,dataframes):
+        """
+        Prepares dataframes for neurocombat, handling flexible column positions.
+
+        Args:
+            dataframes: list of pandas DataFrames.
+        Returns:
+            Tuple: (all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5)
+                - all_togetherF: Combined and transposed dataframe.
+                - ftF: Transposed dataframe with only features (excluding 'sex' and 'age').
+                - btF:  Transposed dataframe with all columns.
+                - feature_dictF: Dictionary mapping feature indices to names.
+                - len1-len5: Number of participants in each input dataframe.
+        """
+        
+        lengths = []
+
+        # Process each dataframe
+        for i, df in enumerate(dataframes):
+            df = df.set_index('participant_id').T  # Set index and transpose
+            dataframes[i] = df
+            lengths.append(len(df.columns))
+
+
+        all_togetherF = pd.concat(dataframes, axis=1, join="inner")
+
+
+        # Efficiently create feature dictionary and dataframes
+        feature_cols = [col for col in all_togetherF.index if col not in ('sex', 'age')]
+        feature_dictF = {i: col for i, col in enumerate(feature_cols)}
+        ftF = all_togetherF.loc[feature_cols].reset_index(drop=True).dropna() # Directly select features, reset index, and drop NaN rows
+        btF = all_togetherF.reset_index(drop=True).dropna() # Reset index and drop NaN rows for the full dataframe
+
+
+        return all_togetherF, ftF, btF, feature_dictF, *lengths
 
     def _make_topper(self, bt, row_labels):
         topper = (
@@ -876,6 +894,57 @@ class HarmRELIEF:
         self.intermediate_results_path = intermediate_results_path
         self.covars = covars
 
+
+
+
+    def _prep_for_neurocombat_5way(self,
+            dataframes):
+        """
+        This function takes five dataframes in the cvasl format,
+        then turns them into the items needed for the
+        neurocombat algorithm with re-identification.
+
+
+
+        :returns: dataframes for neurocombat algorithm and ints of some legnths
+        :rtype: tuple
+        """
+        dataframes = [a.set_index('participant_id').T for a in dataframes]
+        # concat the two dataframes
+        all_togetherF = pd.concat(
+            dataframes,
+            axis=1,
+            join="inner",
+        )
+
+        # create a feautures only frame (no age, no sex)
+        
+        
+        feature_cols = [col for col in all_togetherF.index if col not in ('sex', 'age')]
+        features_only = all_togetherF.loc[feature_cols]
+        
+        dictionary_features_len = len(features_only.T.columns)
+        number = 0
+        made_keys = []
+        made_vals = []
+        for n in features_only.T.columns:
+
+            made_keys.append(number)
+            made_vals.append(n)
+            number += 1
+        feature_dictF = dict(map(lambda i, j: (i, j), made_keys, made_vals))
+        ftF = features_only.reset_index()
+        ftF = ftF.rename(columns={"index": "A"})
+        ftF = ftF.drop(['A'], axis=1)
+        ftF = ftF.dropna()
+        btF = all_togetherF.reset_index()
+        btF = btF.rename(columns={"index": "A"})
+        btF = btF.drop(['A'], axis=1)
+        btF = btF.dropna()
+        lens = [len(_d.columns) for _d in dataframes]
+
+        return all_togetherF, ftF, btF, feature_dictF, *lens
+
     def _make_topper(self, bt, row_labels):
         topper = (
             bt.head(len(row_labels))
@@ -892,7 +961,7 @@ class HarmRELIEF:
 
         relief_r_driver = f"""
             rm(list = ls())
-            source('CVASL_RELIEF.R')            
+            source('{curr_path}/CVASL_RELIEF.R')            
             library(MASS)
             library(Matrix)
             options(repos = c(CRAN = "https://cran.r-project.org"))
@@ -913,7 +982,8 @@ class HarmRELIEF:
             write.csv(outcomes_harmonized5, "{self.intermediate_results_path}/relief1_for5_results.csv")
         """
         
-        all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = har.prep_for_neurocombat_5way(*[_d.data for _d in mri_datasets])
+        all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = self._prep_for_neurocombat_5way([_d.data[self.features_to_harmonize + ['participant_id','sex','age']] for _d in mri_datasets])
+        
         all_togetherF.to_csv(f'{self.intermediate_results_path}/all_togeherf5.csv')
         ftF.to_csv(f'{self.intermediate_results_path}/ftF_top5.csv')
         data = np.genfromtxt(f'{self.intermediate_results_path}/ftF_top5.csv', delimiter=",", skip_header=1)
@@ -942,23 +1012,20 @@ class HarmRELIEF:
         new_header = back_together.iloc[0] #grab the first row for the header
         back_together.columns = new_header #set the header row as the df header
         back_together = back_together[1:]
-        
-        mri_datasets[0].data = back_together.head(len1)
-        mri_datasets[1].data =back_together.head(len1+len2).tail(len2)
-        mri_datasets[2].data = back_together.head(len1+len2+ len3).tail(len3)
-        mri_datasets[3].data = back_together.head(len1+len2+ len3 +len4).tail(len4)
-        mri_datasets[4].data = back_together.head(len1+len2+ len3 +len4+ len5).tail(len5)
         new_feature_dict =  har.increment_keys(feature_dictF)
-        mri_datasets[0].data = mri_datasets[0].data.rename(new_feature_dict, axis='columns')
-        mri_datasets[2].data = mri_datasets[2].data.rename(new_feature_dict, axis='columns')
-        mri_datasets[3].data = mri_datasets[3].data.rename(new_feature_dict, axis='columns')
-        mri_datasets[4].data = mri_datasets[4].data.rename(new_feature_dict, axis='columns')
-        mri_datasets[1].data = mri_datasets[1].data.rename(new_feature_dict, axis='columns')
-
-        mri_datasets[2].data   = mri_datasets[2].data.reset_index().rename(columns={"index": "participant_id"})
-        mri_datasets[1].data = mri_datasets[1].data.reset_index().rename(columns={"index": "participant_id"})
-        mri_datasets[3].data  = mri_datasets[3].data.reset_index().rename(columns={"index": "participant_id"})
-        mri_datasets[0].data = mri_datasets[0].data.reset_index().rename(columns={"index": "participant_id"})
-        mri_datasets[4].data   = mri_datasets[4].data.reset_index().rename(columns={"index": "participant_id"})
+        
+        
+        for _d in mri_datasets:
+            _d.data = _d.data.drop(self.features_to_harmonize, axis=1)
+        df = back_together.head(len1).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": "participant_id"})#.rename(columns={"index": "participant_id"})        
+        mri_datasets[0].data = mri_datasets[0].data.merge(df.drop(['sex','age'],axis=1), on="participant_id")
+        df = back_together.head(len1+len2).tail(len2).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": "participant_id"})#.rename(columns={"index": "participant_id"})        
+        mri_datasets[1].data = mri_datasets[1].data.merge(df.drop(['sex','age'],axis=1), on="participant_id")
+        df = back_together.head(len1+len2+ len3).tail(len3).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": "participant_id"})#.rename(columns={"index": "participant_id"})        
+        mri_datasets[2].data = mri_datasets[1].data.merge(df.drop(['sex','age'],axis=1), on="participant_id")
+        df = back_together.head(len1+len2+ len3 +len4).tail(len4).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": "participant_id"})#.rename(columns={"index": "participant_id"})        
+        mri_datasets[3].data = mri_datasets[1].data.merge(df.drop(['sex','age'],axis=1), on="participant_id")
+        df = back_together.head(len1+len2+ len3 +len4+ len5).tail(len5).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": "participant_id"})#.rename(columns={"index": "participant_id"})        
+        mri_datasets[4].data = mri_datasets[1].data.merge(df.drop(['sex','age'],axis=1), on="participant_id")        
         
         return mri_datasets
