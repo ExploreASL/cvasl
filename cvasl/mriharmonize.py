@@ -12,6 +12,10 @@ import cvasl.vendor.neurocombat.neurocombat as neurocombat
 import cvasl.vendor.open_nested_combat.nest as nest
 from neuroHarmonize import harmonizationLearn
 import cvasl.harmony as har
+from scipy import stats
+from tabulate import tabulate
+import IPython.display as dp # for HTML display
+
 # import rpy2.robjects as robjects
 # from rpy2.robjects.packages import importr
 import subprocess
@@ -48,6 +52,8 @@ class MRIdataset:
         self.num_bins = num_bins
         self.bin_labels = bin_labels
         self.cat_features_to_encode = cat_features_to_encode
+        self.initial_statistics = None
+        self.harmonized_statistics = None
 
     def generalized_binning(self):
         """
@@ -97,6 +103,7 @@ class MRIdataset:
         self.data = df_binned
 
     def encode_categorical_features(self):
+        
         for feature in self.cat_features_to_encode:
             if feature in self.data.columns:
                 unique_values = self.data[feature].unique()
@@ -121,6 +128,71 @@ class MRIdataset:
     def dropFeatures(self):
         self.data = self.data.drop(self.features_to_drop, axis=1)
 
+    def _extended_summary_statistics(self):
+        """
+        Calculates extended summary statistics for each column of a Pandas DataFrame.
+
+        Args:
+            df: The input DataFrame.
+
+        Returns:
+            A Pandas DataFrame containing the summary statistics.
+        """
+        df = self.data
+        summary_stats = []
+
+        for col_name in df.columns:
+            col = df[col_name]
+            col_type = col.dtype
+
+            stats_dict = {
+                "Column Name": col_name,
+                "Data Type": col_type,
+                "Count": col.count(),
+                "Number of Unique Values": col.nunique(),
+                "Missing Values": col.isnull().sum(),
+            }
+
+
+            if pd.api.types.is_numeric_dtype(col_type):
+                stats_dict.update({
+                    "Mean": col.mean(),
+                    "Standard Deviation": col.std(),
+                    "Minimum": col.min(),
+                    "25th Percentile": col.quantile(0.25),
+                    "Median (50th Percentile)": col.median(),
+                    "75th Percentile": col.quantile(0.75),
+                    "Maximum": col.max(),
+                    "Skewness": col.skew(),
+                    "Kurtosis": col.kurt(),
+                })
+                if len(col.dropna()) > 1:  # Check for sufficient data points for normality test
+                    statistic, p_value = stats.shapiro(col.dropna())
+                    stats_dict.update({
+                        "Shapiro-Wilk Test Statistic": statistic,
+                        "Shapiro-Wilk p-value": p_value
+                    })
+
+            elif pd.api.types.is_categorical_dtype(col_type) or pd.api.types.is_object_dtype(col_type):
+                mode = col.mode()
+                mode_str = ', '.join(mode.astype(str)) # handles multiple modes
+                stats_dict.update({
+                    "Mode": mode_str
+                })
+                top_n = 5  # Display top N most frequent categories
+                value_counts_df = col.value_counts().nlargest(top_n).reset_index()
+                value_counts_df.columns = ['Value', 'Count']
+                for i in range(len(value_counts_df)):
+                    stats_dict[f"Top {i+1} Most Frequent Value"] = value_counts_df.iloc[i,0]
+                    stats_dict[f"Top {i+1} Most Frequent Value Count"] = value_counts_df.iloc[i,1]
+
+
+
+            summary_stats.append(stats_dict)
+
+        return pd.DataFrame(summary_stats)
+        
+
     def preprocess(self):
         # Common preprocessing steps
         self.data.columns = self.data.columns.str.lower()
@@ -137,6 +209,11 @@ class MRIdataset:
 
         if self.fetures_to_bin:
             self.generalized_binning()
+        self.initial_statistics = self._extended_summary_statistics()
+    
+    def update_harmonized_statistics(self):
+        self.harmonized_statistics = self._extended_summary_statistics()
+        
 
 
 class EDISdataset(MRIdataset):
@@ -366,6 +443,8 @@ class HarmNeuroHarmonize:
             harmonized_df.insert(0, col, harmonized_df.pop(col))
         for _d in mri_datasets:
             _d.data = harmonized_df[harmonized_df["SITE"] == _d.site_id]
+            _d.data = _d.data.drop(columns=["SITE",'index'])
+        [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 
@@ -467,7 +546,7 @@ class HarmComscanNeuroCombat:
             site_value = dataset.site_id
             adjusted_data = harmonized_df[harmonized_df["site"] == site_value]
             dataset.data = adjusted_data
-
+        [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 class HarmAutoCombat:
@@ -522,7 +601,6 @@ class HarmAutoCombat:
             return None
 
         data = pd.concat([dataset.data for dataset in mri_datasets])
-        print('============================================',data.shape)
 
         # Instantiate ComBat object
         combat = cvaslneurocombat.AutoCombat(
@@ -580,7 +658,7 @@ class HarmAutoCombat:
             site_value = dataset.site_id
             adjusted_data = harmonized_df[harmonized_df["site"] == site_value]
             dataset.data = adjusted_data
-
+        [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 class HarmCovbat:
@@ -597,53 +675,54 @@ class HarmCovbat:
         # Separate features for harmonization and those to be kept unharmonized
         semi_features = []
         datasets_to_harmonize = []
+        
         for dataset in mri_datasets:
-            semi_features.append(dataset.data.drop(self.features_to_harmonize, axis=1))
-            # datasets_to_harmonize.append(dataset.data.drop(self.not_harmonized, axis=1))
-            datasets_to_harmonize.append(dataset.data.drop([c for c in dataset.data.columns if c not in self.features_to_harmonize + self.covariates + [self.site_col] + [self.patient_identifier]], axis=1))
-
-        # Combine datasets for harmonization
-        all_data = pd.concat(datasets_to_harmonize)
-
-        # Prepare data for CovBat
+            semi_features.append(dataset.data.drop([_c for _c in self.features_to_harmonize if _c not in [self.patient_identifier]], axis=1))
+            datasets_to_harmonize.append(dataset.data.drop([c for c in dataset.data.columns if c not in self.features_to_harmonize + self.covariates + [self.site_col] + [self.patient_identifier]], axis=1))            
+            
         pheno_features = [self.patient_identifier] + self.covariates + [self.site_col]
-        pheno = all_data[pheno_features]
-        pheno = pheno.set_index(self.patient_identifier)
+        ALLFIVE = pd.concat(datasets_to_harmonize)
+        
+        # Prepare data for CovBat
+        
+        phenoALLFIVE = ALLFIVE[pheno_features]
+        phenoALLFIVE = phenoALLFIVE.set_index(self.patient_identifier)
 
-        data_to_harmonize = all_data.set_index(self.patient_identifier)
-        data_to_harmonize = data_to_harmonize.drop(self.covariates, axis=1)
-        data_to_harmonize = data_to_harmonize.T
-        print(f"~ {' + '.join(self.covariates)}")
+        dat_ALLFIVE = ALLFIVE.set_index(self.patient_identifier)
+          
+        dat_ALLFIVE = dat_ALLFIVE.T
         mod_matrix = patsy.dmatrix(
-            f"~ {' + '.join(self.covariates)}", pheno, return_type="dataframe"
+            f"~ {' + '.join(self.covariates)}", phenoALLFIVE, return_type="dataframe"
         )
 
         # Perform harmonization using CovBat
+        
         harmonized_data = covbat.combat(
-            data_to_harmonize,
-            pheno[self.site_col],
+            dat_ALLFIVE,
+            phenoALLFIVE[self.site_col],
             model=mod_matrix,
             numerical_covariates=self.numerical_covariates,
         )
+        
         harmonized_data = harmonized_data[
             len(self.covariates) :
         ]  # Remove estimated model parameters from the output
-
+        feature_cols = [col for col in harmonized_data.index if col not in (self.site_col)]
+        
+        harmonized_data = harmonized_data.loc[feature_cols]#.reset_index(drop=True).dropna() # Directly select features, reset index, and drop NaN rows
         # Combine harmonized data with other features
         harmonized_data = pd.concat(
-            [data_to_harmonize.head(len(self.covariates) + 1), harmonized_data]
+            [dat_ALLFIVE.head(len(self.covariates) + 1), harmonized_data]
         )  # Add back the ID and model parameters
         harmonized_data = harmonized_data.T
         harmonized_data = harmonized_data.reset_index()
-
         # Split the harmonized data back into individual datasets
         for i, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
             adjusted_data = harmonized_data[harmonized_data[self.site_col] == site_value]
             adjusted_data = adjusted_data.merge(semi_features[i], on=self.patient_identifier)
-            # adjusted_data = adjusted_data.drop(self.site_col, axis=1)
             dataset.data = adjusted_data
-
+        [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 
@@ -697,7 +776,56 @@ class HarmNeuroCombat:
         btF = all_togetherF.reset_index(drop=True).dropna() # Reset index and drop NaN rows for the full dataframe
 
 
-        return all_togetherF, ftF, btF, feature_dictF, *lengths
+        return all_togetherF, ftF, btF, feature_dictF, lengths
+
+    def _prep_for_neurocombat_5way(self,
+            dataframes):
+        """
+        This function takes five dataframes in the cvasl format,
+        then turns them into the items needed for the
+        neurocombat algorithm with re-identification.
+
+
+
+        :returns: dataframes for neurocombat algorithm and ints of some legnths
+        :rtype: tuple
+        """
+        dataframes = [a.set_index('participant_id').T for a in dataframes]
+        # concat the two dataframes
+        all_togetherF = pd.concat(
+            dataframes,
+            axis=1,
+            join="inner",
+        )
+
+        # create a feautures only frame (no age, no sex)
+        
+        
+        feature_cols = [col for col in all_togetherF.index if col not in ('sex', 'age')]
+        features_only = all_togetherF.loc[feature_cols]
+        
+        dictionary_features_len = len(features_only.T.columns)
+        number = 0
+        made_keys = []
+        made_vals = []
+        for n in features_only.T.columns:
+
+            made_keys.append(number)
+            made_vals.append(n)
+            number += 1
+        feature_dictF = dict(map(lambda i, j: (i, j), made_keys, made_vals))
+        ftF = features_only.reset_index()
+        ftF = ftF.rename(columns={"index": "A"})
+        ftF = ftF.drop(['A'], axis=1)
+        ftF = ftF.dropna()
+        btF = all_togetherF.reset_index()
+        btF = btF.rename(columns={"index": "A"})
+        btF = btF.drop(['A'], axis=1)
+        btF = btF.dropna()
+        lens = [len(_d.columns) for _d in dataframes]
+
+        return all_togetherF, ftF, btF, feature_dictF, lens
+
 
     def _make_topper(self, bt, row_labels):
         topper = (
@@ -735,7 +863,7 @@ class HarmNeuroCombat:
             )
 
         # Prepare data for NeuroCombat
-        all_together, ft, bt, feature_dict, lengths = self._prep_for_neurocombat(
+        all_together, ft, bt, feature_dict, lengths = self._prep_for_neurocombat_5way(
             datasets_to_harmonize
         )
 
@@ -750,9 +878,9 @@ class HarmNeuroCombat:
             if feature_lower in all_together.index:
                 covars[feature] = all_together.loc[feature_lower, :].values.tolist()
         covars = pd.DataFrame(covars)
-
         # Convert data to numpy array for NeuroCombat
         data = ft.values
+        
 
         # Harmonize data using NeuroCombat
         data_combat = neurocombat.neuroCombat(
@@ -783,8 +911,9 @@ class HarmNeuroCombat:
             end = start + length
             harmonized_data = back_together.iloc[start:end]
             harmonized_data = harmonized_data.rename(feature_dict, axis="columns")
+
             harmonized_data = harmonized_data.reset_index().rename(
-                columns={"index": "participant_id"}
+                columns={"level_0": "participant_id"}
             )
             harmonized_data = harmonized_data.merge(
                 semi_features[i], on="participant_id"
@@ -797,7 +926,8 @@ class HarmNeuroCombat:
         for i, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
             adjusted_data = harmonized_data[harmonized_data["site_y"] == site_value]
-            adjusted_data = adjusted_data.merge(semi_features[i], on="participant_id")
+            adjusted_data = adjusted_data.merge(semi_features[i].drop(['age','sex'],axis = 1), on="participant_id")
+                     
             for _c in adjusted_data.columns:
                 if _c + '_y' in adjusted_data.columns and _c + '_x' in adjusted_data.columns:
                     adjusted_data.drop(columns=[_c, _c+'_y'],axis=1, inplace=True)
@@ -805,7 +935,7 @@ class HarmNeuroCombat:
             
             # adjusted_data = adjusted_data.drop(self.site_col, axis=1)
             dataset.data = adjusted_data
-
+        [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 
@@ -881,6 +1011,7 @@ class HarmNestedComBat:
             ds_opn_harmonized = ds_opn_harmonized.drop(columns=['site', 'GMM',])      
             ds_opn_harmonized  = ds_opn_harmonized.merge( _ds.data, on="participant_id")
             _ds.data = ds_opn_harmonized.copy()
+        [_d.update_harmonized_statistics() for _d in mri_datasets]
         if self.return_extended:
             mri_datasets,write_testing_df,dat_testing_input,covars_testing_final
         else:
@@ -1027,5 +1158,5 @@ class HarmRELIEF:
         mri_datasets[3].data = mri_datasets[1].data.merge(df.drop(['sex','age'],axis=1), on="participant_id")
         df = back_together.head(len1+len2+ len3 +len4+ len5).tail(len5).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": "participant_id"})#.rename(columns={"index": "participant_id"})        
         mri_datasets[4].data = mri_datasets[1].data.merge(df.drop(['sex','age'],axis=1), on="participant_id")        
-        
+        [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
