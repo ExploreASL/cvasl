@@ -831,16 +831,16 @@ class HarmNeuroCombat:
         topper = (
             bt.head(len(row_labels))
             .rename_axis(None, axis="columns")
-            .reset_index(drop=False)
+            .reset_index()
         )
-        topper = topper.rename(columns={"index": "char"})
-        topper["char"] = row_labels
+        topper['index'] = row_labels
         return topper
 
     def harmonize(self, mri_datasets):
         # Separate features for harmonization and those to be kept unharmonized
         semi_features = []
         datasets_to_harmonize = []
+        ocols = mri_datasets[0].data.columns
         for dataset in mri_datasets:
             semi_features.append(
                 dataset.data.drop(
@@ -849,24 +849,13 @@ class HarmNeuroCombat:
                         for f in self.features_to_harmonize
                         if f in dataset.data.columns
                     ],
-                    errors="ignore",
-                )
-            )  # ignore errors if the column is not there
-            datasets_to_harmonize.append(
-                dataset.data.drop(
-                    columns=[
-                        #f for f in self.not_harmonized if f in dataset.data.columns
-                        #f for f in dataset.data.columns if f not in self.cat_features + self.cont_features + self.features_to_harmonize + ['site'] + ['participant_id']
-                    ],
-                    errors="ignore",
                 )
             )
-
+            datasets_to_harmonize.append(dataset.data[(self.cat_features + self.cont_features + self.features_to_harmonize + ['site'] + ['participant_id'])])
         # Prepare data for NeuroCombat
         all_together, ft, bt, feature_dict, lengths = self._prep_for_neurocombat_5way(
             datasets_to_harmonize
         )
-
         # Create covariates
         batch_ids = []
         for i, l in enumerate(lengths):
@@ -893,9 +882,8 @@ class HarmNeuroCombat:
 
         # Convert harmonized data back to DataFrame
         neurocombat_df = pd.DataFrame(data_combat)
-
         # Reconstruct the full dataframe
-        topper = self._make_topper(bt, self.features_to_harmonize)
+        topper = self._make_topper(bt, ['age','sex'])
         bottom = neurocombat_df.reset_index(drop=False)
         bottom = bottom.rename(columns={"index": "char"})
         bottom.columns = topper.columns  # align columns with topper
@@ -903,7 +891,9 @@ class HarmNeuroCombat:
         new_header = back_together.iloc[0]
         back_together = back_together[1:]
         back_together.columns = new_header
-
+        
+  
+        
         # Split harmonized data back into original datasets
         harmonized_datasets = []
         start = 0
@@ -913,8 +903,9 @@ class HarmNeuroCombat:
             harmonized_data = harmonized_data.rename(feature_dict, axis="columns")
 
             harmonized_data = harmonized_data.reset_index().rename(
-                columns={"level_0": "participant_id"}
-            )
+                columns={"index": "participant_id"}
+            ).drop(['site'], axis=1)
+
             harmonized_data = harmonized_data.merge(
                 semi_features[i], on="participant_id"
             )  # Merge back the unharmonized features
@@ -922,20 +913,19 @@ class HarmNeuroCombat:
             start = end
 
         harmonized_data = pd.concat([_d for _d in harmonized_datasets])
-
         for i, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
-            adjusted_data = harmonized_data[harmonized_data["site_y"] == site_value]
-            adjusted_data = adjusted_data.merge(semi_features[i].drop(['age','sex'],axis = 1), on="participant_id")
-                     
-            for _c in adjusted_data.columns:
+            adjusted_data = harmonized_data[harmonized_data["site"] == site_value]
+            adjusted_data = adjusted_data.merge(semi_features[i].drop(['age','sex','index'],axis = 1), on="participant_id").drop(['index'],axis = 1)
+            print(np.sort(adjusted_data.columns))         
+            for _c in ocols:
                 if _c + '_y' in adjusted_data.columns and _c + '_x' in adjusted_data.columns:
-                    adjusted_data.drop(columns=[_c, _c+'_y'],axis=1, inplace=True)
+                    adjusted_data.drop(columns=[_c+'_y'],axis=1, inplace=True)
                     adjusted_data.rename(columns={_c + '_x': _c}, inplace=True)
             
             # adjusted_data = adjusted_data.drop(self.site_col, axis=1)
             dataset.data = adjusted_data
-        [_d.update_harmonized_statistics() for _d in mri_datasets]
+#        [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 

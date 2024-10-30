@@ -7,11 +7,11 @@ sys.path.insert(0, '../../../../')
 import numpy as np
 from cvasl.mriharmonize import *
 
-Edis_path = '/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_EDIS.csv'
-helius_path = '/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_HELIUS.csv'
-sabre_path = '/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_SABRE.csv'
-insight_path = '/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_Insight46.csv'
-topmri_path = ['/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_TOP.csv','/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/csval-pyproject/cvasl/ml_experiments_all_harmonizedFULL/new_data/TrainingDataComplete_StrokeMRI.csv']
+Edis_path = '../data/EDIS_input.csv'
+helius_path = '../data/HELIUS_input.csv'
+sabre_path = '../data/SABRE_input.csv'
+insight_path = '../data/Insight46_input.csv'
+topmri_path = ['../data/TOP_input.csv','../data/StrokeMRI_input.csv']
 features_to_map = ['readout', 'labelling', 'sex']
 edis = EDISdataset(Edis_path, site_id=0, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 helius = HELIUSdataset(helius_path, site_id=1, decade=True, ICV = True, cat_features_to_encode=features_to_map)
@@ -19,7 +19,7 @@ sabre = SABREdataset(sabre_path, site_id=2, decade=True, ICV = True, cat_feature
 topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 
-method = 'covbat'
+method = 'autocombat'
 
 
 if method == 'neuroharmonize':
@@ -51,8 +51,8 @@ elif method == 'covbat':
 
 elif method == 'neurocombat':
 
-    to_be_harmonized_or_covar = ['DeepWM_B_CoV', 'ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV', 'DeepWM_B_CBF', 
-        'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF', 'DeepWM_B_CoV', 'DeepWM_B_CBF',]
+    to_be_harmonized_or_covar = ['ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV',
+        'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF',]
     harmonizer = HarmNeuroCombat(features_to_harmonize = to_be_harmonized_or_covar,cat_features = ['age'],cont_features = ['sex'],batch_col = 'site')
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
@@ -60,8 +60,8 @@ elif method == 'nestedcombat':
 
 
     to_be_harmonized_or_covar = [
-        'age', 'sex','deepWM_B_CoV', 'ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV',
-        'DeepWM_B_CBF', 'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF',
+        'age', 'sex', 'ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV',
+        'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF',
     ]
     to_be_harmonized_or_covar  = [x.lower() for x in to_be_harmonized_or_covar ]
     harmonizer = HarmNestedComBat(to_be_harmonized_or_covar = to_be_harmonized_or_covar,  batch_testing_list = ['site'], categorical_testing_cols = ['sex'], continuous_testing_cols = ['age'], intermediate_results_path = '.', return_extended = False)
@@ -103,7 +103,11 @@ elif method == 'relief':
     harmonizer = HarmRELIEF(features_to_harmonize, covars) 
     harmonized_data = harmonizer.harmonize([topmri, helius, edis,  sabre,  insight46])
 
+print(harmonized_data[0].data.head())
+
 [_d.reverse_encode_categorical_features() for _d in harmonized_data]
 
-print(harmonized_data[0].initial_statistics)
-print(harmonized_data[0].harmonized_statistics)
+# print(harmonized_data[0].initial_statistics)
+# print(harmonized_data[0].harmonized_statistics)
+
+print(harmonized_data[0].data.head())
