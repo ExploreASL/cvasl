@@ -753,12 +753,18 @@ class HarmNeuroCombat:
         cont_features,
         patient_identifier = 'participant_id',
         batch_col='site',
+        empirical_bayes = True,
+        mean_only = False,
+        parametric = True,
     ):
         self.cat_features = [a.lower() for a in cat_features]
         self.cont_features = [a.lower() for a in cont_features]
         self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
         self.patient_identifier = patient_identifier.lower()
         self.batch_col = batch_col.lower()
+        self.empirical_bayes = empirical_bayes
+        self.mean_only = mean_only
+        self.parametric = parametric
 
 
     def _prep_for_neurocombat_5way(self,
@@ -861,6 +867,9 @@ class HarmNeuroCombat:
             batch_col=self.batch_col,
             continuous_cols=self.cont_features,
             categorical_cols=self.cat_features,
+            eb=self.empirical_bayes,
+            mean_only=self.mean_only,
+            parametric=self.parametric
         )["data"]
 
         # Convert harmonized data back to DataFrame
