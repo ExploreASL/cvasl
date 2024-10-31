@@ -399,12 +399,13 @@ class Insight46dataset(MRIdataset):
 
 class HarmNeuroHarmonize:
     def __init__(
-        self, features_to_map, features_to_harmonize, covariates, smooth_terms = ['age']
+        self, features_to_harmonize, covariates, smooth_terms = ['age'], empirical_bayes = True
     ):
-        self.features_to_map = features_to_map
+        
         self.features_to_harmonize = features_to_harmonize
         self.covariates = covariates
         self.smooth_terms = smooth_terms
+        self.empirical_bayes = empirical_bayes
 
     def harmonize(self, mri_datasets):
 
@@ -422,7 +423,7 @@ class HarmNeuroHarmonize:
 
         # Perform harmonization
         _, harmonized_data = harmonizationLearn(
-            np.array(features_data), covariates_data, smooth_terms=self.smooth_terms
+            data = np.array(features_data), covars = covariates_data, smooth_terms=self.smooth_terms, eb = self.empirical_bayes
         )
 
         # Create harmonized dataframe
