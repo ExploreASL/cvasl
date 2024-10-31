@@ -23,7 +23,7 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True, cat_feature
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 patient_identifier = 'participant_id'
 
-method = 'autocombat'
+method = 'relief'
 
 
 if method == 'neuroharmonize':
