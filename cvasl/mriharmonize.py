@@ -680,13 +680,13 @@ class HarmAutoCombat:
 
 class HarmCovbat:
     def __init__(
-        self, features_to_harmonize,  covariates, site_col='site', patient_identifier = 'participant_id', numerical_covariates = 'age', empirical_bayes = True
+        self, features_to_harmonize,  covariates, site_col='site', patient_identifier = 'participant_id', numerical_covariates = ['age'], empirical_bayes = True
     ):
         self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
         self.covariates = [a.lower() for a in covariates]
         self.site_col = site_col.lower()
         self.patient_identifier = patient_identifier.lower()
-        self.numerical_covariates = numerical_covariates
+        self.numerical_covariates = [a.lower() for a in numerical_covariates]
         self.empirical_bayes = empirical_bayes
 
     def harmonize(self, mri_datasets):
@@ -1128,18 +1128,18 @@ class HarmRELIEF:
         back_together = back_together[1:]
         new_feature_dict =  har.increment_keys(feature_dictF)
         
-        
         for _d in mri_datasets:
             _d.data = _d.data.drop(self.features_to_harmonize, axis=1)
-        df = back_together.head(len1).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": self.patient_identifier})#.rename(columns={"index": "participant_id"})        
-        mri_datasets[0].data = mri_datasets[0].data.merge(df.drop(self.covars,axis=1), on=self.patient_identifier)
-        df = back_together.head(len1+len2).tail(len2).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": self.patient_identifier})#.rename(columns={"index": "participant_id"})        
-        mri_datasets[1].data = mri_datasets[1].data.merge(df.drop(self.covars,axis=1), on=self.patient_identifier)
-        df = back_together.head(len1+len2+ len3).tail(len3).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": self.patient_identifier})#.rename(columns={"index": "participant_id"})        
-        mri_datasets[2].data = mri_datasets[1].data.merge(df.drop(self.covars,axis=1), on=self.patient_identifier)
-        df = back_together.head(len1+len2+ len3 +len4).tail(len4).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": self.patient_identifier})#.rename(columns={"index": "participant_id"})        
-        mri_datasets[3].data = mri_datasets[1].data.merge(df.drop(self.covars,axis=1), on=self.patient_identifier)
-        df = back_together.head(len1+len2+ len3 +len4+ len5).tail(len5).rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": self.patient_identifier})#.rename(columns={"index": "participant_id"})        
-        mri_datasets[4].data = mri_datasets[1].data.merge(df.drop(self.covars,axis=1), on=self.patient_identifier)        
+
+        # Keep track of cumulative length
+        cum_len = 0
+
+        # Process each dataset
+        for i in range(len(mri_datasets)):
+            current_len = len(mri_datasets[i].data)
+            df = back_together.iloc[cum_len:cum_len + current_len].rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": self.patient_identifier})
+            mri_datasets[i].data = mri_datasets[i].data.merge(df.drop(self.covars, axis=1), on=self.patient_identifier)
+            cum_len += current_len
+        
         [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
