@@ -556,6 +556,9 @@ class HarmAutoCombat:
         sites,
         discrete_covariates=None,
         continuous_covariates=None,
+        scaler_clustering = None,
+        discrete_cluster_features = None,
+        continuous_cluster_features = None,
         metric = 'distortion',
         features_reduction = None,
         feature_reduction_dimensions = 2,
@@ -580,7 +583,10 @@ class HarmAutoCombat:
             continuous_covariates if continuous_covariates is not None else []
         )
         self.metric = metric
+        self.scaler_clustering = scaler_clustering
         self.features_reduction = features_reduction
+        self.continuous_cluster_features = continuous_cluster_features
+        self.discrete_cluster_features = discrete_cluster_features
         self.features_reduction_dimensions = feature_reduction_dimensions
         
 
@@ -609,7 +615,8 @@ class HarmAutoCombat:
             sites_features=self.sites,
             discrete_combat_covariates = self.discrete_covariates,
             continuous_combat_covariates = self.continuous_covariates,
-            continuous_cluster_features=self.sites,
+            continuous_cluster_features=self.continuous_cluster_features,
+            discrete_cluster_features=self.discrete_cluster_features,
             size_min=2,
             features_reduction = self.features_reduction,
             n_components =self.features_reduction_dimensions,

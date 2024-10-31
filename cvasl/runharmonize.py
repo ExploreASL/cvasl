@@ -23,7 +23,7 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True, cat_feature
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 patient_identifier = 'participant_id'
 
-method = 'neurocombat'
+method = 'autocombat'
 
 
 if method == 'neuroharmonize':
@@ -67,7 +67,6 @@ elif method == 'nestedcombat':
         'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF',
     ]
     to_be_harmonized_or_covar  = [x.lower() for x in to_be_harmonized_or_covar ]
-    print(edis.data[np.sort(edis.data.columns)].head())
     harmonizer = HarmNestedComBat(to_be_harmonized_or_covar = to_be_harmonized_or_covar,  batch_testing_list = ['site'], categorical_testing_cols = ['sex'], continuous_testing_cols = ['age'], intermediate_results_path = '.', return_extended = False)
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
@@ -87,7 +86,7 @@ elif method == 'autocombat':
     discrete_covariates = ['sex']
     continuous_covariates = ['decade']
     sites=['site']
-    harmonizer = HarmAutoCombat(features_to_harmonize = features_to_harmonize, sites=sites, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates) 
+    harmonizer = HarmAutoCombat(features_to_harmonize = features_to_harmonize, sites=sites, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates, continuous_cluster_features=sites, discrete_cluster_features=None) 
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'relief':
@@ -109,7 +108,6 @@ elif method == 'relief':
 
 [_d.reverse_encode_categorical_features() for _d in harmonized_data]
 
-# print(harmonized_data[0].initial_statistics)
-# print(harmonized_data[0].harmonized_statistics)
+
 print('output data')
 print(harmonized_data[0].data[np.sort(harmonized_data[0].data.columns)].head())
