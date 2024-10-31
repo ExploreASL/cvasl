@@ -456,6 +456,9 @@ class HarmComscanNeuroCombat:
         sites,
         discrete_covariates=None,
         continuous_covariates=None,
+        empirical_bayes = True,
+        parametric = True,
+        mean_only = False
        
     ):
         """
@@ -476,6 +479,9 @@ class HarmComscanNeuroCombat:
         self.continuous_covariates = (
             continuous_covariates if continuous_covariates is not None else []
         )
+        self.empirical_bayes = empirical_bayes
+        self.parametric = parametric
+        self.mean_only = mean_only
         
 
     def harmonize(self, mri_datasets):
@@ -502,6 +508,9 @@ class HarmComscanNeuroCombat:
             sites=self.sites,
             discrete_covariates=self.discrete_covariates,
             continuous_covariates=self.continuous_covariates,
+            empirical_bayes=self.empirical_bayes,
+            parametric=self.parametric,
+            mean_only=self.mean_only
         )
 
         # Select relevant data for harmonization
