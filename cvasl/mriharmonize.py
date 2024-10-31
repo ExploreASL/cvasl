@@ -680,13 +680,14 @@ class HarmAutoCombat:
 
 class HarmCovbat:
     def __init__(
-        self, features_to_harmonize,  covariates, site_col='site', patient_identifier = 'participant_id', numerical_covariates = 'age'
+        self, features_to_harmonize,  covariates, site_col='site', patient_identifier = 'participant_id', numerical_covariates = 'age', empirical_bayes = True
     ):
         self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
         self.covariates = [a.lower() for a in covariates]
         self.site_col = site_col.lower()
         self.patient_identifier = patient_identifier.lower()
         self.numerical_covariates = numerical_covariates
+        self.empirical_bayes = empirical_bayes
 
     def harmonize(self, mri_datasets):
         # Separate features for harmonization and those to be kept unharmonized
@@ -715,10 +716,11 @@ class HarmCovbat:
         # Perform harmonization using CovBat
         
         harmonized_data = covbat.combat(
-            dat_ALLFIVE,
-            phenoALLFIVE[self.site_col],
+            data = dat_ALLFIVE,
+            batch = phenoALLFIVE[self.site_col],
             model=mod_matrix,
             numerical_covariates=self.numerical_covariates,
+            eb=self.empirical_bayes
         )
         
         harmonized_data = harmonized_data[
