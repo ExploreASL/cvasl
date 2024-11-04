@@ -399,13 +399,13 @@ class Insight46dataset(MRIdataset):
 
 class HarmNeuroHarmonize:
     def __init__(
-        self, features_to_harmonize, covariates, smooth_terms = ['age'], empirical_bayes = True
+        self, features_to_harmonize, covariates, smooth_terms = ['age'], site_indicator = 'site', empirical_bayes = True
     ):
-        
         self.features_to_harmonize = features_to_harmonize
         self.covariates = covariates
         self.smooth_terms = smooth_terms
         self.empirical_bayes = empirical_bayes
+        self.site_indicator = site_indicator
 
     def harmonize(self, mri_datasets):
 
@@ -419,11 +419,11 @@ class HarmNeuroHarmonize:
         # Prepare data for harmonization
         features_data = all_data[self.features_to_harmonize]
         covariates_data = all_data[self.covariates]
-        covariates_data = covariates_data.rename(columns={"site": "SITE"})
+        covariates_data = covariates_data.rename(columns={self.site_indicator: "SITE"})
 
         # Perform harmonization
         _, harmonized_data = harmonizationLearn(
-            data = np.array(features_data), covars = covariates_data, smooth_terms=self.smooth_terms, eb = self.empirical_bayes
+            np.array(features_data), covariates_data, smooth_terms=self.smooth_terms,eb=self.empirical_bayes
         )
 
         # Create harmonized dataframe
@@ -438,10 +438,6 @@ class HarmNeuroHarmonize:
             axis=1,
         )
 
-        # Reorder columns
-        cols_to_front = ["participant_id", "age", "sex"]
-        for col in reversed(cols_to_front):
-            harmonized_df.insert(0, col, harmonized_df.pop(col))
         for _d in mri_datasets:
             _d.data = harmonized_df[harmonized_df["SITE"] == _d.site_id]
             _d.data = _d.data.drop(columns=["SITE",'index'])
@@ -714,10 +710,6 @@ class HarmCovbat:
         )
 
         # Perform harmonization using CovBat
-        print(dat_ALLFIVE.columns)
-        print(self.site_col)
-        print(self.numerical_covariates)
-        print(self.empirical_bayes)
         harmonized_data = covbat.combat(
             data = dat_ALLFIVE,
             batch = phenoALLFIVE[self.site_col],

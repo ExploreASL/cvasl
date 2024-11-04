@@ -23,14 +23,15 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True, cat_feature
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 patient_identifier = 'participant_id'
 
-method = 'covbat'
+method = 'neuroharmonize'
 
 
 if method == 'neuroharmonize':
 
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
-    covariates = ['age', 'sex', 'site', 'icv']
-    harmonizer = HarmNeuroHarmonize(features_to_map, features_to_harmonize, covariates)
+    covariates = ['age', 'sex',  'icv', 'site']
+    sites = ['site']
+    harmonizer = HarmNeuroHarmonize(features_to_harmonize,covariates)#, sites= sites)
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'covbat':
@@ -60,7 +61,6 @@ elif method == 'neurocombat':
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'nestedcombat':
-
 
     to_be_harmonized_or_covar = [
         'age', 'sex', 'ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV',
@@ -111,3 +111,4 @@ elif method == 'relief':
 
 print('output data')
 print(harmonized_data[0].data[np.sort(harmonized_data[0].data.columns)].head())
+
