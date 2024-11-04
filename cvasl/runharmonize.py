@@ -23,7 +23,7 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True, cat_feature
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True, cat_features_to_encode=features_to_map)
 patient_identifier = 'participant_id'
 
-method = 'relief'
+method = 'covbat'
 
 
 if method == 'neuroharmonize':
@@ -47,7 +47,7 @@ elif method == 'covbat':
     
     to_be_harmonized_or_covar = [_c.lower() for _c in edis.data.columns if _c not in not_harmonized]
     
-    numerical_covariates = 'age'
+    numerical_covariates = ['age']
     pheno_features = ['age', 'sex']
     harmonizer = HarmCovbat(to_be_harmonized_or_covar,pheno_features,site_col='site',patient_identifier=patient_identifier,numerical_covariates=numerical_covariates)
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])

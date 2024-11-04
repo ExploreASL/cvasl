@@ -714,7 +714,10 @@ class HarmCovbat:
         )
 
         # Perform harmonization using CovBat
-        
+        print(dat_ALLFIVE.columns)
+        print(self.site_col)
+        print(self.numerical_covariates)
+        print(self.empirical_bayes)
         harmonized_data = covbat.combat(
             data = dat_ALLFIVE,
             batch = phenoALLFIVE[self.site_col],
