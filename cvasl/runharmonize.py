@@ -16,14 +16,15 @@ sabre_path = '../data/SABRE_input.csv'
 insight_path = '../data/Insight46_input.csv'
 topmri_path = ['../data/TOP_input.csv','../data/StrokeMRI_input.csv']
 features_to_map = ['readout', 'labelling', 'sex']
-edis = EDISdataset(Edis_path, site_id=0, decade=True, ICV = True, cat_features_to_encode=features_to_map)
-helius = HELIUSdataset(helius_path, site_id=1, decade=True, ICV = True, cat_features_to_encode=features_to_map)
-sabre = SABREdataset(sabre_path, site_id=2, decade=True, ICV = True, cat_features_to_encode=features_to_map)
-topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True, cat_features_to_encode=features_to_map)
-insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True, cat_features_to_encode=features_to_map)
+
+edis = EDISdataset(Edis_path, site_id=0, decade=True, ICV = True)
+helius = HELIUSdataset(helius_path, site_id=1, decade=True, ICV = True)
+sabre = SABREdataset(sabre_path, site_id=2, decade=True, ICV = True)
+topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True)
+insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True)
 patient_identifier = 'participant_id'
 
-method = 'neuroharmonize'
+method = 'covbat'
 
 
 if method == 'neuroharmonize':
@@ -31,16 +32,17 @@ if method == 'neuroharmonize':
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
     covariates = ['age', 'sex',  'icv', 'site']
     sites = ['site']
-    harmonizer = HarmNeuroHarmonize(features_to_harmonize,covariates)#, sites= sites)
+    harmonizer = HarmNeuroHarmonize( features_to_harmonize,covariates)#, sites= sites)
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'covbat':
-    edis = EDISdataset(Edis_path, site_id=0, decade=False, ICV = False, cat_features_to_encode=features_to_map)
-    helius = HELIUSdataset(helius_path, site_id=1, decade=False, ICV = False, cat_features_to_encode=features_to_map)
-    sabre = SABREdataset(sabre_path, site_id=2, decade=False, ICV = False, cat_features_to_encode=features_to_map)
-    topmri = TOPdataset(topmri_path, site_id=3, decade=False, ICV = False, cat_features_to_encode=features_to_map)
-    insight46 = Insight46dataset(insight_path, site_id=4, decade=False, ICV = False, cat_features_to_encode=features_to_map)
-    
+    edis = EDISdataset(Edis_path, site_id=0, decade=False, ICV = False)#, cat_features_to_encode=features_to_map)
+    helius = HELIUSdataset(helius_path, site_id=1, decade=False, ICV = False)#, cat_features_to_encode=features_to_map)
+    sabre = SABREdataset(sabre_path, site_id=2, decade=False, ICV = False)#, cat_features_to_encode=features_to_map)
+    topmri = TOPdataset(topmri_path, site_id=3, decade=False, ICV = False)#, cat_features_to_encode=features_to_map)
+    insight46 = Insight46dataset(insight_path, site_id=4, decade=False, ICV = False)#, cat_features_to_encode=features_to_map)
+    map_columns([edis, helius, sabre, topmri, insight46],features_to_map)
+
     not_harmonized= ['GM_vol', 'WM_vol', 'CSF_vol','GM_ICVRatio', 'GMWM_ICVRatio', 'WMHvol_WMvol', 'WMH_count',
                 'LD', 'PLD', 'Labelling',
        'Readout', 'M0','DeepWM_B_CoV','DeepWM_B_CBF',]
@@ -54,14 +56,14 @@ elif method == 'covbat':
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'neurocombat':
-
+    map_columns([edis, helius, sabre, topmri, insight46],features_to_map)
     to_be_harmonized_or_covar = ['ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV',
         'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF',]
     harmonizer = HarmNeuroCombat(features_to_harmonize = to_be_harmonized_or_covar,cat_features = ['age'],cont_features = ['sex'],batch_col = 'site',patient_identifier=patient_identifier)
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'nestedcombat':
-
+    map_columns([edis, helius, sabre, topmri, insight46],features_to_map)
     to_be_harmonized_or_covar = [
         'age', 'sex', 'ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV',
         'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF',
@@ -71,7 +73,7 @@ elif method == 'nestedcombat':
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'comscanneuroharmonize':
-
+    map_columns([edis, helius, sabre, topmri, insight46],features_to_map)
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 
                              'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
     discrete_covariates = ['sex']
@@ -80,7 +82,7 @@ elif method == 'comscanneuroharmonize':
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'autocombat':
-
+    map_columns([edis, helius, sabre, topmri, insight46],features_to_map)
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 
                              'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
     discrete_covariates = ['sex']
@@ -90,7 +92,7 @@ elif method == 'autocombat':
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'relief':
-    features_to_map = ['readout', 'labelling', 'sex']
+    map_columns([edis, helius, sabre, topmri, insight46],features_to_map)
     edis = EDISdataset(Edis_path, site_id=0, decade=False, ICV = False, cat_features_to_encode=features_to_map, features_to_drop=["m0", "id",'site'])
     helius = HELIUSdataset(helius_path, site_id=1, decade=False, ICV = False, cat_features_to_encode=features_to_map, features_to_drop=["m0", "id",'site'])
     sabre = SABREdataset(sabre_path, site_id=2, decade=False, ICV = False, cat_features_to_encode=features_to_map, features_to_drop=["m0", "id",'site'])

@@ -20,7 +20,26 @@ import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 import subprocess
 
-
+def map_columns(dff,cat_features_to_encode):
+    
+    feature_mappings = {}
+    reverse_mappings = {}
+    data = pd.concat([_d.data for _d in dff])
+    
+    for feature in cat_features_to_encode:
+        if feature in data.columns:
+            unique_values = data[feature].unique()
+            mapping = {value: i for i, value in enumerate(unique_values)}
+            feature_mappings[feature] = mapping
+            reverse_mappings[feature] = {v: k for k, v in mapping.items()}
+            data[feature] = data[feature].map(mapping)
+    
+    for _d in dff:
+        _d.data = data[data['site'] == _d.site_id]
+        _d.feature_mappings = feature_mappings
+        _d.reverse_mappings = reverse_mappings
+        _d.cat_features_to_encode = cat_features_to_encode
+    return dff
 
 class MRIdataset:
     def __init__(
@@ -408,6 +427,8 @@ class HarmNeuroHarmonize:
         self.site_indicator = site_indicator
 
     def harmonize(self, mri_datasets):
+        
+        comb = MRIdataset
 
         # Apply feature mapping
         for dataset in mri_datasets:
