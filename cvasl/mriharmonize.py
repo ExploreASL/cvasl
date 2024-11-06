@@ -20,7 +20,7 @@ import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 import subprocess
 
-def map_columns(dff,cat_features_to_encode):
+def encode_cat_features(dff,cat_features_to_encode):
     
     feature_mappings = {}
     reverse_mappings = {}
@@ -134,8 +134,20 @@ class MRIdataset:
     def reverse_encode_categorical_features(self):
         for feature, mapping in self.reverse_mappings.items():
             if feature in self.data.columns:
-                self.data[feature] = self.data[feature].map(mapping)
+                unique_values = self.data[feature].unique()
+                # Filter the mapping to include only the unique values
+                filtered_mapping = {k: mapping[k] for k in unique_values if k in mapping}               
+                self.data[feature] = self.data[feature].map(filtered_mapping)
 
+    # def reverse_encode_categorical_features(self):
+    #     for feature, mapping in self.reverse_mappings.items():
+    #         if feature in self.data.columns:
+    #             # Only map values that exist in the column
+    #             self.data[feature] = self.data[feature].map(
+    #                 lambda x: mapping.get(x, x) if x in mapping else x
+    #             )
+    
+                    
     def addICVfeatures(self):
         self.data["icv"] = self.data["gm_vol"] / self.data["gm_icvratio"]
 
@@ -418,8 +430,34 @@ class Insight46dataset(MRIdataset):
 
 class HarmNeuroHarmonize:
     def __init__(
-        self, features_to_harmonize, covariates, smooth_terms = ['age'], site_indicator = 'site', empirical_bayes = True
+        self, features_to_harmonize, covariates, smooth_terms = [], site_indicator = 'site', empirical_bayes = True
     ):
+        """
+        Wrapper class for NeuroHarmonize.
+        
+        Arguments
+        ---------
+        features_to_harmonize : a list
+            Features to harmonize excluding covariates and site indicator
+        
+        covariates : a list
+            Contains covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables)
+
+        smooth_terms (Optional) :  a list, default []
+            Names of columns in covars to include as smooth, nonlinear terms.
+            Can be any or all columns in covars, except site_indicator.
+            Ff empty, ComBat is applied with a linear model of covariates.
+            Otherwise, Generalized Additive Models (GAMs) are used.
+            Using it will increase computation time due to search for optimal smoothing.
+            
+        site_indicator : a string 
+            Indicates the feature that differentiates different sites, default 'site'
+            
+        empirical_bayes : bool, default True
+            Whether to use empirical Bayes estimates of site effects              
+        """        
+
         self.features_to_harmonize = features_to_harmonize
         self.covariates = covariates
         self.smooth_terms = smooth_terms
@@ -427,12 +465,20 @@ class HarmNeuroHarmonize:
         self.site_indicator = site_indicator
 
     def harmonize(self, mri_datasets):
+        """
+        Performs the harmonization.
         
-        comb = MRIdataset
-
-        # Apply feature mapping
-        for dataset in mri_datasets:
-            dataset.encode_categorical_features()
+        Arguments
+        ---------
+        mri_datasets : a list
+            a list of MRIdataset objects to harmonize
+                    
+        Returns
+        -------
+        mri_datasets : a list of MRIdataset objects with harmonized data
+        
+        """                
+        # comb = MRIdataset
 
         # Combine all datasets
         all_data = pd.concat([dataset.data for dataset in mri_datasets])
@@ -470,26 +516,46 @@ class HarmComscanNeuroCombat:
     def __init__(
         self,
         features_to_harmonize,
-        sites,
-        discrete_covariates=None,
-        continuous_covariates=None,
+        discrete_covariates = None,
+        continuous_covariates = None,
+        site_indicator = 'site',
         empirical_bayes = True,
         parametric = True,
         mean_only = False
        
     ):
         """
-        Initializes the HarmComscanNeuroCombat harmonization class.
+        Wrapper class for Neuro Combat.
+        
+        Arguments
+        ---------
+        features_to_harmonize : a list
+            Features to harmonize excluding covariates and site indicator
+        
+        discrete_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables).
+            
+        continuous_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables).
 
-        Args:
-            features_to_harmonize (list): List of features to be harmonized.
-            sites (list): List containing the name of the site column.  Should be a list even if only one site column.
-            discrete_covariates (list, optional): List of discrete covariates. Defaults to None.
-            continuous_covariates (list, optional): List of continuous covariates. Defaults to None.
-            unharm_features (list, optional): List of features *not* to be harmonized but to be included in the final output. Defaults to None.
-        """
+        smooth_terms (Optional) :  a list, default []
+            Names of columns in covars to include as smooth, nonlinear terms.
+            Can be any or all columns in covars, except site_indicator.
+            Ff empty, ComBat is applied with a linear model of covariates.
+            Otherwise, Generalized Additive Models (GAMs) are used.
+            Using it will increase computation time due to search for optimal smoothing.
+            
+        site_indicator : a string 
+            Indicates the feature that differentiates different sites, default 'site'
+            
+        empirical_bayes : bool, default True
+            Whether to use empirical Bayes estimates of site effects              
+        """        
+
         self.features_to_harmonize = features_to_harmonize
-        self.sites = sites
+        self.site_indicator = [site_indicator]
         self.discrete_covariates = (
             discrete_covariates if discrete_covariates is not None else []
         )
@@ -503,14 +569,18 @@ class HarmComscanNeuroCombat:
 
     def harmonize(self, mri_datasets):
         """
-        Performs ComBat harmonization on the input data.
-
-        Args:
-            data (pd.DataFrame): Input DataFrame containing the features, site, and covariate information.
-
-        Returns:
-            pd.DataFrame: Harmonized DataFrame.  Returns original dataframe if `features_to_harmonize` is empty.
-        """
+        Performs the harmonization.
+        
+        Arguments
+        ---------
+        mri_datasets : a list
+            a list of MRIdataset objects to harmonize
+                    
+        Returns
+        -------
+        mri_datasets : a list of MRIdataset objects with harmonized data
+        
+        """                
 
         if (
             not self.features_to_harmonize
@@ -522,7 +592,7 @@ class HarmComscanNeuroCombat:
         # Instantiate ComBat object
         combat = cvaslneurocombat.Combat(
             features=self.features_to_harmonize,
-            sites=self.sites,
+            sites=self.site_indicator,
             discrete_covariates=self.discrete_covariates,
             continuous_covariates=self.continuous_covariates,
             empirical_bayes=self.empirical_bayes,
@@ -531,9 +601,10 @@ class HarmComscanNeuroCombat:
         )
 
         # Select relevant data for harmonization
+        print(self.site_indicator)
         data_to_harmonize = data[
             self.features_to_harmonize
-            + self.sites
+            + self.site_indicator
             + self.discrete_covariates
             + self.continuous_covariates
         ].copy()
@@ -548,7 +619,7 @@ class HarmComscanNeuroCombat:
         )
 
         # Add back covariates and unharmonized features
-        covariates = self.sites + self.discrete_covariates + self.continuous_covariates
+        covariates = self.site_indicator + self.discrete_covariates + self.continuous_covariates
         harmonized_df = pd.concat(
             [harmonized_df, data_to_harmonize[covariates].reset_index(drop=True)],
             axis=1,
@@ -571,7 +642,7 @@ class HarmComscanNeuroCombat:
 
         for _, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
-            adjusted_data = harmonized_df[harmonized_df["site"] == site_value]
+            adjusted_data = harmonized_df[harmonized_df[self.site_indicator[0]] == site_value]
             dataset.data = adjusted_data
         [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
@@ -580,29 +651,58 @@ class HarmAutoCombat:
     def __init__(
         self,
         features_to_harmonize,
-        sites,
+        site_indicator,
         discrete_covariates=None,
         continuous_covariates=None,
-        scaler_clustering = None,
         discrete_cluster_features = None,
         continuous_cluster_features = None,
         metric = 'distortion',
         features_reduction = None,
         feature_reduction_dimensions = 2,
+        empirical_bayes = True
        
     ):
         """
-        Initializes the HarmAutoCombat harmonization class.
+        Wrapper class for Auto Combat.
+        
+        Arguments
+        ---------
+        features_to_harmonize : a list
+            Features to harmonize excluding covariates and site indicator
 
-        Args:
-            features_to_harmonize (list): List of features to be harmonized.
-            sites (list): List containing the name of the site column.  Should be a list even if only one site column.
-            discrete_covariates (list, optional): List of discrete covariates. Defaults to None.
-            continuous_covariates (list, optional): List of continuous covariates. Defaults to None.
-            unharm_features (list, optional): List of features *not* to be harmonized but to be included in the final output. Defaults to None.
-        """
+        site_indicator : a string 
+            Indicates the feature that differentiates different sites, default 'site'
+        
+        discrete_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables).
+            
+        continuous_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+            
+        discrete_cluster_features : a list
+            Target sites_features which are categorical to one-hot (e.g. ManufacturerModelName).
+            All covariates must be encoded numerically (no categorical variables).
+            
+        continuous_cluster_features : a list
+            Target sites_features which are continuous to scale (e.g. EchoTime).
+
+        metric : "distortion", "silhouette" or "calinski_harabasz", default "distortion"
+            Metric to define the optimal number of cluster.
+            
+        features_reduction : 'pca' or 'umap', default None
+            Method for reduction of the embedded space with n_components. Can be 'pca' or 'umap'.
+
+        feature_reduction_dimensions : int, default 2
+            Dimension of the embedded space for features reduction.
+            
+        empirical_bayes : bool, default True
+            Whether to use empirical Bayes estimates of site effects
+        """        
+
+        
         self.features_to_harmonize = features_to_harmonize
-        self.sites = sites
+        self.site_indicator = site_indicator
         self.discrete_covariates = (
             discrete_covariates if discrete_covariates is not None else []
         )
@@ -610,23 +710,27 @@ class HarmAutoCombat:
             continuous_covariates if continuous_covariates is not None else []
         )
         self.metric = metric
-        self.scaler_clustering = scaler_clustering
         self.features_reduction = features_reduction
         self.continuous_cluster_features = continuous_cluster_features
         self.discrete_cluster_features = discrete_cluster_features
         self.features_reduction_dimensions = feature_reduction_dimensions
+        self.empirical_bayes = empirical_bayes
         
 
     def harmonize(self, mri_datasets):
         """
-        Performs ComBat harmonization on the input data.
-
-        Args:
-            data (pd.DataFrame): Input DataFrame containing the features, site, and covariate information.
-
-        Returns:
-            pd.DataFrame: Harmonized DataFrame.  Returns original dataframe if `features_to_harmonize` is empty.
-        """
+        Performs the harmonization.
+        
+        Arguments
+        ---------
+        mri_datasets : a list
+            a list of MRIdataset objects to harmonize
+                    
+        Returns
+        -------
+        mri_datasets : a list of MRIdataset objects with harmonized data
+        
+        """                
 
         if (
             not self.features_to_harmonize
@@ -639,7 +743,7 @@ class HarmAutoCombat:
         combat = cvaslneurocombat.AutoCombat(
             features = self.features_to_harmonize,
             metric = self.metric,
-            sites_features=self.sites,
+            sites_features=self.site_indicator,
             discrete_combat_covariates = self.discrete_covariates,
             continuous_combat_covariates = self.continuous_covariates,
             continuous_cluster_features=self.continuous_cluster_features,
@@ -647,12 +751,12 @@ class HarmAutoCombat:
             size_min=2,
             features_reduction = self.features_reduction,
             n_components =self.features_reduction_dimensions,
-            n_jobs = -1)
+            n_jobs = -1, empirical_bayes=self.empirical_bayes)
 
         # Select relevant data for harmonization
         data_to_harmonize = data[
             self.features_to_harmonize
-            + self.sites
+            + self.site_indicator
             + self.discrete_covariates
             + self.continuous_covariates
         ].copy()
@@ -667,7 +771,7 @@ class HarmAutoCombat:
         )
 
         # Add back covariates and unharmonized features
-        covariates = self.sites + self.discrete_covariates + self.continuous_covariates
+        covariates = self.site_indicator + self.discrete_covariates + self.continuous_covariates
         harmonized_df = pd.concat(
             [harmonized_df, data_to_harmonize[covariates].reset_index(drop=True)],
             axis=1,
@@ -690,32 +794,70 @@ class HarmAutoCombat:
 
         for _, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
-            adjusted_data = harmonized_df[harmonized_df["site"] == site_value]
+            # adjusted_data = harmonized_df[harmonized_df["site"] == site_value]
+            adjusted_data = harmonized_df[harmonized_df[self.site_indicator] == site_value]
             dataset.data = adjusted_data
         [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 class HarmCovbat:
     def __init__(
-        self, features_to_harmonize,  covariates, site_col='site', patient_identifier = 'participant_id', numerical_covariates = ['age'], empirical_bayes = True
+        self, features_to_harmonize,  covariates, site_indicator='site', patient_identifier = 'participant_id', numerical_covariates = ['age'], empirical_bayes = True
     ):
+        """
+        Wrapper class for Covbat.
+        
+        Arguments
+        ---------
+        features_to_harmonize : a list
+            Features to harmonize excluding covariates and site indicator
+
+        covariates : a list
+            Contains covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables)
+
+        site_indicator : a string 
+            Indicates the feature that differentiates different sites (batches in the data in the original covbat documentation), default 'site'
+        
+        patient_identifier : string
+            Indicates the feature that differentiates different patients, default 'participant_id'            
+
+        numerical_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+                        
+        empirical_bayes : bool, default True
+            Whether to use empirical Bayes estimates of site effects
+        """        
+        
         self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
         self.covariates = [a.lower() for a in covariates]
-        self.site_col = site_col.lower()
+        self.site_indicator = site_indicator.lower()
         self.patient_identifier = patient_identifier.lower()
         self.numerical_covariates = [a.lower() for a in numerical_covariates]
         self.empirical_bayes = empirical_bayes
 
     def harmonize(self, mri_datasets):
-        # Separate features for harmonization and those to be kept unharmonized
+        """
+        Performs the harmonization.
+        
+        Arguments
+        ---------
+        mri_datasets : a list
+            a list of MRIdataset objects to harmonize
+                    
+        Returns
+        -------
+        mri_datasets : a list of MRIdataset objects with harmonized data
+        
+        """                        
         semi_features = []
         datasets_to_harmonize = []
         
         for dataset in mri_datasets:
             semi_features.append(dataset.data.drop([_c for _c in self.features_to_harmonize if _c not in [self.patient_identifier]], axis=1))
-            datasets_to_harmonize.append(dataset.data.drop([c for c in dataset.data.columns if c not in self.features_to_harmonize + self.covariates + [self.site_col] + [self.patient_identifier]], axis=1))            
+            datasets_to_harmonize.append(dataset.data.drop([c for c in dataset.data.columns if c not in self.features_to_harmonize + self.covariates + [self.site_indicator] + [self.patient_identifier]], axis=1))            
             
-        pheno_features = [self.patient_identifier] + self.covariates + [self.site_col]
+        pheno_features = [self.patient_identifier] + self.covariates + [self.site_indicator]
         ALLFIVE = pd.concat(datasets_to_harmonize)
         
         # Prepare data for CovBat
@@ -733,7 +875,7 @@ class HarmCovbat:
         # Perform harmonization using CovBat
         harmonized_data = covbat.combat(
             data = dat_ALLFIVE,
-            batch = phenoALLFIVE[self.site_col],
+            batch = phenoALLFIVE[self.site_indicator],
             model=mod_matrix,
             numerical_covariates=self.numerical_covariates,
             eb=self.empirical_bayes
@@ -742,7 +884,7 @@ class HarmCovbat:
         harmonized_data = harmonized_data[
             len(self.covariates) :
         ]  # Remove estimated model parameters from the output
-        feature_cols = [col for col in harmonized_data.index if col not in (self.site_col)]
+        feature_cols = [col for col in harmonized_data.index if col not in (self.site_indicator)]
         
         harmonized_data = harmonized_data.loc[feature_cols]#.reset_index(drop=True).dropna() # Directly select features, reset index, and drop NaN rows
         # Combine harmonized data with other features
@@ -754,7 +896,7 @@ class HarmCovbat:
         # Split the harmonized data back into individual datasets
         for i, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
-            adjusted_data = harmonized_data[harmonized_data[self.site_col] == site_value]
+            adjusted_data = harmonized_data[harmonized_data[self.site_indicator] == site_value]
             adjusted_data = adjusted_data.merge(semi_features[i], on=self.patient_identifier)
             dataset.data = adjusted_data
         [_d.update_harmonized_statistics() for _d in mri_datasets]
@@ -765,19 +907,52 @@ class HarmNeuroCombat:
     def __init__(
         self,
         features_to_harmonize,
-        cat_features,
-        cont_features,
+        discrete_covariates,
+        continuous_covariates,
         patient_identifier = 'participant_id',
-        batch_col='site',
+        site_indicator='site',
         empirical_bayes = True,
         mean_only = False,
         parametric = True,
     ):
-        self.cat_features = [a.lower() for a in cat_features]
-        self.cont_features = [a.lower() for a in cont_features]
+        """
+        Wrapper class for Neuro Combat.
+        
+        Arguments
+        ---------
+        features_to_harmonize : a list
+            Features to harmonize excluding covariates and site indicator
+        
+        discrete_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables).
+            
+        continuous_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables).
+
+        patient_identifier : string
+            Indicates the feature that differentiates different patients, default 'participant_id'
+            
+        
+        site_indicator : a string 
+            Indicates the feature that differentiates different sites, default 'site'
+            
+        empirical_bayes : bool, default True
+            Whether to use empirical Bayes estimates of site effects              
+            
+        mean_only : bool, default False
+            Whether to use only the mean of the data for harmonization.
+            
+        parametric : bool, default True
+            Whether parametric adjustements should be performed.
+        """        
+        
+        self.discrete_covariates = [a.lower() for a in discrete_covariates]
+        self.continuous_covariates = [a.lower() for a in continuous_covariates]
         self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
         self.patient_identifier = patient_identifier.lower()
-        self.batch_col = batch_col.lower()
+        self.site_indicator = site_indicator.lower()
         self.empirical_bayes = empirical_bayes
         self.mean_only = mean_only
         self.parametric = parametric
@@ -785,17 +960,7 @@ class HarmNeuroCombat:
 
     def _prep_for_neurocombat_5way(self,
             dataframes):
-        """
-        This function takes five dataframes in the cvasl format,
-        then turns them into the items needed for the
-        neurocombat algorithm with re-identification.
-
-
-
-        :returns: dataframes for neurocombat algorithm and ints of some legnths
-        :rtype: tuple
-        """
-        dataframes = [a.set_index('participant_id').T for a in dataframes]
+        dataframes = [a.set_index(self.patient_identifier).T for a in dataframes]
         # concat the two dataframes
         all_togetherF = pd.concat(
             dataframes,
@@ -806,7 +971,7 @@ class HarmNeuroCombat:
         # create a feautures only frame (no age, no sex)
         
         
-        feature_cols = [col for col in all_togetherF.index if col not in self.cat_features + self.cont_features]
+        feature_cols = [col for col in all_togetherF.index if col not in self.discrete_covariates + self.continuous_covariates]
         features_only = all_togetherF.loc[feature_cols]
         
         dictionary_features_len = len(features_only.T.columns)
@@ -842,6 +1007,19 @@ class HarmNeuroCombat:
         return topper
 
     def harmonize(self, mri_datasets):
+        """
+        Performs the harmonization.
+        
+        Arguments
+        ---------
+        mri_datasets : a list
+            a list of MRIdataset objects to harmonize
+                    
+        Returns
+        -------
+        mri_datasets : a list of MRIdataset objects with harmonized data
+        
+        """                                
         # Separate features for harmonization and those to be kept unharmonized
         semi_features = []
         datasets_to_harmonize = []
@@ -856,7 +1034,7 @@ class HarmNeuroCombat:
                     ],
                 )
             )
-            datasets_to_harmonize.append(dataset.data[(self.cat_features + self.cont_features + self.features_to_harmonize + [self.batch_col] + [self.patient_identifier])])
+            datasets_to_harmonize.append(dataset.data[(self.discrete_covariates + self.continuous_covariates + self.features_to_harmonize + [self.site_indicator] + [self.patient_identifier])])
         # Prepare data for NeuroCombat
         all_together, ft, bt, feature_dict, lengths = self._prep_for_neurocombat_5way(
             datasets_to_harmonize
@@ -866,8 +1044,8 @@ class HarmNeuroCombat:
         for i, l in enumerate(lengths):
             batch_ids.extend([i + 1] * l)  # start batch numbers at 1
 
-        covars = {self.batch_col: batch_ids}
-        for feature in self.cat_features + self.cont_features:
+        covars = {self.site_indicator: batch_ids}
+        for feature in self.discrete_covariates + self.continuous_covariates:
             feature_lower = feature.lower()
             if feature_lower in all_together.index:
                 covars[feature] = all_together.loc[feature_lower, :].values.tolist()
@@ -880,9 +1058,9 @@ class HarmNeuroCombat:
         data_combat = neurocombat.neuroCombat(
             dat=data,
             covars=covars,
-            batch_col=self.batch_col,
-            continuous_cols=self.cont_features,
-            categorical_cols=self.cat_features,
+            batch_col=self.site_indicator,
+            continuous_cols=self.continuous_covariates,
+            categorical_cols=self.discrete_covariates,
             eb=self.empirical_bayes,
             mean_only=self.mean_only,
             parametric=self.parametric
@@ -891,7 +1069,7 @@ class HarmNeuroCombat:
         # Convert harmonized data back to DataFrame
         neurocombat_df = pd.DataFrame(data_combat)
         # Reconstruct the full dataframe
-        topper = self._make_topper(bt, self.cat_features + self.cont_features)
+        topper = self._make_topper(bt, self.discrete_covariates + self.continuous_covariates)
         bottom = neurocombat_df.reset_index(drop=False)
         bottom = bottom.rename(columns={"index": "char"})
         bottom.columns = topper.columns  # align columns with topper
@@ -912,7 +1090,7 @@ class HarmNeuroCombat:
 
             harmonized_data = harmonized_data.reset_index().rename(
                 columns={"index": self.patient_identifier}
-            ).drop([self.batch_col], axis=1)
+            ).drop([self.site_indicator], axis=1)
 
             harmonized_data = harmonized_data.merge(
                 semi_features[i], on=self.patient_identifier
@@ -923,8 +1101,8 @@ class HarmNeuroCombat:
         harmonized_data = pd.concat([_d for _d in harmonized_datasets])
         for i, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
-            adjusted_data = harmonized_data[harmonized_data[self.batch_col] == site_value]
-            adjusted_data = adjusted_data.merge(semi_features[i].drop(self.cat_features + self.cont_features + ['index'],axis = 1), on=self.patient_identifier).drop(['index'],axis = 1) 
+            adjusted_data = harmonized_data[harmonized_data[self.site_indicator] == site_value]
+            adjusted_data = adjusted_data.merge(semi_features[i].drop(self.discrete_covariates + self.continuous_covariates + ['index'],axis = 1), on=self.patient_identifier).drop(['index'],axis = 1) 
             for _c in ocols:
                 if _c + '_y' in adjusted_data.columns and _c + '_x' in adjusted_data.columns:
                     adjusted_data.drop(columns=[_c+'_y'],axis=1, inplace=True)
@@ -937,27 +1115,71 @@ class HarmNeuroCombat:
 
 
 class HarmNestedComBat:
-    def __init__(self, to_be_harmonized_or_covar, batch_testing_list = ['site'], categorical_testing_cols = ['sex'], continuous_testing_cols = ['age'], intermediate_results_path = '.', patient_identifier = 'participant_id', return_extended = False):
-        self.to_be_harmonized_or_covar = [a.lower() for a in to_be_harmonized_or_covar]
-        self.batch_testing_list = [a.lower() for a in batch_testing_list]
-        self.categorical_testing_cols = [a.lower() for a in categorical_testing_cols]
-        self.continuous_testing_cols = [a.lower() for a in continuous_testing_cols]
+    def __init__(self, features_to_harmonize, site_indicator = ['site'], discrete_covariates = ['sex'], continuous_covariates = ['age'], intermediate_results_path = '.', patient_identifier = 'participant_id', return_extended = False):
+        """
+        Wrapper class for Nested Combat.
+        
+        Arguments
+        ---------
+        features_to_harmonize : a list
+            Features to harmonize excluding covariates and site indicator
+        
+        discrete_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables).
+            
+        continuous_covariates : a list
+            Contains discrete covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables).
+
+        patient_identifier : string
+            Indicates the feature that differentiates different patients, default 'participant_id'
+            
+        
+        site_indicator : a string 
+            Indicates the feature that differentiates different sites, default 'site'
+            
+        intermediate_results_path : string
+            Path to save intermediate results of the harmonization process
+            
+        return_extended : bool, default False
+            Whether to return the intermediate results of the harmonization process
+        """        
+        
+        self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
+        self.site_indicator = [a.lower() for a in site_indicator]
+        self.discrete_covariates = [a.lower() for a in discrete_covariates]
+        self.continuous_covariates = [a.lower() for a in continuous_covariates]
         self.intermediate_results_path = intermediate_results_path
         self.patient_identifier = patient_identifier
         self.return_extended = return_extended
 
     def harmonize(self, mri_datasets):
+        """
+        Performs the harmonization.
+        
+        Arguments
+        ---------
+        mri_datasets : a list
+            a list of MRIdataset objects to harmonize
+                    
+        Returns
+        -------
+        mri_datasets : a list of MRIdataset objects with harmonized data
+        
+        """                        
+        
         datasets = []
         batch_testing_df = []
         for ds in mri_datasets:
             datasets.append(ds.data.copy())
             #batch_testing_df.append(ds.data[['participant_id','site','age','sex']])
-            batch_testing_df.append(ds.data[[self.patient_identifier] + self.batch_testing_list+self.continuous_testing_cols+self.categorical_testing_cols])
-            ds.data.drop(self.to_be_harmonized_or_covar,axis=1, inplace = True)
+            batch_testing_df.append(ds.data[[self.patient_identifier] + self.site_indicator+self.continuous_covariates+self.discrete_covariates])
+            ds.data.drop(self.features_to_harmonize,axis=1, inplace = True)
         batch_testing_df = pd.concat(batch_testing_df)
         
-        datasets = [a.drop([b for b in a.columns if b not in self.to_be_harmonized_or_covar + self.categorical_testing_cols + self.continuous_testing_cols + [self.patient_identifier]],axis=1) for a in datasets]
-        data_testing_df = pd.concat([a.drop(columns=self.categorical_testing_cols + self.continuous_testing_cols) for a in datasets]).reset_index(drop=True).dropna().merge(batch_testing_df[self.patient_identifier], 
+        datasets = [a.drop([b for b in a.columns if b not in self.features_to_harmonize + self.discrete_covariates + self.continuous_covariates + [self.patient_identifier]],axis=1) for a in datasets]
+        data_testing_df = pd.concat([a.drop(columns=self.discrete_covariates + self.continuous_covariates) for a in datasets]).reset_index(drop=True).dropna().merge(batch_testing_df[self.patient_identifier], 
                                         left_on=self.patient_identifier, right_on=self.patient_identifier)
         dat_testing = data_testing_df.iloc[:, 1:].T.apply(pd.to_numeric)
         caseno_testing = data_testing_df[self.patient_identifier]
@@ -965,8 +1187,8 @@ class HarmNestedComBat:
         data_testing_df= data_testing_df.drop_duplicates()
         
         covars_testing_string = pd.DataFrame()
-        covars_testing_string[self.categorical_testing_cols] = covars_testing[self.categorical_testing_cols].copy()
-        covars_testing_quant = covars_testing[self.continuous_testing_cols]
+        covars_testing_string[self.discrete_covariates] = covars_testing[self.discrete_covariates].copy()
+        covars_testing_quant = covars_testing[self.continuous_covariates]
         
         covars_testing_cat = pd.DataFrame()
         for col_testing in covars_testing_string:
@@ -985,13 +1207,13 @@ class HarmNestedComBat:
         gmm_testing_df_merge[gmm_testing_df_merge.participant_id.duplicated()]
 
         covars_testing_final = gmm_testing_df_merge.drop([self.patient_identifier,'Patient','Grouping'],axis=1)
-        categorical_testing_cols = self.categorical_testing_cols + ['GMM']
+        discrete_covariates = self.discrete_covariates + ['GMM']
 
         output_testing_df = nest.OPNestedComBat(dat_testing,
                                         covars_testing_final,
-                                        self.batch_testing_list,
-                                        self.intermediate_results_path, categorical_cols=categorical_testing_cols,
-                                        continuous_cols=self.continuous_testing_cols)
+                                        self.site_indicator,
+                                        self.intermediate_results_path, categorical_cols=discrete_covariates,
+                                        continuous_cols=self.continuous_covariates)
 
         write_testing_df = pd.concat([caseno_testing, output_testing_df], axis=1) 
         write_testing_df.to_csv(self.intermediate_results_path+'/Mfeatures_testing_NestedComBat.csv') # write results fo file
@@ -1007,7 +1229,7 @@ class HarmNestedComBat:
         for _ds in mri_datasets:
             
             ds_opn_harmonized = complete_harmonised[complete_harmonised['site'] == _ds.site_id]
-            ds_opn_harmonized = ds_opn_harmonized.drop(columns=self.batch_testing_list+['GMM',])      
+            ds_opn_harmonized = ds_opn_harmonized.drop(columns=self.site_indicator+['GMM',])      
             ds_opn_harmonized  = ds_opn_harmonized.merge( _ds.data, on=self.patient_identifier)
             _ds.data = ds_opn_harmonized.copy()
         [_d.update_harmonized_statistics() for _d in mri_datasets]
@@ -1018,11 +1240,30 @@ class HarmNestedComBat:
 
 class HarmRELIEF:
     def __init__(
-        self, features_to_harmonize, covars, patient_identifier, intermediate_results_path = '.'
+        self, features_to_harmonize, covariates, patient_identifier = 'participant_id', intermediate_results_path = '.'
     ):
+        """
+        Wrapper class for RELIEF.
+        
+        Arguments
+        ---------
+        features_to_harmonize : a list
+            Features to harmonize excluding covariates and site indicator
+        
+        covariates : a list
+            Contains covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables)
+
+        patient_identifier : string
+            Indicates the feature that differentiates different patients, default 'participant_id'
+            
+        intermediate_results_path : string
+            Path to save intermediate results of the harmonization process
+        """        
+        
         self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
         self.intermediate_results_path = intermediate_results_path
-        self.covars = covars
+        self.covariates = covariates
         self.patient_identifier = patient_identifier.lower()
 
     def _prep_for_neurocombat_5way(self,
@@ -1049,7 +1290,7 @@ class HarmRELIEF:
         
         
         #feature_cols = [col for col in all_togetherF.index if col not in ('sex', 'age')]
-        feature_cols = [col for col in all_togetherF.index if col not in self.covars]
+        feature_cols = [col for col in all_togetherF.index if col not in self.covariates]
         features_only = all_togetherF.loc[feature_cols]
         
         dictionary_features_len = len(features_only.T.columns)
@@ -1085,7 +1326,19 @@ class HarmRELIEF:
         return topper
 
     def harmonize(self, mri_datasets):
-
+        """
+        Performs the harmonization.
+        
+        Arguments
+        ---------
+        mri_datasets : a list
+            a list of MRIdataset objects to harmonize
+                    
+        Returns
+        -------
+        mri_datasets : a list of MRIdataset objects with harmonized data
+        
+        """                        
         curr_path = os.getcwd()
 
         relief_r_driver = f"""
@@ -1112,7 +1365,7 @@ class HarmRELIEF:
         """
         
         # all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = self._prep_for_neurocombat_5way([_d.data[self.features_to_harmonize + ['participant_id','sex','age']] for _d in mri_datasets])
-        all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = self._prep_for_neurocombat_5way([_d.data[self.features_to_harmonize + [self.patient_identifier] + self.covars] for _d in mri_datasets])
+        all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = self._prep_for_neurocombat_5way([_d.data[self.features_to_harmonize + [self.patient_identifier] + self.covariates] for _d in mri_datasets])
         
         all_togetherF.to_csv(f'{self.intermediate_results_path}/all_togeherf5.csv')
         ftF.to_csv(f'{self.intermediate_results_path}/ftF_top5.csv')
@@ -1126,11 +1379,11 @@ class HarmRELIEF:
         fourth_columns_as_four = [4] * len4
         fifth_columns_as_five = [5] * len5
         covars = {'batch':first_columns_as_one + second_columns_as_two + third_columns_as_three + fourth_columns_as_four + fifth_columns_as_five}
-        for _c in self.covars:
+        for _c in self.covariates:
             covars[_c] = all_togetherF.loc[_c, :].values.tolist()
         covars = pd.DataFrame(covars)
         covars.to_csv(f'{self.intermediate_results_path}/bath_and_mod_forRELIEF5.csv')
-        topperF = self._make_topper(btF,self.covars)
+        topperF = self._make_topper(btF,self.covariates)
         #subprocess.run(['Rscript', 'CVASL_RELIEF_DRIVER.R'])
         
         r = robjects.r
@@ -1154,7 +1407,7 @@ class HarmRELIEF:
         for i in range(len(mri_datasets)):
             current_len = len(mri_datasets[i].data)
             df = back_together.iloc[cum_len:cum_len + current_len].rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": self.patient_identifier})
-            mri_datasets[i].data = mri_datasets[i].data.merge(df.drop(self.covars, axis=1), on=self.patient_identifier)
+            mri_datasets[i].data = mri_datasets[i].data.merge(df.drop(self.covariates, axis=1), on=self.patient_identifier)
             cum_len += current_len
         
         [_d.update_harmonized_statistics() for _d in mri_datasets]
