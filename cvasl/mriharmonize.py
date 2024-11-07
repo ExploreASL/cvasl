@@ -1467,8 +1467,8 @@ class HarmCombatPlusPlus:
         rm(list = ls())
         options(repos = c(CRAN = "https://cran.r-project.org"))
         install.packages("matrixStats", dependencies = TRUE, quiet = TRUE)
-        source('combatPP.R') #as pluscombat
-        source("utils.R")
+        source('{curr_path}/combatPP.R') #as pluscombat
+        source("{curr_path}/utils.R")
 
         library(matrixStats)
 
