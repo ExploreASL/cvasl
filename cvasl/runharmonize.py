@@ -24,7 +24,7 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True)
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True)
 patient_identifier = 'participant_id'
 
-method = 'nestedcombat'
+method = 'combat++'
 
 
 if method == 'neuroharmonize':
@@ -120,6 +120,16 @@ elif method == 'relief':
     
     harmonizer = HarmRELIEF(features_to_harmonize=features_to_harmonize,covariates=covars,patient_identifier=patient_identifier) 
     harmonized_data = harmonizer.harmonize([topmri, helius, edis,  sabre,  insight46])
+
+elif method == 'combat++':
+    encode_cat_features([edis, helius, sabre, topmri, insight46],features_to_map)
+    features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 
+                             'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
+    discrete_covariates = ['sex']
+    continuous_covariates = ['age']
+    sites='site'
+    harmonizer = HarmCombatPlusPlus(features_to_harmonize = features_to_harmonize, site_indicator=sites, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates) 
+    harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 [_d.reverse_encode_categorical_features() for _d in harmonized_data]
 

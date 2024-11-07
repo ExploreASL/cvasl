@@ -1412,3 +1412,112 @@ class HarmRELIEF:
         
         [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
+
+
+class HarmCombatPlusPlus:
+    def __init__(
+        self, features_to_harmonize, discrete_covariates, continuous_covariates, patient_identifier = 'participant_id', intermediate_results_path = '.', site_indicator = 'site'
+    ):
+        """
+        Wrapper class for RELIEF.
+        
+        Arguments
+        ---------
+        features_to_harmonize : a list
+            Features to harmonize excluding covariates and site indicator
+        
+        covariates : a list
+            Contains covariates to control for during harmonization.
+            All covariates must be encoded numerically (no categorical variables)
+
+        patient_identifier : string
+            Indicates the feature that differentiates different patients, default 'participant_id'
+            
+        intermediate_results_path : string
+            Path to save intermediate results of the harmonization process
+            
+        site_indicator : a string
+            Indicates the feature that differentiates different sites, default 'site'
+        """        
+        
+        self.features_to_harmonize = [a.lower() for a in features_to_harmonize]
+        self.intermediate_results_path = intermediate_results_path
+        self.discrete_covariates = discrete_covariates
+        self.continuous_covariates = continuous_covariates
+        self.patient_identifier = patient_identifier.lower()
+        self.site_indicator = site_indicator.lower()
+
+    def harmonize(self, mri_datasets):
+        """
+        Performs the harmonization.
+        
+        Arguments
+        ---------
+        mri_datasets : a list
+            a list of MRIdataset objects to harmonize
+                    
+        Returns
+        -------
+        mri_datasets : a list of MRIdataset objects with harmonized data
+        
+        """                        
+        curr_path = os.getcwd()
+
+        relief_r_driver = f"""
+        rm(list = ls())
+        options(repos = c(CRAN = "https://cran.r-project.org"))
+        install.packages("matrixStats", dependencies = TRUE, quiet = TRUE)
+        source('combatPP.R') #as pluscombat
+        source("utils.R")
+
+        library(matrixStats)
+
+        fused_dat <- read.csv('{self.intermediate_results_path}/_tmp_combined_dataset.csv')
+
+        cont_features = ({','.join(repr(x) for x in self.continuous_covariates)})
+        disc_features = ({','.join(repr(x) for x in self.discrete_covariates)})
+
+        cont_mat <- sapply(fused_dat[cont_features], function(x) as.numeric(unlist(x)))
+
+        # Convert discrete features to categorical
+        disc_mat <- sapply(fused_dat[disc_features], function(x) {{
+        x <- as.numeric(unlist(x))
+        as.factor(x)
+        }})
+
+        # Create design matrix
+        mod <- model.matrix(~ ., data = data.frame(cont_mat, disc_mat))
+
+        # Extract batch information
+        batchvector <- c(fused_dat['{self.site_indicator}'])
+        batchvector <- as.numeric(unlist(batchvector))
+
+
+        # Transpose data
+        ta <- t(fused_dat) 
+
+        # Apply ComBat++ harmonization
+        data.harmonized <-combatPP(ta,  mod=mod, batchvector) # need to add mod=mod
+
+        # Extract harmonized data and process
+        new_df <- data.harmonized$dat.combat
+
+
+        rollback <- t(new_df)
+
+
+        write.csv(rollback, "{self.intermediate_results_path}/plus_harmonized_all.csv")
+        """
+        
+        # all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = self._prep_for_neurocombat_5way([_d.data[self.features_to_harmonize + ['participant_id','sex','age']] for _d in mri_datasets])
+        all_together = pd.concat([_d.data[self.features_to_harmonize+self.discrete_covariates+self.continuous_covariates+[self.site_indicator]] for _d in mri_datasets])
+        all_together.to_csv(f'{self.intermediate_results_path}/_tmp_combined_dataset.csv')
+        r = robjects.r
+        r(relief_r_driver)
+        bottom = pd.read_csv(f'{self.intermediate_results_path}/plus_harmonized_all.csv', index_col=0)#.reset_index(drop=False).drop(['index'],axis=1)#.rename(columns={"index": "char"})
+        all_together[self.features_to_harmonize] = bottom[self.features_to_harmonize]
+        for _ds in mri_datasets:
+            ds_opn_harmonized = all_together[all_together['site'] == _ds.site_id]
+            _ds.data[self.features_to_harmonize] = ds_opn_harmonized[self.features_to_harmonize].copy()
+        
+        return mri_datasets
