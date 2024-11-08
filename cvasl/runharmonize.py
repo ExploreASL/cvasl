@@ -24,7 +24,7 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True)
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True)
 patient_identifier = 'participant_id'
 
-method = 'combat++'
+method = 'autocombat'
 
 
 if method == 'neuroharmonize':
@@ -97,13 +97,13 @@ elif method == 'comscanneuroharmonize':
 elif method == 'autocombat':
     encode_cat_features([edis, helius, sabre, topmri, insight46],features_to_map)
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 
-                             'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
+                             'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf',]
     discrete_covariates = ['sex']
     continuous_covariates = ['decade']
-    sites=['site']
-    discrete_cluster_features = ['labelling','readout']
-    continuous_cluster_features = ['site','ld','pld'] #Attention: notice that site needs to be added to continuous cluster features
-    harmonizer = HarmAutoCombat(features_to_harmonize = features_to_harmonize, site_indicator=sites, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates, continuous_cluster_features=continuous_cluster_features, discrete_cluster_features=None) 
+    sites=['site','ld','pld','readout','labelling']
+    discrete_cluster_features = ['readout','labelling']
+    continuous_cluster_features = ['ld','pld'] 
+    harmonizer = HarmAutoCombat(features_to_harmonize = features_to_harmonize, site_indicator=sites, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates, continuous_cluster_features=continuous_cluster_features, discrete_cluster_features=discrete_cluster_features)
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
 elif method == 'relief':

@@ -754,12 +754,13 @@ class HarmAutoCombat:
             n_jobs = -1, empirical_bayes=self.empirical_bayes)
 
         # Select relevant data for harmonization
-        data_to_harmonize = data[
+        _ft = list(dict.fromkeys(
             self.features_to_harmonize
             + self.site_indicator
             + self.discrete_covariates
             + self.continuous_covariates
-        ].copy()
+        ))        
+        data_to_harmonize = data[_ft].copy()
 
         # Transform the data using ComBat
         harmonized_data = combat.fit(data_to_harmonize)
