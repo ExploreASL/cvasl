@@ -24,7 +24,7 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True)
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True)
 patient_identifier = 'participant_id'
 
-method = 'autocombat'
+method = 'nestedcombat'
 
 
 if method == 'neuroharmonize':
@@ -78,7 +78,7 @@ elif method == 'nestedcombat':
     ]
     site_indicator = ['site']
     #ATTENTION: When I add readout to the discrete covariates, the code throws an error related to calculating the singular matrix, apprently messes up svd operations somehow
-    discrete_covariates = ['sex','labelling']#, 'readout']
+    discrete_covariates = ['sex','labelling', 'readout']
     continuous_covariates = ['age','ld','pld']
     to_be_harmonized_or_covar  = [x.lower() for x in features_to_harmonize ]
     harmonizer = HarmNestedComBat(features_to_harmonize= features_to_harmonize,  site_indicator = site_indicator, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates, intermediate_results_path = '.', return_extended = False, patient_identifier=patient_identifier)
