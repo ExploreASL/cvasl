@@ -251,13 +251,7 @@ def standardize_across_features(X, design, info_dict):
         print("Matrix rank:", np.linalg.matrix_rank(mod))
         print("Condition number:", np.linalg.cond(mod))
         cond_number = np.linalg.cond(mod)
-        print("Condition number:", cond_number)
-        if cond_number < 30:
-            print(" - Indicates good numerical stability.")
-        elif cond_number < 1000:
-            print(" - Indicates moderate numerical stability; results may be reliable but caution is advised.")
-        else:
-            print(" - Indicates poor numerical stability; results may be unreliable.")
+        print("Condition number; larger numbers indicate poor numerical stability:", cond_number)
             
         # Check for constant columns
         print("Constant columns (columns with the same value across all samples):", np.where(np.all(mod == mod[0,:], axis=0))[0])
