@@ -6,6 +6,7 @@ sys.path.insert(0, '../../../')
 sys.path.insert(0, '../../../../')
 import numpy as np
 from cvasl.mriharmonize import *
+from sklearn.ensemble import ExtraTreesRegressor
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -24,7 +25,7 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True)
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True)
 patient_identifier = 'participant_id'
 
-method = 'nestedcombat'
+method = 'covbat'
 
 
 if method == 'neuroharmonize':
@@ -127,11 +128,49 @@ elif method == 'combat++':
                              'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
     discrete_covariates = ['sex']
     continuous_covariates = ['age']
+    discrete_covariates_to_remove = ['labelling']
+    continuous_covariates_to_remove = ['ld']
     sites='site'
-    harmonizer = HarmCombatPlusPlus(features_to_harmonize = features_to_harmonize, site_indicator=sites, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates) 
+    harmonizer = HarmCombatPlusPlus(features_to_harmonize = features_to_harmonize, site_indicator=sites, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates, discrete_covariates_to_remove = discrete_covariates_to_remove, continuous_covariates_to_remove = continuous_covariates_to_remove) 
     harmonized_data = harmonizer.harmonize([edis, helius, sabre, topmri, insight46])
 
-[_d.reverse_encode_categorical_features() for _d in harmonized_data]
 
-print(harmonized_data[0].data.head())
+
+metrics_df_val_all = []
+metrics_df_all = []
+topmri, helius, edis,  sabre,  insight46 = harmonized_data
+for _it in range(20):
+    #randomly select seed
+    seed = np.random.randint(0,100000)
+    pred = PredictBrainAge(model_name='extratree',model_file_name='extratree',model=ExtraTreesRegressor(n_estimators=100, random_state=0),
+                        datasets=[topmri],datasets_validation=[helius,edis,sabre,insight46] ,features=list(harmonized_data[0].data.columns.difference({'participant_id','id','site','age'})),target=['age'],
+                        cat_category='sex',cont_category='age',n_bins=4,splits=5,test_size_p=0.2,random_state=seed)
+
+    metrics_df,metrics_df_val, predictions_df,predictions_df_val, models = pred.predict()
+    metrics_df_all.append(metrics_df)
+    metrics_df_val_all.append(metrics_df_val)
+    print(f'Trial {_it+1} completed') 
+
+#now return the mean of each column of metrics_df_val
+metrics_df_val = pd.concat(metrics_df_val_all)
+metrics_df = pd.concat(metrics_df_all)
+val_mean = metrics_df_val[['explained_variance', 'max_error',
+       'mean_absolute_error', 'mean_squared_error', 'mean_squared_log_error',
+       'median_absolute_error', 'r2', 'mean_poisson_deviance',
+       'mean_gamma_deviance', 'mean_tweedie_deviance', 'd2_tweedie_score',
+       'mean_absolute_percentage_error']].mean(axis=0)
+#and the stabdard error
+val_se = metrics_df_val[['explained_variance', 'max_error',
+       'mean_absolute_error', 'mean_squared_error', 'mean_squared_log_error',
+       'median_absolute_error', 'r2', 'mean_poisson_deviance',
+       'mean_gamma_deviance', 'mean_tweedie_deviance', 'd2_tweedie_score',
+       'mean_absolute_percentage_error']].std(axis=0)/np.sqrt(len(metrics_df_val))
+
+# concat val_mean and val_se as two columns in a new dataframe with column names 'mean' and 'se'
+val_mean_se = pd.concat([val_mean,val_se],axis=1)
+val_mean_se.columns = ['mean','se']
+print(val_mean_se)
+
+# [_d.reverse_encode_categorical_features() for _d in harmonized_data]
+# print(harmonized_data[0].data.head())
 

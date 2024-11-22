@@ -15,6 +15,9 @@ import cvasl.harmony as har
 from scipy import stats
 from tabulate import tabulate
 import IPython.display as dp # for HTML display
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn import metrics
+import warnings
 
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
@@ -601,7 +604,7 @@ class HarmComscanNeuroCombat:
         )
 
         # Select relevant data for harmonization
-        print(self.site_indicator)
+
         data_to_harmonize = data[
             self.features_to_harmonize
             + self.site_indicator
@@ -751,7 +754,7 @@ class HarmAutoCombat:
             size_min=2,
             features_reduction = self.features_reduction,
             n_components =self.features_reduction_dimensions,
-            n_jobs = -1, empirical_bayes=self.empirical_bayes)
+            n_jobs = 8, empirical_bayes=self.empirical_bayes)
 
         # Select relevant data for harmonization
         _ft = list(dict.fromkeys(
@@ -1417,7 +1420,7 @@ class HarmRELIEF:
 
 class HarmCombatPlusPlus:
     def __init__(
-        self, features_to_harmonize, discrete_covariates, continuous_covariates, patient_identifier = 'participant_id', intermediate_results_path = '.', site_indicator = 'site'
+        self, features_to_harmonize, discrete_covariates, continuous_covariates, discrete_covariates_to_remove, continuous_covariates_to_remove, patient_identifier = 'participant_id', intermediate_results_path = '.', site_indicator = 'site'
     ):
         """
         Wrapper class for RELIEF.
@@ -1447,6 +1450,8 @@ class HarmCombatPlusPlus:
         self.continuous_covariates = continuous_covariates
         self.patient_identifier = patient_identifier.lower()
         self.site_indicator = site_indicator.lower()
+        self.discrete_covariates_to_remove = [a.lower() for a in discrete_covariates_to_remove]
+        self.continuous_covariates_to_remove = [a.lower() for a in continuous_covariates_to_remove]
 
     def harmonize(self, mri_datasets):
         """
@@ -1463,55 +1468,86 @@ class HarmCombatPlusPlus:
         
         """                        
         curr_path = os.getcwd()
-
+        _disc = [f'as.factor({a}) + ' for a in self.discrete_covariates_to_remove]
+        _disc = ''.join(_disc)[:-3]
+        _cont = [f'{a} +' for a in self.continuous_covariates_to_remove]
+        _cont = ''.join(_cont)[:-3]
         relief_r_driver = f"""
         rm(list = ls())
         options(repos = c(CRAN = "https://cran.r-project.org"))
         install.packages("matrixStats", dependencies = TRUE, quiet = TRUE)
         source('{curr_path}/combatPP.R') #as pluscombat
         source("{curr_path}/utils.R")
-
         library(matrixStats)
-
+        
         fused_dat <- read.csv('{self.intermediate_results_path}/_tmp_combined_dataset.csv')
-
         cont_features = ({','.join(repr(x) for x in self.continuous_covariates)})
         disc_features = ({','.join(repr(x) for x in self.discrete_covariates)})
-
         cont_mat <- sapply(fused_dat[cont_features], function(x) as.numeric(unlist(x)))
-
         # Convert discrete features to categorical
         disc_mat <- sapply(fused_dat[disc_features], function(x) {{
         x <- as.numeric(unlist(x))
         as.factor(x)
         }})
 
-        # Create design matrix
         mod <- model.matrix(~ ., data = data.frame(cont_mat, disc_mat))
+        #####################################################################################
+        cont_features_to_remove = c({','.join(repr(x) for x in self.continuous_covariates_to_remove)})
+        disc_features_to_remove = c({','.join(repr(x) for x in self.discrete_covariates_to_remove)})
+        cont_mat_to_remove <- sapply(fused_dat[cont_features_to_remove], function(x) as.numeric(unlist(x)))
+        # Convert discrete features to categorical
+        disc_mat_to_remove <- sapply(fused_dat[disc_features_to_remove], function(x) {{
+        x <- as.numeric(unlist(x))
+        as.factor(x)
+        }})
 
-        # Extract batch information
+
+
+
+        # Conditional assignment for mod_to_remove based on the presence of covariates
+
+        # Check if both cont_mat_to_remove and disc_mat_to_remove are NULL
+        if (is.null(cont_mat_to_remove) && is.null(disc_mat_to_remove)) {{
+        mod_to_remove <- NULL
+        }} else {{
+        # Initialize an empty list to store non-NULL matrices
+        data_list <- list()
+        
+        # Add cont_mat_to_remove to the list if it's not NULL
+        if (!is.null(cont_mat_to_remove)) {{
+            data_list$cont_mat_to_remove <- cont_mat_to_remove
+        }}
+        
+        # Add disc_mat_to_remove to the list if it's not NULL
+        if (!is.null(disc_mat_to_remove)) {{
+            data_list$disc_mat_to_remove <- disc_mat_to_remove
+        }}
+        
+        # Combine the non-NULL matrices into a data frame
+        combined_data <- do.call(cbind, data_list)
+        
+        # Create the model matrix using the combined data
+        mod_to_remove <- model.matrix(~ ., data = as.data.frame(combined_data))
+        }}
+
+
+
+
+        #mod_to_remove <- model.matrix(~ ., data = data.frame(cont_mat_to_remove, disc_mat_to_remove))
+        
+        #####################################################################################
         batchvector <- c(fused_dat['{self.site_indicator}'])
         batchvector <- as.numeric(unlist(batchvector))
 
-
-        # Transpose data
         ta <- t(fused_dat) 
-
-        # Apply ComBat++ harmonization
-        data.harmonized <-combatPP(ta,  mod=mod, batchvector) # need to add mod=mod
-
-        # Extract harmonized data and process
+        data.harmonized <-combatPP(dat=ta, PC= mod_to_remove, mod=mod, batch=batchvector) # need to add mod=mod
         new_df <- data.harmonized$dat.combat
-
-
         rollback <- t(new_df)
-
-
         write.csv(rollback, "{self.intermediate_results_path}/plus_harmonized_all.csv")
         """
         
         # all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = self._prep_for_neurocombat_5way([_d.data[self.features_to_harmonize + ['participant_id','sex','age']] for _d in mri_datasets])
-        all_together = pd.concat([_d.data[self.features_to_harmonize+self.discrete_covariates+self.continuous_covariates+[self.site_indicator]] for _d in mri_datasets])
+        all_together = pd.concat([_d.data[self.features_to_harmonize+self.discrete_covariates+self.continuous_covariates+[self.site_indicator] + self.continuous_covariates_to_remove + self.discrete_covariates_to_remove] for _d in mri_datasets])
         all_together.to_csv(f'{self.intermediate_results_path}/_tmp_combined_dataset.csv')
         r = robjects.r
         r(relief_r_driver)
@@ -1522,3 +1558,135 @@ class HarmCombatPlusPlus:
             _ds.data[self.features_to_harmonize] = ds_opn_harmonized[self.features_to_harmonize].copy()
         
         return mri_datasets
+
+
+
+class PredictBrainAge:
+    
+    def __init__(self, 
+        model_name,
+        model_file_name,
+        model,
+        datasets,
+        datasets_validation,
+        features,
+        target,
+        cat_category='sex',
+        cont_category='age',
+        n_bins=4,
+        splits=5,
+        test_size_p=0.2,
+        random_state=42,
+        ):
+        
+            self.model_name = model_name
+            self.model_file_name = model_file_name
+            self.model = model
+            self.datasets = datasets
+            self.datasets_validation = datasets_validation
+            self.data = pd.concat([_d.data for _d in datasets])
+            self.data_validation = pd.concat([_d.data for _d in datasets_validation]) if datasets_validation is not None else None
+            self.features = features
+            self.target = target
+            self.cat_category = cat_category
+            self.cont_category = cont_category
+            self.splits = splits
+            self.test_size_p = test_size_p
+            self.random_state = random_state
+            self.n_bins = n_bins
+            
+        
+    def bin_dataset(self, ds, column, num_bins=4):
+        
+        ds[f'binned'] = pd.qcut(ds[column], num_bins, labels=False, duplicates='drop')
+
+    def predict(self):
+        if self.test_size_p > 1 / self.splits:
+            warnings.warn("Potential resampling issue: test_size_p is too large.")
+        
+        self.bin_dataset(self.data,self.cont_category, num_bins=self.n_bins)  # Assuming bin_dataset exists
+        self.data['fuse_bin'] = pd.factorize(
+                self.data[self.cat_category].astype(str) + '_' + self.data['binned'].astype(str)
+            )[0]
+        
+        if self.datasets_validation is not None:
+            self.bin_dataset(self.data_validation,self.cont_category, num_bins=self.n_bins)  # Assuming bin_dataset exists
+            self.data_validation['fuse_bin'] = pd.factorize(
+                    self.data_validation[self.cat_category].astype(str) + '_' + self.data_validation['binned'].astype(str)
+                )[0]
+
+        
+        
+        sss = StratifiedShuffleSplit(n_splits=self.splits, test_size=self.test_size_p, random_state=self.random_state)
+
+        all_metrics = []
+        all_metrics_val = []
+        all_predictions = []
+        all_predictions_val = []
+        models = []
+        X = self.data[self.features]
+        y = self.data[self.target]
+        for i, (train_index, test_index) in enumerate(sss.split(self.data, self.data['fuse_bin'])):
+            X_train = X.values[train_index]
+            y_train = y.values[train_index]
+            X_test = X.values[test_index]
+            y_test = y.values[test_index]
+            if self.data_validation is not None:
+                X_val = self.data_validation[self.features]
+                y_val = self.data_validation[self.target]
+            
+
+            self.model.fit(X_train, y_train)
+            y_pred = self.model.predict(X_test)
+            y_pred_val = self.model.predict(X_val) if self.data_validation is not None else None
+            metrics_data = {
+                'algorithm': f'{self.model_name}-{i}',
+                'fold': i,
+                'file_name': f'{self.model_file_name}.{i}',
+                'explained_variance': metrics.explained_variance_score(y_test, y_pred),
+                'max_error': metrics.max_error(y_test, y_pred),
+                'mean_absolute_error': metrics.mean_absolute_error(y_test, y_pred),
+                'mean_squared_error': metrics.mean_squared_error(y_test, y_pred),
+                'mean_squared_log_error': metrics.mean_squared_log_error(y_test, y_pred) if all(y_test > 0) and all(y_pred > 0) else None,
+                'median_absolute_error': metrics.median_absolute_error(y_test, y_pred),
+                'r2': metrics.r2_score(y_test, y_pred),
+                'mean_poisson_deviance': metrics.mean_poisson_deviance(y_test, y_pred) if all(y_test >= 0) and all(y_pred >= 0) else None,
+                'mean_gamma_deviance': metrics.mean_gamma_deviance(y_test, y_pred) if all(y_test > 0) and all(y_pred > 0) else None,
+                'mean_tweedie_deviance': metrics.mean_tweedie_deviance(y_test, y_pred),
+                'd2_tweedie_score': metrics.d2_tweedie_score(y_test, y_pred), # Added d2 tweedie score
+                'mean_absolute_percentage_error': metrics.mean_absolute_percentage_error(y_test, y_pred), # Added MAPE
+            }
+            metric_data_val = { 
+                'algorithm': f'{self.model_name}-{i}',
+                'fold': i,
+                'file_name': f'{self.model_file_name}.{i}',
+                'explained_variance': metrics.explained_variance_score(y_val, y_pred_val),
+                'max_error': metrics.max_error(y_val, y_pred_val),
+                'mean_absolute_error': metrics.mean_absolute_error(y_val, y_pred_val),
+                'mean_squared_error': metrics.mean_squared_error(y_val, y_pred_val),
+                'mean_squared_log_error': metrics.mean_squared_log_error(y_val, y_pred_val) if all(y_val > 0) and all(y_pred_val > 0) else None,
+                'median_absolute_error': metrics.median_absolute_error(y_val, y_pred_val),
+                'r2': metrics.r2_score(y_val, y_pred_val),
+                'mean_poisson_deviance': metrics.mean_poisson_deviance(y_val, y_pred_val) if all(y_val >= 0) and all(y_pred_val >= 0) else None,
+                'mean_gamma_deviance': metrics.mean_gamma_deviance(y_val, y_pred_val) if all(y_val > 0) and all(y_pred_val > 0) else None,
+                'mean_tweedie_deviance': metrics.mean_tweedie_deviance(y_val, y_pred_val),
+                'd2_tweedie_score': metrics.d2_tweedie_score(y_val, y_pred_val), # Added d2 tweedie score
+                'mean_absolute_percentage_error': metrics.mean_absolute_percentage_error(y_val, y_pred_val), # Added MAPE
+            } if self.data_validation is not None else None
+
+            all_metrics.append(metrics_data)
+            all_metrics_val.append(metric_data_val)
+            predictions_data = pd.DataFrame({'y_test': y_test.flatten(), 'y_pred': y_pred.flatten()})
+            predictions_data_val = pd.DataFrame({'y_test': y_val.values.flatten(), 'y_pred': y_pred_val.flatten()}) if self.data_validation is not None else None
+            all_predictions.append(predictions_data)
+            all_predictions_val.append(predictions_data_val) if self.data_validation is not None else None
+
+            models.append((self.model, X.values[train_index][:, 0]))
+
+        metrics_df = pd.DataFrame(all_metrics)
+        metrics_df_val = pd.DataFrame(all_metrics_val) if self.data_validation is not None else None
+        predictions_df = pd.concat(all_predictions)
+        predictions_df_val = pd.concat(all_predictions_val) if self.data_validation is not None else None
+
+        return metrics_df,metrics_df_val, predictions_df,predictions_df_val, models
+    
