@@ -38,6 +38,8 @@ def encode_cat_features(dff,cat_features_to_encode):
             data[feature] = data[feature].map(mapping)
     
     for _d in dff:
+        print(_d.path)
+        print(_d.data.columns)
         _d.data = data[data['site'] == _d.site_id]
         _d.feature_mappings = feature_mappings
         _d.reverse_mappings = reverse_mappings
@@ -67,6 +69,7 @@ class MRIdataset:
         self.feature_mappings = {}
         self.reverse_mappings = {}
         self.icv = ICV
+        self.path = path
         self.decade = decade
         self.features_to_drop = features_to_drop
         self.fetures_to_bin = features_to_bin
@@ -230,20 +233,23 @@ class MRIdataset:
     def preprocess(self):
         # Common preprocessing steps
         self.data.columns = self.data.columns.str.lower()
+        print(1,self.data.columns)
         if self.features_to_drop:
             self.dropFeatures()
-
+        print(2,self.data.columns)
         if self.decade:
             self.addDecadefeatures()
+        print(3,self.data.columns)
         if self.icv:
             self.addICVfeatures()
-
+        print(4,self.data.columns)
         if self.cat_features_to_encode:
             self.encode_categorical_features()
-
+        print(5,self.data.columns)
         if self.fetures_to_bin:
             self.generalized_binning()
-        self.initial_statistics = self._extended_summary_statistics()
+        print(6,self.data.columns)
+        #self.initial_statistics = self._extended_summary_statistics()
     
     def update_harmonized_statistics(self):
         self.harmonized_statistics = self._extended_summary_statistics()
@@ -511,7 +517,7 @@ class HarmNeuroHarmonize:
         for _d in mri_datasets:
             _d.data = harmonized_df[harmonized_df["SITE"] == _d.site_id]
             _d.data = _d.data.drop(columns=["SITE",'index'])
-        [_d.update_harmonized_statistics() for _d in mri_datasets]
+        # [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 
@@ -647,7 +653,7 @@ class HarmComscanNeuroCombat:
             site_value = dataset.site_id
             adjusted_data = harmonized_df[harmonized_df[self.site_indicator[0]] == site_value]
             dataset.data = adjusted_data
-        [_d.update_harmonized_statistics() for _d in mri_datasets]
+        # [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 class HarmAutoCombat:
@@ -801,7 +807,7 @@ class HarmAutoCombat:
             # adjusted_data = harmonized_df[harmonized_df["site"] == site_value]
             adjusted_data = harmonized_df[harmonized_df[self.site_indicator] == site_value]
             dataset.data = adjusted_data
-        [_d.update_harmonized_statistics() for _d in mri_datasets]
+        # [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 class HarmCovbat:
@@ -903,7 +909,7 @@ class HarmCovbat:
             adjusted_data = harmonized_data[harmonized_data[self.site_indicator] == site_value]
             adjusted_data = adjusted_data.merge(semi_features[i], on=self.patient_identifier)
             dataset.data = adjusted_data
-        [_d.update_harmonized_statistics() for _d in mri_datasets]
+        # [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 
@@ -1201,8 +1207,10 @@ class HarmNestedComBat:
             le.fit(list(stringcol_testing))
             covars_testing_cat[col_testing] = le.transform(stringcol_testing)        
         
+        
         covars_testing_final = pd.concat([covars_testing_cat, covars_testing_quant])
         
+        ##################################### GMM Splitting #####################################
         gmm_testing_df = nest.GMMSplit(dat_testing, caseno_testing, self.intermediate_results_path)
         
         gmm_testing_df_merge = batch_testing_df.merge(gmm_testing_df, right_on='Patient', left_on=self.patient_identifier)
@@ -1212,7 +1220,10 @@ class HarmNestedComBat:
 
         covars_testing_final = gmm_testing_df_merge.drop([self.patient_identifier,'Patient','Grouping'],axis=1)
         discrete_covariates = self.discrete_covariates + ['GMM']
-
+        #################################### GMM Splitting #####################################
+    
+        
+        
         output_testing_df = nest.OPNestedComBat(dat_testing,
                                         covars_testing_final,
                                         self.site_indicator,
@@ -1236,7 +1247,7 @@ class HarmNestedComBat:
             ds_opn_harmonized = ds_opn_harmonized.drop(columns=self.site_indicator+['GMM',])      
             ds_opn_harmonized  = ds_opn_harmonized.merge( _ds.data, on=self.patient_identifier)
             _ds.data = ds_opn_harmonized.copy()
-        [_d.update_harmonized_statistics() for _d in mri_datasets]
+        # [_d.update_harmonized_statistics() for _d in mri_datasets]
         if self.return_extended:
             mri_datasets,write_testing_df,dat_testing_input,covars_testing_final
         else:
@@ -1414,7 +1425,7 @@ class HarmRELIEF:
             mri_datasets[i].data = mri_datasets[i].data.merge(df.drop(self.covariates, axis=1), on=self.patient_identifier)
             cum_len += current_len
         
-        [_d.update_harmonized_statistics() for _d in mri_datasets]
+        # [_d.update_harmonized_statistics() for _d in mri_datasets]
         return mri_datasets
 
 
