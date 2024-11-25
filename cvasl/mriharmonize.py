@@ -18,7 +18,7 @@ import IPython.display as dp # for HTML display
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn import metrics
 import warnings
-
+from sklearn.preprocessing import StandardScaler
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 import subprocess
@@ -1221,6 +1221,11 @@ class HarmNestedComBat:
         covars_testing_final = gmm_testing_df_merge.drop([self.patient_identifier,'Patient','Grouping'],axis=1)
         discrete_covariates = self.discrete_covariates + ['GMM']
         #################################### GMM Splitting #####################################
+        
+        # gmm_testing_df_merge = batch_testing_df
+
+        # covars_testing_final = gmm_testing_df_merge.drop([self.patient_identifier],axis=1)
+        # discrete_covariates = self.discrete_covariates
     
         
         
@@ -1637,15 +1642,19 @@ class PredictBrainAge:
         models = []
         X = self.data[self.features]
         y = self.data[self.target]
+        
+        X = pd.DataFrame(StandardScaler().fit_transform(X), columns = X.columns)
+        
+        if self.data_validation is not None:
+            X_val = self.data_validation[self.features]
+            y_val = self.data_validation[self.target]
+            X_val = pd.DataFrame(StandardScaler().fit_transform(X_val), columns = X_val.columns)
+        
         for i, (train_index, test_index) in enumerate(sss.split(self.data, self.data['fuse_bin'])):
             X_train = X.values[train_index]
             y_train = y.values[train_index]
             X_test = X.values[test_index]
-            y_test = y.values[test_index]
-            if self.data_validation is not None:
-                X_val = self.data_validation[self.features]
-                y_val = self.data_validation[self.target]
-            
+            y_test = y.values[test_index]            
 
             self.model.fit(X_train, y_train)
             y_pred = self.model.predict(X_test)

@@ -25,7 +25,7 @@ topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True)
 insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True)
 patient_identifier = 'participant_id'
 
-method = 'neuroharmonize'
+method = 'nestedcombat'
 
 
 if method == 'neuroharmonize':
