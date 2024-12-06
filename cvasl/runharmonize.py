@@ -17,14 +17,16 @@ sabre_path = '../data/SABRE_input.csv'
 insight_path = '../data/Insight46_input.csv'
 topmri_path = ['../data/TOP_input.csv','../data/StrokeMRI_input.csv']
 
+features_to_drop = ["m0", "id"]
+
 features_to_map = ['readout', 'labelling', 'sex']
 patient_identifier = 'participant_id'
 
-edis = MRIdataset(Edis_path, site_id=0, decade=True, ICV = True, patient_identifier=patient_identifier)
-helius = MRIdataset(helius_path, site_id=1, decade=True, ICV = True, patient_identifier=patient_identifier)
-sabre = MRIdataset(sabre_path, site_id=2, decade=True, ICV = True, patient_identifier=patient_identifier)
-topmri = MRIdataset(topmri_path, site_id=3, decade=True, ICV = True, patient_identifier=patient_identifier)
-insight46 = MRIdataset(insight_path, site_id=4, decade=True, ICV = True, patient_identifier=patient_identifier)
+edis = MRIdataset(Edis_path, site_id=0, decade=True, ICV = True, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+helius = MRIdataset(helius_path, site_id=1, decade=True, ICV = True, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+sabre = MRIdataset(sabre_path, site_id=2, decade=True, ICV = True, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+topmri = MRIdataset(topmri_path, site_id=3, decade=True, ICV = True, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+insight46 = MRIdataset(insight_path, site_id=4, decade=True, ICV = True, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
 
 datasets = [edis, helius, sabre, topmri, insight46]
 [_d.preprocess() for _d in datasets]
@@ -32,7 +34,7 @@ datasets = [edis, helius, sabre, topmri, insight46]
 
 datasets = encode_cat_features(datasets,features_to_map)
 
-method = 'relief'
+method = 'neuroharmonize'
 
 
 if method == 'neuroharmonize':
@@ -40,7 +42,6 @@ if method == 'neuroharmonize':
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
     covariates = ['age', 'sex',  'icv', 'site']
     site_indicator = 'site'
-    datasets = encode_cat_features(datasets,features_to_map)
     #ATTENTION: providing the smoothing term, e.g. ['age'] leads to longer running time and different results
     harmonizer = HarmNeuroHarmonize( features_to_harmonize = features_to_harmonize, covariates = covariates, smooth_terms = [], site_indicator=site_indicator, empirical_bayes = True)
     harmonized_data = harmonizer.harmonize(datasets)
@@ -124,8 +125,9 @@ elif method == 'combat++':
     harmonizer = HarmCombatPlusPlus(features_to_harmonize = features_to_harmonize, site_indicator=sites, discrete_covariates = discrete_covariates, continuous_covariates = continuous_covariates, discrete_covariates_to_remove = discrete_covariates_to_remove, continuous_covariates_to_remove = continuous_covariates_to_remove) 
     harmonized_data = harmonizer.harmonize(datasets)
 
+print(harmonized_data[1].data.tail())
 [_d.prepare_for_export() for _d in datasets]
-print(harmonized_data[0].data.head())
+print(harmonized_data[1].data.tail())
 
 
 harmonized_data[0].data.to_csv(Edis_path.replace('input',f'output_{method}'),index=False)
@@ -133,9 +135,4 @@ harmonized_data[1].data.to_csv(helius_path.replace('input',f'output_{method}'),i
 harmonized_data[2].data.to_csv(sabre_path.replace('input',f'output_{method}'),index=False)
 harmonized_data[3].data.to_csv(topmri_path[0].replace('input',f'output_{method}'),index=False)
 harmonized_data[4].data.to_csv(insight_path.replace('input',f'output_{method}'),index=False)
-
-
-
-[_d.reverse_encode_categorical_features() for _d in harmonized_data]
-#print(harmonized_data[0].data.head())
 

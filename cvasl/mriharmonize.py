@@ -63,6 +63,7 @@ class MRIdataset:
             self.data = pd.concat(pd.read_csv(_p) for _p in path)
         else:
             self.data = pd.read_csv(path)
+
         self.site_id = site_id
         self.data["Site"] = self.site_id
         self.feature_mappings = {}
@@ -80,6 +81,7 @@ class MRIdataset:
         self.initial_statistics = None
         self.harmonized_statistics = None
         self.columns_order = self.data.columns.to_list()
+        self.dropped_features = None
 
     def generalized_binning(self):
         """
@@ -151,12 +153,12 @@ class MRIdataset:
 
     def addDecadefeatures(self):
         self.data["decade"] = (self.data["age"] / 10).round()
-        self.data = self.data.sort_values(by="age")
+        #self.data = self.data.sort_values(by="age")
         self.data.reset_index(inplace=True)
 
     def dropFeatures(self):
         
-        self.dropped_features = self.data[self.features_to_drop]
+        self.dropped_features = self.data[[self.patient_identifier] + self.features_to_drop]
         self.data = self.data.drop(self.features_to_drop, axis=1)
     
     #define a function that would add site_id to the bginning of the patient_identifier column of the data
@@ -168,12 +170,21 @@ class MRIdataset:
         self.data[self.patient_identifier] = self.data[self.patient_identifier].str.split('_OriginalID:').str[1]
     
     def prepare_for_export(self):
+        print('444',self.data.tail())
         self.restore_patient_ids()
+        print('999',self.data.tail())
+        print('888',self.dropped_features.tail())    
+        self.data = self.data.merge(self.dropped_features,on=self.patient_identifier)
+        print('111',self.data.tail())
         self.reverse_encode_categorical_features()
-        self.data = pd.concat([self.data, self.dropped_features.reset_index()], axis=1)
+        print('222',self.data.tail())
         _tc = [_c.lower() for _c in self.columns_order]
+        print('333',self.data.tail())
         self.data = self.data[_tc]
+        print('555',self.data.tail())
         self.data.columns = self.columns_order
+        print('666',self.data.tail())
+
     
     def _extended_summary_statistics(self):
         """
@@ -243,9 +254,13 @@ class MRIdataset:
     def preprocess(self):
         # Common preprocessing steps
         self.data.columns = self.data.columns.str.lower()
-        self.unique_patient_ids()
         if self.features_to_drop:
             self.dropFeatures()
+
+        self.unique_patient_ids()
+        
+
+
         if self.decade:
             self.addDecadefeatures()
         if self.icv:
@@ -1443,6 +1458,7 @@ class PredictBrainAge:
         ds[f'binned'] = pd.qcut(ds[column], num_bins, labels=False, duplicates='drop')
 
     def predict(self):
+
         if self.test_size_p > 1 / self.splits:
             warnings.warn("Potential resampling issue: test_size_p is too large.")
         
@@ -1458,7 +1474,6 @@ class PredictBrainAge:
                 )[0]
 
         
-        
         sss = StratifiedShuffleSplit(n_splits=self.splits, test_size=self.test_size_p, random_state=self.random_state)
 
         all_metrics = []
@@ -1473,13 +1488,12 @@ class PredictBrainAge:
         sc = StandardScaler()
         X = sc.fit_transform(X)
         X_val = sc.transform (X_val) if self.data_validation is not None else None
-        
         for i, (train_index, test_index) in enumerate(sss.split(self.data, self.data['fuse_bin'])):
             X_train = X[train_index]
             y_train = y.values[train_index]
             X_test = X[test_index]
             y_test = y.values[test_index]            
-
+            
             self.model.fit(X_train, y_train)
             y_pred = self.model.predict(X_test)
             y_pred_val = self.model.predict(X_val) if self.data_validation is not None else None

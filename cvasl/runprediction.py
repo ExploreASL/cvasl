@@ -1,9 +1,5 @@
 import pandas as pd
 import sys
-sys.path.insert(0, '../../')
-sys.path.insert(0, '../')
-sys.path.insert(0, '../../../')
-sys.path.insert(0, '../../../../')
 import numpy as np
 from cvasl.mriharmonize import *
 from sklearn.ensemble import ExtraTreesRegressor
@@ -27,8 +23,12 @@ from sklearn.ensemble import GradientBoostingRegressor
 import warnings
 warnings.filterwarnings("ignore")
 
-method = 'neuroharmonize' # 'neuroharmonize' or 'covbat' or 'neurocombat'
+#method = 'neurocombat'
+method = 'neuroharmonize'
+
 features_to_map = ['readout', 'labelling', 'sex']
+patient_identifier = 'participant_id'
+features_to_drop = ["m0", "id"]
 
 Edis_path = f'../data/EDIS_output_{method}.csv'
 helius_path = f'../data/HELIUS_output_{method}.csv'
@@ -36,12 +36,15 @@ sabre_path = f'../data/SABRE_output_{method}.csv'
 insight_path = f'../data/Insight46_output_{method}.csv'
 topmri_path = f'../data/TOP_output_{method}.csv'
 
+patient_identifier = 'participant_id'
 
-edis_harm = EDISdataset(Edis_path, site_id=0, decade=True, ICV = True,features_to_drop=None)
-helius_harm = HELIUSdataset(helius_path, site_id=1, decade=True, ICV = True,features_to_drop=None)
-sabre_harm = SABREdataset(sabre_path, site_id=2, decade=True, ICV = True,features_to_drop=None)
-topmri_harm = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True,features_to_drop=None)
-insight46_harm = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True,features_to_drop=None)
+edis_harm = MRIdataset(Edis_path, site_id=0, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+helius_harm = MRIdataset(helius_path, site_id=1, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+sabre_harm = MRIdataset(sabre_path, site_id=2, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+topmri_harm = MRIdataset(topmri_path, site_id=3, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+insight46_harm = MRIdataset(insight_path, site_id=4, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+
+datasets_harm = [edis_harm, helius_harm, sabre_harm, topmri_harm, insight46_harm]
 
 Edis_path = '../data/EDIS_input.csv'
 helius_path = '../data/HELIUS_input.csv'
@@ -50,13 +53,20 @@ insight_path = '../data/Insight46_input.csv'
 topmri_path = ['../data/TOP_input.csv','../data/StrokeMRI_input.csv']
 
 
-edis = EDISdataset(Edis_path, site_id=0, decade=True, ICV = True)
-helius = HELIUSdataset(helius_path, site_id=1, decade=True, ICV = True)
-sabre = SABREdataset(sabre_path, site_id=2, decade=True, ICV = True)
-topmri = TOPdataset(topmri_path, site_id=3, decade=True, ICV = True)
-insight46 = Insight46dataset(insight_path, site_id=4, decade=True, ICV = True)
+edis = MRIdataset(Edis_path, site_id=0, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+helius = MRIdataset(helius_path, site_id=1, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+sabre = MRIdataset(sabre_path, site_id=2, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+topmri = MRIdataset(topmri_path, site_id=3, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
+insight46 = MRIdataset(insight_path, site_id=4, decade=False, ICV = False, patient_identifier=patient_identifier, features_to_drop=features_to_drop)
 
-[edis, helius, sabre, topmri, insight46] = encode_cat_features([edis, helius, sabre, topmri, insight46],features_to_map)
+datasets = [edis, helius, sabre, topmri, insight46]
+
+
+[_d.preprocess() for _d in datasets]
+[_d.preprocess() for _d in datasets_harm]
+
+datasets = encode_cat_features(datasets,features_to_map)
+datasets_harm = encode_cat_features(datasets_harm,features_to_map)
 
 
 
@@ -73,12 +83,16 @@ for model in [ExtraTreesRegressor(n_estimators=100,random_state=np.random.randin
         pred_harm = PredictBrainAge(model_name='extratree',model_file_name='extratree',model=model,
                             datasets=[topmri_harm],datasets_validation=[edis_harm,helius_harm,sabre_harm,insight46_harm] ,features=pred_features,target=['age'],
                             cat_category='sex',cont_category='age',n_bins=2,splits=10,test_size_p=0.05,random_state=seed)
+        
         pred = PredictBrainAge(model_name='extratree',model_file_name='extratree',model=model,
                             datasets=[topmri],datasets_validation=[edis,helius,sabre,insight46] ,features=pred_features,target=['age'],
                             cat_category='sex',cont_category='age',n_bins=4,splits=5,test_size_p=0.1,random_state=seed)
 
-        metrics_df,metrics_df_val, predictions_df,predictions_df_val, models = pred.predict()
+
+
         metrics_df_harm,metrics_df_val_harm, predictions_df_harm,predictions_df_val_harm, models_harm = pred_harm.predict()
+        metrics_df,metrics_df_val, predictions_df,predictions_df_val, models = pred.predict()
+        
         
         metrics_df_all_harm.append(metrics_df_harm)
         metrics_df_val_all_harm.append(metrics_df_val_harm)
