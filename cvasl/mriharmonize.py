@@ -38,8 +38,6 @@ def encode_cat_features(dff,cat_features_to_encode):
             data[feature] = data[feature].map(mapping)
     
     for _d in dff:
-        print(_d.path)
-        print(_d.data.columns)
         _d.data = data[data['site'] == _d.site_id]
         _d.feature_mappings = feature_mappings
         _d.reverse_mappings = reverse_mappings
@@ -51,6 +49,7 @@ class MRIdataset:
         self,
         path,
         site_id,
+        patient_identifier="participant_id",
         cat_features_to_encode=None,
         ICV=False,
         decade=False,
@@ -68,6 +67,7 @@ class MRIdataset:
         self.data["Site"] = self.site_id
         self.feature_mappings = {}
         self.reverse_mappings = {}
+        self.patient_identifier = patient_identifier
         self.icv = ICV
         self.path = path
         self.decade = decade
@@ -79,6 +79,7 @@ class MRIdataset:
         self.cat_features_to_encode = cat_features_to_encode
         self.initial_statistics = None
         self.harmonized_statistics = None
+        self.columns_order = self.data.columns.to_list()
 
     def generalized_binning(self):
         """
@@ -143,16 +144,7 @@ class MRIdataset:
                 unique_values = self.data[feature].unique()
                 # Filter the mapping to include only the unique values
                 filtered_mapping = {k: mapping[k] for k in unique_values if k in mapping}               
-                self.data[feature] = self.data[feature].map(filtered_mapping)
-
-    # def reverse_encode_categorical_features(self):
-    #     for feature, mapping in self.reverse_mappings.items():
-    #         if feature in self.data.columns:
-    #             # Only map values that exist in the column
-    #             self.data[feature] = self.data[feature].map(
-    #                 lambda x: mapping.get(x, x) if x in mapping else x
-    #             )
-    
+                self.data[feature] = self.data[feature].map(filtered_mapping)    
                     
     def addICVfeatures(self):
         self.data["icv"] = self.data["gm_vol"] / self.data["gm_icvratio"]
@@ -163,8 +155,26 @@ class MRIdataset:
         self.data.reset_index(inplace=True)
 
     def dropFeatures(self):
+        
+        self.dropped_features = self.data[self.features_to_drop]
         self.data = self.data.drop(self.features_to_drop, axis=1)
-
+    
+    #define a function that would add site_id to the bginning of the patient_identifier column of the data
+    def unique_patient_ids(self):
+        self.data[self.patient_identifier] = "MRIPatient_Site:" + str(self.site_id) + '_OriginalID:'  + self.data[self.patient_identifier]
+    
+    #define a function that restores the patient_identifier column to its original state
+    def restore_patient_ids(self):
+        self.data[self.patient_identifier] = self.data[self.patient_identifier].str.split('_OriginalID:').str[1]
+    
+    def prepare_for_export(self):
+        self.restore_patient_ids()
+        self.reverse_encode_categorical_features()
+        self.data = pd.concat([self.data, self.dropped_features.reset_index()], axis=1)
+        _tc = [_c.lower() for _c in self.columns_order]
+        self.data = self.data[_tc]
+        self.data.columns = self.columns_order
+    
     def _extended_summary_statistics(self):
         """
         Calculates extended summary statistics for each column of a Pandas DataFrame.
@@ -233,208 +243,22 @@ class MRIdataset:
     def preprocess(self):
         # Common preprocessing steps
         self.data.columns = self.data.columns.str.lower()
-        print(1,self.data.columns)
+        self.unique_patient_ids()
         if self.features_to_drop:
             self.dropFeatures()
-        print(2,self.data.columns)
         if self.decade:
             self.addDecadefeatures()
-        print(3,self.data.columns)
         if self.icv:
             self.addICVfeatures()
-        print(4,self.data.columns)
         if self.cat_features_to_encode:
             self.encode_categorical_features()
-        print(5,self.data.columns)
         if self.fetures_to_bin:
             self.generalized_binning()
-        print(6,self.data.columns)
         #self.initial_statistics = self._extended_summary_statistics()
     
     def update_harmonized_statistics(self):
         self.harmonized_statistics = self._extended_summary_statistics()
         
-
-
-class EDISdataset(MRIdataset):
-    def __init__(
-        self,
-        path,
-        site_id,
-        cat_features_to_encode=None,
-        ICV=False,
-        decade=False,
-        features_to_drop=["m0", "id"],
-        features_to_bin=None,
-        binning_method="equal_width",
-        num_bins=10,
-        bin_labels=None,
-    ):
-        super().__init__(
-            path,
-            site_id,
-            cat_features_to_encode,
-            ICV,
-            decade,
-            features_to_drop,
-            features_to_bin,
-            binning_method,
-            num_bins,
-            bin_labels,
-        )
-        self.preprocess()
-
-
-class HELIUSdataset(MRIdataset):
-    def __init__(
-        self,
-        path,
-        site_id,
-        cat_features_to_encode=None,
-        ICV=False,
-        decade=False,
-        features_to_drop=["m0", "id"],
-        features_to_bin=None,
-        binning_method="equal_width",
-        num_bins=10,
-        bin_labels=None,
-    ):
-        super().__init__(
-            path,
-            site_id,
-            cat_features_to_encode,
-            ICV,
-            decade,
-            features_to_drop,
-            features_to_bin,
-            binning_method,
-            num_bins,
-            bin_labels,
-        )
-        self.preprocess()
-
-    def preprocess(self):
-        super().preprocess()
-        # Specific preprocessing for HELIUS
-        self.data.loc[
-            self.data["participant_id"] == "sub-153852_1", "participant_id"
-        ] = "sub-153852_1H"
-
-
-class SABREdataset(MRIdataset):
-    def __init__(
-        self,
-        path,
-        site_id,
-        cat_features_to_encode=None,
-        ICV=False,
-        decade=False,
-        features_to_drop=["m0", "id"],
-        features_to_bin=None,
-        binning_method="equal_width",
-        num_bins=10,
-        bin_labels=None,
-    ):
-        super().__init__(
-            path,
-            site_id,
-            cat_features_to_encode,
-            ICV,
-            decade,
-            features_to_drop,
-            features_to_bin,
-            binning_method,
-            num_bins,
-            bin_labels,
-        )
-        self.preprocess()
-
-
-class StrokeMRIdataset(MRIdataset):
-    def __init__(
-        self,
-        path,
-        site_id,
-        cat_features_to_encode=None,
-        ICV=False,
-        decade=False,
-        features_to_drop=["m0", "id"],
-        features_to_bin=None,
-        binning_method="equal_width",
-        num_bins=10,
-        bin_labels=None,
-    ):
-        super().__init__(
-            path,
-            site_id,
-            cat_features_to_encode,
-            ICV,
-            decade,
-            features_to_drop,
-            features_to_bin,
-            binning_method,
-            num_bins,
-            bin_labels,
-        )
-        self.preprocess()
-
-
-class TOPdataset(MRIdataset):
-    def __init__(
-        self,
-        path,
-        site_id,
-        cat_features_to_encode=None,
-        ICV=False,
-        decade=False,
-        features_to_drop=["m0", "id"],
-        features_to_bin=None,
-        binning_method="equal_width",
-        num_bins=10,
-        bin_labels=None,
-    ):
-        super().__init__(
-            path,
-            site_id,
-            cat_features_to_encode,
-            ICV,
-            decade,
-            features_to_drop,
-            features_to_bin,
-            binning_method,
-            num_bins,
-            bin_labels,
-        )
-        self.preprocess()
-
-
-class Insight46dataset(MRIdataset):
-    def __init__(
-        self,
-        path,
-        site_id,
-        cat_features_to_encode=None,
-        ICV=False,
-        decade=False,
-        features_to_drop=["m0", "id"],
-        features_to_bin=None,
-        binning_method="equal_width",
-        num_bins=10,
-        bin_labels=None,
-    ):
-        super().__init__(
-            path,
-            site_id,
-            cat_features_to_encode,
-            ICV,
-            decade,
-            features_to_drop,
-            features_to_bin,
-            binning_method,
-            num_bins,
-            bin_labels,
-        )
-        self.preprocess()
 
 
 class HarmNeuroHarmonize:
@@ -881,7 +705,7 @@ class HarmCovbat:
         mod_matrix = patsy.dmatrix(
             f"~ {' + '.join(self.covariates)}", phenoALLFIVE, return_type="dataframe"
         )
-
+        
         # Perform harmonization using CovBat
         harmonized_data = covbat.combat(
             data = dat_ALLFIVE,
@@ -900,12 +724,13 @@ class HarmCovbat:
         # Combine harmonized data with other features
         harmonized_data = pd.concat(
             [dat_ALLFIVE.head(len(self.covariates) + 1), harmonized_data]
-        )  # Add back the ID and model parameters
+        )  
         harmonized_data = harmonized_data.T
         harmonized_data = harmonized_data.reset_index()
         # Split the harmonized data back into individual datasets
         for i, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
+            
             adjusted_data = harmonized_data[harmonized_data[self.site_indicator] == site_value]
             adjusted_data = adjusted_data.merge(semi_features[i], on=self.patient_identifier)
             dataset.data = adjusted_data
@@ -1241,16 +1066,15 @@ class HarmNestedComBat:
         dat_testing_input.to_csv(self.intermediate_results_path+'/Mfeatures_input_testing_NestedComBat.csv')
         covars_testing_final.to_csv(self.intermediate_results_path+'/Mcovars_input_testing_NestedComBat.csv')
 
-        
         complete_harmonised = pd.concat([write_testing_df, covars_testing_final], axis=1)   
         
         complete_harmonised = complete_harmonised.loc[:,~complete_harmonised.columns.duplicated()].copy()
-        
         for _ds in mri_datasets:
             
             ds_opn_harmonized = complete_harmonised[complete_harmonised['site'] == _ds.site_id]
             ds_opn_harmonized = ds_opn_harmonized.drop(columns=self.site_indicator+['GMM',])      
-            ds_opn_harmonized  = ds_opn_harmonized.merge( _ds.data, on=self.patient_identifier)
+            ds_opn_harmonized  = ds_opn_harmonized.merge(_ds.data[[_c for _c in _ds.data.columns if _c not in ds_opn_harmonized.columns] + [self.patient_identifier]], on=self.patient_identifier)
+
             _ds.data = ds_opn_harmonized.copy()
         # [_d.update_harmonized_statistics() for _d in mri_datasets]
         if self.return_extended:
@@ -1427,7 +1251,7 @@ class HarmRELIEF:
         for i in range(len(mri_datasets)):
             current_len = len(mri_datasets[i].data)
             df = back_together.iloc[cum_len:cum_len + current_len].rename(new_feature_dict, axis='columns').reset_index().rename(columns={"index": self.patient_identifier})
-            mri_datasets[i].data = mri_datasets[i].data.merge(df.drop(self.covariates, axis=1), on=self.patient_identifier)
+            mri_datasets[i].data = mri_datasets[i].data.merge(df.drop(self.covariates, axis=1), on=self.patient_identifier).drop(['index'], axis=1)
             cum_len += current_len
         
         # [_d.update_harmonized_statistics() for _d in mri_datasets]
@@ -1587,6 +1411,7 @@ class PredictBrainAge:
         datasets_validation,
         features,
         target,
+        patient_identifier = 'participant_id',
         cat_category='sex',
         cont_category='age',
         n_bins=4,
@@ -1598,6 +1423,7 @@ class PredictBrainAge:
             self.model_name = model_name
             self.model_file_name = model_file_name
             self.model = model
+            self.patient_identifier = patient_identifier
             self.datasets = datasets
             self.datasets_validation = datasets_validation
             self.data = pd.concat([_d.data for _d in datasets])
@@ -1642,18 +1468,16 @@ class PredictBrainAge:
         models = []
         X = self.data[self.features]
         y = self.data[self.target]
-        
-        X = pd.DataFrame(StandardScaler().fit_transform(X), columns = X.columns)
-        
-        if self.data_validation is not None:
-            X_val = self.data_validation[self.features]
-            y_val = self.data_validation[self.target]
-            X_val = pd.DataFrame(StandardScaler().fit_transform(X_val), columns = X_val.columns)
+        X_val = self.data_validation[self.features] if self.data_validation is not None else None        
+        y_val = self.data_validation[self.target].values if self.data_validation is not None else None     
+        sc = StandardScaler()
+        X = sc.fit_transform(X)
+        X_val = sc.transform (X_val) if self.data_validation is not None else None
         
         for i, (train_index, test_index) in enumerate(sss.split(self.data, self.data['fuse_bin'])):
-            X_train = X.values[train_index]
+            X_train = X[train_index]
             y_train = y.values[train_index]
-            X_test = X.values[test_index]
+            X_test = X[test_index]
             y_test = y.values[test_index]            
 
             self.model.fit(X_train, y_train)
@@ -1697,11 +1521,11 @@ class PredictBrainAge:
             all_metrics.append(metrics_data)
             all_metrics_val.append(metric_data_val)
             predictions_data = pd.DataFrame({'y_test': y_test.flatten(), 'y_pred': y_pred.flatten()})
-            predictions_data_val = pd.DataFrame({'y_test': y_val.values.flatten(), 'y_pred': y_pred_val.flatten()}) if self.data_validation is not None else None
+            predictions_data_val = pd.DataFrame({'y_test': y_val.flatten(), 'y_pred': y_pred_val.flatten()}) if self.data_validation is not None else None
             all_predictions.append(predictions_data)
             all_predictions_val.append(predictions_data_val) if self.data_validation is not None else None
 
-            models.append((self.model, X.values[train_index][:, 0]))
+            models.append((self.model, X[train_index][:, 0]))
 
         metrics_df = pd.DataFrame(all_metrics)
         metrics_df_val = pd.DataFrame(all_metrics_val) if self.data_validation is not None else None
