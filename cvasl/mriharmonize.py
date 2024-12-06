@@ -170,20 +170,12 @@ class MRIdataset:
         self.data[self.patient_identifier] = self.data[self.patient_identifier].str.split('_OriginalID:').str[1]
     
     def prepare_for_export(self):
-        print('444',self.data.tail())
         self.restore_patient_ids()
-        print('999',self.data.tail())
-        print('888',self.dropped_features.tail())    
         self.data = self.data.merge(self.dropped_features,on=self.patient_identifier)
-        print('111',self.data.tail())
         self.reverse_encode_categorical_features()
-        print('222',self.data.tail())
         _tc = [_c.lower() for _c in self.columns_order]
-        print('333',self.data.tail())
         self.data = self.data[_tc]
-        print('555',self.data.tail())
         self.data.columns = self.columns_order
-        print('666',self.data.tail())
 
     
     def _extended_summary_statistics(self):
@@ -1429,6 +1421,7 @@ class PredictBrainAge:
         patient_identifier = 'participant_id',
         cat_category='sex',
         cont_category='age',
+        site_indicator='site',
         n_bins=4,
         splits=5,
         test_size_p=0.2,
@@ -1445,6 +1438,7 @@ class PredictBrainAge:
             self.data_validation = pd.concat([_d.data for _d in datasets_validation]) if datasets_validation is not None else None
             self.features = features
             self.target = target
+            self.site_indicator = site_indicator
             self.cat_category = cat_category
             self.cont_category = cont_category
             self.splits = splits
@@ -1535,7 +1529,13 @@ class PredictBrainAge:
             all_metrics.append(metrics_data)
             all_metrics_val.append(metric_data_val)
             predictions_data = pd.DataFrame({'y_test': y_test.flatten(), 'y_pred': y_pred.flatten()})
+            
+            predictions_data[self.patient_identifier] = self.data[self.patient_identifier].values[test_index]
+            predictions_data['site'] = self.data[self.site_indicator].values[test_index]
             predictions_data_val = pd.DataFrame({'y_test': y_val.flatten(), 'y_pred': y_pred_val.flatten()}) if self.data_validation is not None else None
+            predictions_data_val[self.patient_identifier] = self.data_validation[self.patient_identifier].values
+            
+            predictions_data_val['site'] = self.data_validation[self.site_indicator].values if self.data_validation is not None else None
             all_predictions.append(predictions_data)
             all_predictions_val.append(predictions_data_val) if self.data_validation is not None else None
 
