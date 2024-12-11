@@ -191,6 +191,23 @@ class KMeansConstrainedMissing(TransformerMixin, ClusterMixin, BaseEstimator):
         y : Ignored
 
         """
+        #################################################
+        # for i in range(X.shape[1]):
+        #     print(f"Column {i}: {X[:, i].dtype}")
+
+        for col in X.columns:
+            try:
+                # Check if column can be converted to float
+                X[col].astype(float)
+                # If successful, convert the column
+                X[col] = X[col].astype(float)
+                # print(f"Column {col} converted to float")
+            except ValueError:
+                #do nothing
+                pass
+                # print(f"Column {col} contains non-float values")
+
+        #################################################
 
         columns_df = []
         if isinstance(X, pd.DataFrame):
@@ -198,7 +215,6 @@ class KMeansConstrainedMissing(TransformerMixin, ClusterMixin, BaseEstimator):
             if self.features_reduction is not None:
                 columns_df = list(map(lambda x: f"Dimension_{x}", list(range(1, self.n_components + 1))))
             X = X.to_numpy()
-
         # Initialize missing values to their column means
         missing = ~np.isfinite(X)
         self.mu_ = np.nanmean(X, 0, keepdims=1)
@@ -688,7 +704,7 @@ def optimal_clustering(X: Union[pd.DataFrame, np.ndarray],
                        random_state: Optional[int] = None,
                        visualize: bool = False) \
         -> Tuple[KMeansConstrained, Union[umap.UMAP, PCA], int, np.ndarray, int, Sequence[
-            np.float], np.float, np.ndarray, np.ndarray, np.ndarray]:
+            float], float, np.ndarray, np.ndarray, np.ndarray]:
     """
     Function to find the optimal clustering using a constrained k means. Two method are available to find the optimal
     number of cluster ``silhouette`` or ``elbow``.
