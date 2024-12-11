@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# version is managed by setuptools-scm
+cvasl/_version.py
+
 # C extensions
 *.so
 .DS_Store
