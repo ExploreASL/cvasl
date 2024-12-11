@@ -572,7 +572,7 @@ class Combat(BaseEstimator, TransformerMixin):
 
         # Sites
         if fitting:
-            self.site_encoder = OneHotEncoder(sparse=False)
+            self.site_encoder = OneHotEncoder(sparse_output=False)
             self.site_encoder.fit(X[:, sites_col])
 
         sites_design = self.site_encoder.transform(X[:, sites_col])
@@ -596,7 +596,7 @@ class Combat(BaseEstimator, TransformerMixin):
             if fitting:
                 self.discrete_encoders = []
                 for i in discrete_covariates_col:
-                    discrete_encoder = OneHotEncoder(sparse=False)
+                    discrete_encoder = OneHotEncoder(sparse_output=False)
                     discrete_encoder.fit(X[:, [i]])
                     self.discrete_encoders.append(discrete_encoder)
 

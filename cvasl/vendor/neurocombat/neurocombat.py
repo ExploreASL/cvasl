@@ -236,6 +236,7 @@ def make_design_matrix(Y, batch_col, cat_cols, num_cols, ref_level):
     return design
 
 
+
 def standardize_across_features(X, design, info_dict):
     n_batch = info_dict['n_batch']
     n_sample = info_dict['n_sample']
@@ -244,9 +245,23 @@ def standardize_across_features(X, design, info_dict):
     ref_level = info_dict['ref_level']
 
     def get_beta_with_nan(yy, mod):
-        wh = np.isfinite(yy)
-        mod = mod[wh, :]
-        yy = yy[wh]
+        wh = np.isfinite(yy.tolist())
+        print('******************** Diagnostic Information ********************')
+        print("Matrix shape:", mod.shape)
+        print("Matrix rank:", np.linalg.matrix_rank(mod))
+        print("Condition number:", np.linalg.cond(mod))
+        cond_number = np.linalg.cond(mod)
+        print("Condition number; larger numbers indicate poor numerical stability:", cond_number)
+            
+        # Check for constant columns
+        print("Constant columns (columns with the same value across all samples):", np.where(np.all(mod == mod[0,:], axis=0))[0])
+        
+    
+        # Check for correlations
+        corr = np.corrcoef(mod.T)
+        high_corr = np.where(np.abs(corr) > 0.95)
+        print("High correlations:", list(zip(high_corr[0], high_corr[1])))
+        print("*****************************************************************")
         B = np.dot(np.dot(la.inv(np.dot(mod.T, mod)), mod.T), yy.T)
         return B
 
