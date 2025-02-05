@@ -12,22 +12,6 @@ import cvasl.vendor.neurocombat.neurocombat as neurocombat
 import cvasl.vendor.open_nested_combat.nest as nest
 from neuroHarmonize import harmonizationLearn
 import rpy2.robjects as robjects
-import os
-import sys
-sys.path.insert(0, '../../')
-sys.path.insert(0, '../')
-import pandas as pd
-import numpy as np
-import patsy
-from sklearn.preprocessing import LabelEncoder
-import cvasl.vendor.covbat.covbat as covbat
-import cvasl.vendor.comscan.neurocombat as cvaslneurocombat
-import cvasl.vendor.neurocombat.neurocombat as neurocombat
-import cvasl.vendor.open_nested_combat.nest as nest
-from neuroHarmonize import harmonizationLearn
-import rpy2.robjects as robjects
-
-
 
 class NeuroHarmonize:
     def __init__(
