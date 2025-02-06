@@ -1,0 +1,303 @@
+dataset:
+  MRIdataset:
+    class_name: MRIdataset
+    description: Class for loading and preprocessing MRI datasets.
+    parameters:
+      path:
+        type: "str, list"
+        description: "Path to the CSV file or list of paths."
+      site_id:
+        type: "int, str"
+        description: "Identifier for the site."
+      patient_identifier:
+        type: "str"
+        description: "Column name for patient ID."
+        default: "participant_id"
+      cat_features_to_encode:
+        type: "list, None"
+        description: "List of categorical features to encode."
+        default: null
+      ICV:
+        type: "bool"
+        description: "Whether to add ICV-related features."
+        default: false
+      decade:
+        type: "bool"
+        description: "Whether to add decade-related features."
+        default: false
+      features_to_drop:
+        type: "list"
+        description: "List of features to drop."
+        default: ["m0", "id"]
+      features_to_bin:
+        type: "list, None"
+        description: "List of features to bin."
+        default: null
+      binning_method:
+        type: "str"
+        description: "Binning method to use."
+        choices: ["equal_width", "equal_frequency"]
+        default: "equal_width"
+      num_bins:
+        type: "int"
+        description: "Number of bins."
+        default: 10
+      bin_labels:
+        type: "list, None"
+        description: "Labels for bins."
+        default: null
+
+harmonizers:
+  NeuroHarmonize:
+    class_name: NeuroHarmonize
+    description: Wrapper class for NeuroHarmonize harmonization.
+    parameters:
+      features_to_harmonize:
+        type: "list"
+        description: "Features to harmonize excluding covariates and site indicator."
+      covariates:
+        type: "list"
+        description: "Covariates to control for during harmonization."
+      smooth_terms:
+        type: "list"
+        description: "Names of columns to include as smooth, nonlinear terms."
+        default: []
+      site_indicator:
+        type: "str"
+        description: "Indicates the feature that differentiates different sites."
+        default: "site"
+      empirical_bayes:
+        type: "bool"
+        description: "Whether to use empirical Bayes estimates of site effects."
+        default: true
+
+  Covbat:
+    class_name: Covbat
+    description: Wrapper class for Covbat harmonization.
+    parameters:
+      features_to_harmonize:
+        type: "list"
+        description: "Features to harmonize excluding covariates and site indicator."
+      covariates:
+        type: "list"
+        description: "Covariates to control for during harmonization."
+      site_indicator:
+        type: "str"
+        description: "Feature that differentiates different sites (batches)."
+        default: "site"
+      patient_identifier:
+        type: "str"
+        description: "Feature that differentiates different patients."
+        default: "participant_id"
+      numerical_covariates:
+        type: "list"
+        description: "Numerical covariates for CovBat harmonization."
+        default: ["age"]
+      empirical_bayes:
+        type: "bool"
+        description: "Whether to use empirical Bayes estimates of site effects."
+        default: true
+
+  NeuroCombat:
+    class_name: NeuroCombat
+    description: Wrapper class for Neuro Combat harmonization.
+    parameters:
+      features_to_harmonize:
+        type: "list"
+        description: "Features to harmonize excluding covariates and site indicator."
+      discrete_covariates:
+        type: "list"
+        description: "Discrete covariates to control for."
+      continuous_covariates:
+        type: "list"
+        description: "Continuous covariates to control for."
+      patient_identifier:
+        type: "str"
+        description: "Column name identifying each patient."
+        default: "participant_id"
+      site_indicator:
+        type: "str"
+        description: "Column name indicating the site or batch."
+        default: "site"
+      empirical_bayes:
+        type: "bool"
+        description: "Whether to use empirical Bayes estimates of site effects."
+        default: true
+      mean_only:
+        type: "bool"
+        description: "Whether to perform mean-only adjustment."
+        default: false
+      parametric:
+        type: "bool"
+        description: "Whether to use parametric adjustments."
+        default: true
+
+  NestedComBat:
+    class_name: NestedComBat
+    description: Wrapper class for Nested ComBat harmonization.
+    parameters:
+      features_to_harmonize:
+        type: "list"
+        description: "Features to harmonize."
+      batch_list_harmonisations:
+        type: "list"
+        description: "List of batch variables for nested ComBat."
+      site_indicator:
+        type: "list"
+        description: "List containing the site indicator column name."
+        default: ["site"]
+      discrete_covariates:
+        type: "list"
+        description: "List of discrete covariates."
+        default: ["sex"]
+      continuous_covariates:
+        type: "list"
+        description: "List of continuous covariates."
+        default: ["age"]
+      intermediate_results_path:
+        type: "str"
+        description: "Path to save intermediate results."
+        default: "."
+      patient_identifier:
+        type: "str"
+        description: "Column name for patient identifier."
+        default: "participant_id"
+      return_extended:
+        type: "bool"
+        description: "Whether to return extended outputs (intermediate dataframes)."
+        default: false
+      use_gmm:
+        type: "bool"
+        description: "Whether to use Gaussian Mixture Model (GMM) for grouping."
+        default: true
+
+  CombatPlusPlus:
+    class_name: CombatPlusPlus
+    description: Wrapper class for CombatPlusPlus harmonization.
+    parameters:
+      features_to_harmonize:
+        type: "list"
+        description: "Features to harmonize excluding covariates and site indicator."
+      discrete_covariates:
+        type: "list"
+        description: "Discrete covariates to control for in model matrix."
+      continuous_covariates:
+        type: "list"
+        description: "Continuous covariates to control for in model matrix."
+      discrete_covariates_to_remove:
+        type: "list"
+        description: "Discrete covariates to remove with Combat++."
+      continuous_covariates_to_remove:
+        type: "list"
+        description: "Continuous covariates to remove with Combat++."
+      patient_identifier:
+        type: "str"
+        description: "Column name identifying patients."
+        default: "participant_id"
+      intermediate_results_path:
+        type: "str"
+        description: "Path to save intermediate results."
+        default: "."
+      site_indicator:
+        type: "str"
+        description: "Column name indicating the site or batch."
+        default: "site"
+
+  ComscanNeuroCombat:
+    class_name: ComscanNeuroCombat
+    description: Wrapper class for Neuro Combat using Comscan implementation.
+    parameters:
+      features_to_harmonize:
+        type: "list"
+        description: "Features to harmonize excluding covariates and site indicator."
+      discrete_covariates:
+        type: "list, None"
+        description: "Discrete covariates to control for during harmonization."
+        default: null
+      continuous_covariates:
+        type: "list, None"
+        description: "Continuous covariates to control for during harmonization."
+        default: null
+      site_indicator:
+        type: "str"
+        description: "Feature that differentiates different sites."
+        default: "site"
+      empirical_bayes:
+        type: "bool"
+        description: "Whether to use empirical Bayes estimates of site effects."
+        default: true
+      parametric:
+        type: "bool"
+        description: "Whether to use parametric adjustment in ComBat."
+        default: true
+      mean_only:
+        type: "bool"
+        description: "Whether to perform mean-only adjustment in ComBat."
+        default: false
+
+  AutoCombat:
+    class_name: AutoCombat
+    description: Wrapper class for Auto Combat harmonization.
+    parameters:
+      data_subset:
+        type: "list"
+        description: "Features of the dataset subset to be passed to autocombat for harmonization."
+      features_to_harmonize:
+        type: "list"
+        description: "Features to harmonize excluding covariates and site indicator."
+      site_indicator:
+        type: "list, str"
+        description: "Column name(s) indicating the site."
+      discrete_covariates:
+        type: "list, None"
+        description: "Discrete covariates to control for during harmonization."
+        default: null
+      continuous_covariates:
+        type: "list, None"
+        description: "Continuous covariates to control for during harmonization."
+        default: null
+      discrete_cluster_features:
+        type: "list, None"
+        description: "Target site features which are categorical to one-hot encode for clustering."
+        default: null
+      continuous_cluster_features:
+        type: "list, None"
+        description: "Target site features which are continuous to scale for clustering."
+        default: null
+      metric:
+        type: "str"
+        description: "Metric to define the optimal number of clusters."
+        choices: ["distortion", "silhouette", "calinski_harabasz"]
+        default: "distortion"
+      features_reduction:
+        type: "str, None"
+        description: "Method for reduction of the embedded space with n_components."
+        choices: ["pca", "umap", null]
+        default: null
+      feature_reduction_dimensions:
+        type: "int"
+        description: "Dimension of the embedded space for features reduction."
+        default: 2
+      empirical_bayes:
+        type: "bool"
+        description: "Whether to use empirical Bayes estimates of site effects."
+        default: true
+
+  RELIEF:
+    class_name: RELIEF
+    description: Wrapper class for RELIEF harmonization.
+    parameters:
+      features_to_harmonize:
+        type: "list"
+        description: "Features to harmonize excluding covariates and site indicator."
+      covariates:
+        type: "list"
+        description: "Covariates to control for during harmonization."
+      patient_identifier:
+        type: "str"
+        description: "Column name identifying patients."
+        default: "participant_id"
+      intermediate_results_path:
+        type: "str"
+        description: "Path to save intermediate results."
+        default: "."

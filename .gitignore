@@ -2,7 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.old
+*.csv
 # C extensions
 *.so
 .DS_Store
@@ -23,7 +24,9 @@ __pycache__/
 /build/
 .RData
 .vscode/
-
+.Rhistory
+all-files.txt
+0
 # Jupyter Notebook
 .ipynb_checkpoints
 
