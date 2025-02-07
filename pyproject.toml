@@ -69,3 +69,7 @@ include = ["cvasl",  "cvasl.vendor*"]
 version_file = "cvasl/_version.py"
 # default: guess-next-dev, alternatives: release-branch-semver, post-release, no-guess-dev
 version_scheme = "guess-next-dev"
+
+[project]
+name = "cvasl"
+version = "0.1.0"

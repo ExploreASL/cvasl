@@ -69,7 +69,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
+/cvasl/_version.py
 # R stuff
 .Rhistory
 
