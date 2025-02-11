@@ -1,0 +1,566 @@
+import os
+import pandas as pd
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from scipy.stats import pearsonr
+import logging
+import wandb
+import argparse
+import json
+
+from data import BrainAgeDataset
+from utils import create_demographics_table, create_prediction_chart
+from models.cnn import Large3DCNN
+from models.densenet3d import DenseNet3D
+from models.efficientnet3d import EfficientNet3D
+from models.improvedcnn3d import Improved3DCNN
+from models.resnet3d import ResNet3D
+from models.resnext3d import ResNeXt3D
+
+torch.backends.cudnn.benchmark = True
+torch.set_float32_matmul_precision("high")
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# Set a seed for reproducibility
+torch.manual_seed(42)
+np.random.seed(42)
+
+def train_model(
+    csv_file,
+    image_dir,
+    model,
+    model_type="large", 
+    batch_size=4,
+    learning_rate=0.001,
+    num_epochs=100,
+    use_wandb=True,
+    pretrained_model_path=None,
+    use_cuda=False,
+    split_strategy="stratified_group",
+    test_size=0.2,
+    bins=10,
+    output_dir="./saved_models",
+    wandb_prefix="",
+    weight_decay=0.05
+):
+    logging.info("Starting training process...")
+    os.makedirs(output_dir, exist_ok=True)
+
+    
+    try:
+        model_name = model.get_name()
+    except AttributeError:
+        model_name = model_type 
+
+    lr_str = f"{learning_rate:.1e}".replace("+", "").replace("-", "_")
+    param_str = (
+        f"{wandb_prefix}_{model_name}_lr{lr_str}_epochs{num_epochs}_" 
+        f"bs{batch_size}_split-{split_strategy}_test{test_size}_bins-{bins}"
+    )
+
+    if use_wandb:
+        wandb_config = {
+            "model_type": model_type,
+            "batch_size": batch_size,
+            "learning_rate": learning_rate,
+            "num_epochs": num_epochs,
+            "use_cuda": use_cuda,
+            "split_strategy": split_strategy,
+            "test_size": test_size,
+            "bins": bins,
+        }
+        try:
+            model_params = model.get_params()
+            wandb_config.update(model_params)
+        except AttributeError:
+            logging.info("Model does not have get_params method, skipping parameter logging to wandb.")
+
+        wandb.init(
+            project="asl-brainage",
+            name=param_str,
+            config=wandb_config,
+        )
+        run = wandb.run
+    else:
+        run = None
+    dataset = BrainAgeDataset(csv_file, image_dir)
+    if run:
+        create_demographics_table(dataset, run)
+    dataset = [
+        sample for sample in dataset if sample is not None
+    ]
+    logging.info(
+        "Number of samples after filtering for missing data: %d", len(dataset))
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() and use_cuda else "cpu")
+    logging.info("Using device: %s", device)
+    if device.type == "cuda":
+        gpu_name = torch.cuda.get_device_name(0)
+        gpu_memory = (
+            torch.cuda.get_device_properties(0).total_memory / 1024**3
+        )
+        gpu_info = (
+            f"**\033[1mDetected GPU:\033[0m** {gpu_name}, Memory: {gpu_memory:.2f} GB"
+        )
+        logging.info(gpu_info)
+
+    train_size = int(0.8 * len(dataset))
+    test_size = len(dataset) - train_size
+
+    logging.info(f"Using split strategy: {split_strategy}")
+
+    if split_strategy == "random":
+        train_size = int((1 - test_size) * len(dataset))
+        test_size = len(dataset) - train_size
+        train_dataset, test_dataset = torch.utils.data.random_split(
+            dataset, [train_size, test_size]
+        )
+    elif split_strategy == "stratified":
+        # Create age bins for stratification
+        ages = [sample["age"].item() for sample in dataset]
+        age_bins = pd.qcut(ages, q=bins, labels=False)
+        train_idx, test_idx = train_test_split(
+            range(len(dataset)), test_size=test_size, stratify=age_bins, random_state=42
+        )
+        train_dataset = torch.utils.data.Subset(dataset, train_idx)
+        test_dataset = torch.utils.data.Subset(dataset, test_idx)
+    elif split_strategy == "group":
+        # Group by site
+        sites = [
+            sample["demographics"][1].item() for sample in dataset
+        ]  # Site is index 1
+        gss = GroupShuffleSplit(
+            n_splits=1, test_size=test_size, random_state=42)
+        train_idx, test_idx = next(
+            gss.split(range(len(dataset)), groups=sites))
+        train_dataset = torch.utils.data.Subset(dataset, train_idx)
+        test_dataset = torch.utils.data.Subset(dataset, test_idx)
+    elif split_strategy == "stratified_group_sex":
+        # Combine age bins and site for stratification
+        ages = [sample["age"].item() for sample in dataset]
+        sites = [sample["demographics"][1].item() for sample in dataset]
+        sexes = [
+            sample["demographics"][0].item() for sample in dataset
+        ]  
+        age_bins = pd.qcut(ages, q=bins, labels=False)
+        stratify_groups = [
+            f"{site}_{sex}_{age_bin}"
+            for site, sex, age_bin in zip(sites, sexes, age_bins)
+        ]  
+        train_idx, test_idx = train_test_split(
+            range(len(dataset)),
+            test_size=test_size,
+            stratify=stratify_groups,
+            random_state=42,
+        )
+        train_dataset = torch.utils.data.Subset(dataset, train_idx)
+        test_dataset = torch.utils.data.Subset(dataset, test_idx)
+    elif split_strategy == "stratified_group":
+        
+        ages = [sample["age"].item() for sample in dataset]
+        sites = [sample["demographics"][1].item() for sample in dataset]
+        age_bins = pd.qcut(ages, q=bins, labels=False)
+        stratify_groups = [
+            f"{site}_{age_bin}" for site, age_bin in zip(sites, age_bins)
+        ]
+        train_idx, test_idx = train_test_split(
+            range(len(dataset)),
+            test_size=test_size,
+            stratify=stratify_groups,
+            random_state=42,
+        )
+        train_dataset = torch.utils.data.Subset(dataset, train_idx)
+        test_dataset = torch.utils.data.Subset(dataset, test_idx)
+    else:
+        raise ValueError(f"Invalid split strategy: {split_strategy}")
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers = 4, pin_memory=True)
+    test_loader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers = 4, pin_memory=True)
+    logging.info("Data loaders created")
+
+    
+    model.to(device)
+    cmodel = torch.compile(model)
+    logging.info(f"Model created: {cmodel.get_name() if hasattr(cmodel, 'get_name') else model_type}")
+
+    criterion = nn.L1Loss()
+    optimizer = optim.Adam(
+        cmodel.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='min',
+        factor=0.5,
+        patience=10,
+        verbose=True,
+    )
+    logging.info(f"Loss function and optimizer set up.")
+
+    best_model_path = os.path.join(output_dir, f"best_{param_str}.pth")
+    if not pretrained_model_path:
+        best_test_mae = float("inf")
+        epochs_no_improve = 0
+        for epoch in range(num_epochs):
+            logging.info(f"Starting epoch: {epoch}")
+            cmodel.train()
+            train_loss = 0
+            for i, batch in enumerate(train_loader):
+                logging.debug(f"Processing batch: {i}")
+                images = (
+                    batch["image"].unsqueeze(1).to(device)
+                )
+                ages = batch["age"].unsqueeze(1).to(device)
+                demographics = batch["demographics"].to(device)
+                optimizer.zero_grad()
+                outputs = cmodel(images, demographics)
+                loss = criterion(outputs, ages)
+                loss.backward()
+                optimizer.step()
+                train_loss += loss.item()
+                logging.debug(f"Batch {i} processed. Loss: {loss.item()}")
+            train_loss = train_loss / len(train_loader)
+            logging.info(f"Epoch: {epoch}, Training Loss: {train_loss}")
+            cmodel.eval()
+            with torch.no_grad():
+                test_mae, test_rmse, test_r2, test_pearson, test_mape = evaluate_model(
+                    cmodel, test_loader, device
+                )
+            logging.info(
+                f"Epoch {epoch} Test MAE: {test_mae}, Test MAPE: {test_mape}, RMSE: {test_rmse}, R2: {test_r2}, Pearson Correlation: {test_pearson}"
+            )
+            if run:
+                wandb.log(
+                    {
+                        "train_loss": train_loss,
+                        "test_mae": test_mae,
+                        "test_mape": test_mape,
+                        "test_rmse": test_rmse,
+                        "test_r2": test_r2,
+                        "test_pearson": test_pearson,
+                    }
+                )
+                scheduler.step(test_mae)
+            if round(test_mae, 2) < round(best_test_mae, 2):
+                epochs_no_improve = 0
+                best_test_mae = test_mae
+                _sd = cmodel.state_dict()
+                _sd = {key.replace("_orig_mod.", ""): value for key, value in _sd.items()}
+                model.load_state_dict(_sd)
+                # torch.save(_sd, best_model_path)
+                torch.save(model, best_model_path)
+
+                logging.info(
+                    f"Model saved at epoch {epoch} as test MAE {test_mae} is better than previous best {best_test_mae}"
+                )
+            else:
+                epochs_no_improve += 1
+                if epochs_no_improve >= 10:
+                    logging.info(
+                        f"Early stopping at epoch {epoch} as test MAE did not improve over 20 epochs"
+                    )
+                    break
+
+        logging.info("Training completed.")
+    cmodel.eval()
+    with torch.no_grad():
+        test_mae, test_rmse, test_r2, test_pearson, test_mape = evaluate_model(
+            cmodel, test_loader, device
+        )
+    logging.info(
+        f"Final Test MAE: {test_mae}, Test MAPE: {test_mape}, RMSE: {test_rmse}, R2: {test_r2}, Pearson Correlation: {test_pearson}"
+    )
+    if run:
+        create_prediction_chart(cmodel, test_loader, device, run)
+        wandb.log(
+            {
+                "final_test_mae": test_mae,
+                "final_test_mape": test_mape,
+                "final_test_rmse": test_rmse,
+                "final_test_r2": test_r2,
+                "final_test_pearson": test_pearson,
+            }
+        )
+    if run:
+        wandb.finish()
+    return model
+
+
+def evaluate_model(model, test_loader, device):
+    model.eval()
+    all_predictions = []
+    all_targets = []
+    with torch.no_grad():
+        for batch in test_loader:
+            images = batch["image"].unsqueeze(1).to(device)
+            ages = batch["age"].unsqueeze(1).to(device)
+            demographics = batch["demographics"].to(device)
+            outputs = model(images, demographics)  # forward pass
+            all_predictions.extend(
+                outputs.cpu().numpy().flatten()
+            )
+            all_targets.extend(
+                ages.cpu().numpy().flatten()
+            )
+    all_predictions = np.array(all_predictions)
+    all_targets = np.array(all_targets)
+    mae = mean_absolute_error(all_targets, all_predictions)
+    rmse = np.sqrt(mean_squared_error(
+        all_targets, all_predictions))
+
+    r2 = r2_score(all_targets, all_predictions)
+    pearson, _ = pearsonr(all_targets, all_predictions)
+    mape = np.mean(np.abs((all_targets - all_predictions) / (all_targets + 1e-8))) * 100
+    return mae, rmse, r2, pearson, mape
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Brain Age Prediction Training Script")
+
+    parser.add_argument(
+        "--csv_file",
+        type=str,
+        default="/home/radv/samiri/my-scratch/trainingdata/topmri.csv",
+        help="Path to the CSV file",
+    )
+    parser.add_argument(
+        "--image_dir",
+        type=str,
+        default="/home/radv/samiri/my-scratch/trainingdata/topmri/",
+        help="Path to the image directory",
+    )
+    parser.add_argument("--wandb_prefix", type=str,
+                        default="", help="wandb job prefix")
+    parser.add_argument(
+        "--batch_size", type=int, default=4, help="Batch size for training"
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=0.000015,
+        help="Learning rate for training",
+    )
+    parser.add_argument(
+        "--num_epochs", type=int, default=150, help="Number of epochs for training"
+    )
+    parser.add_argument("--use_wandb", action="store_true",
+                        help="Enable wandb logging")
+    parser.add_argument(
+        "--pretrained_model_path",
+        type=str,
+        default=None,
+        help="Path to a pretrained model file",
+    )
+    parser.add_argument(
+        "--use_cuda",
+        action="store_true",
+        default=False,
+        help="Enable CUDA (GPU) if available",
+    )
+    parser.add_argument(
+        "--split_strategy",
+        type=str,
+        default="stratified_group_sex",
+        choices=[
+            "random",
+            "stratified",
+            "group",
+            "stratified_group",
+            "stratified_group_sex",
+        ],
+        help="Data split strategy (random/stratified/group/stratified_group)",
+    )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=0.0,
+        help="Weight decay for Adam optimizer",
+    )
+    parser.add_argument(
+        "--test_size",
+        type=float,
+        default=0.2,
+        help="Proportion of data to use for testing",
+    )
+    parser.add_argument(
+        "--bins", type=int, default=10, help="Number of bins for stratification"
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./saved_models",
+        help="Directory to save trained models",
+    )
+
+    parser.add_argument(
+        "--model_type",
+        type=str,
+        default="large",
+        choices=[
+            "small",
+            "large",
+            "resnet",
+            "densenet",
+            "resnext3d",
+            "efficientnet3d",
+            "improved_cnn",
+        ],
+        help="Type of model to use",
+    )
+
+
+    # Large3DCNN Parameters
+    large_cnn_group = parser.add_argument_group("Large3DCNN arguments")
+    large_cnn_group.add_argument("--large_cnn_layers", type=int, default=3, help="Number of conv layers for Large3DCNN")
+    large_cnn_group.add_argument("--large_cnn_filters", type=int, default=16, help="Initial filters for Large3DCNN")
+    large_cnn_group.add_argument("--large_cnn_filters_multiplier", type=float, default=2.0, help="Filters multiplier for Large3DCNN") # Added filter multiplier
+    large_cnn_group.add_argument("--large_cnn_use_bn", action="store_true", help="Use BN in Large3DCNN")
+    large_cnn_group.add_argument("--large_cnn_use_se", action="store_true", help="Use SE blocks in Large3DCNN")
+    large_cnn_group.add_argument("--large_cnn_use_dropout", action="store_true", help="Use dropout in Large3DCNN")
+    large_cnn_group.add_argument("--large_cnn_dropout_rate", type=float, default=0.2, help="Dropout rate for Large3DCNN")
+
+    # ResNet3D Parameters
+    resnet_group = parser.add_argument_group("ResNet3D arguments")
+    resnet_group.add_argument("--resnet_layers", type=int, nargs='+', default=[2, 2, 2], help="Number of blocks per ResNet layer (list of 3 ints)")
+    resnet_group.add_argument("--resnet_initial_filters", type=int, default=32, help="Initial filters for ResNet3D")
+    resnet_group.add_argument("--resnet_filters_multiplier", type=float, default=2.0, help="Filters multiplier for ResNet3D") # Added filter multiplier
+    resnet_group.add_argument("--resnet_use_se", action="store_true", help="Use SE blocks in ResNet3D")
+    resnet_group.add_argument("--resnet_dropout", action="store_true", help="Use dropout in ResNet3D")
+
+    # DenseNet3D Parameters
+    densenet_group = parser.add_argument_group("DenseNet3D arguments")
+    densenet_group.add_argument("--densenet_growth_rate", type=int, default=16, help="Growth rate for DenseNet3D")
+    densenet_group.add_argument("--densenet_layers", type=int, nargs='+', default=[4, 4], help="Number of layers per DenseBlock (list of 2 ints)")
+    densenet_group.add_argument("--densenet_initial_filters", type=int, default=32, help="Initial filters for DenseNet3D")
+    densenet_group.add_argument("--densenet_transition_filters_multiplier", type=float, default=2.0, help="Filters multiplier for DenseNet3D transition layers") # Added filter multiplier
+    densenet_group.add_argument("--densenet_use_se", action="store_true", help="Use SE blocks in DenseNet3D")
+    densenet_group.add_argument("--densenet_dropout", action="store_true", help="Use dropout in DenseNet3D")
+
+    # ResNeXt3D Parameters
+    resnext_group = parser.add_argument_group("ResNeXt3D arguments")
+    resnext_group.add_argument("--resnext_layers", type=int, nargs='+', default=[2, 2, 2], help="Number of blocks per ResNeXt layer (list of 3 ints)")
+    resnext_group.add_argument("--resnext_cardinality", type=int, default=32, help="Cardinality for ResNeXt3D")
+    resnext_group.add_argument("--resnext_bottleneck_width", type=int, default=4, help="Bottleneck width for ResNeXt3D")
+    resnext_group.add_argument("--resnext_initial_filters", type=int, default=64, help="Initial filters for ResNeXt3D")
+    resnext_group.add_argument("--resnext_filters_multiplier", type=float, default=2.0, help="Filters multiplier for ResNeXt3D") # Added filter multiplier
+    resnext_group.add_argument("--resnext_use_se", action="store_true", help="Use SE blocks in ResNeXt3D")
+    resnext_group.add_argument("--resnext_dropout", action="store_true", help="Use dropout in ResNeXt3D")
+
+    # EfficientNet3D Parameters
+    efficientnet_group = parser.add_argument_group("EfficientNet3D arguments")
+    efficientnet_group.add_argument("--efficientnet_width_coefficient", type=float, default=1.0, help="Width coefficient for EfficientNet3D")
+    efficientnet_group.add_argument("--efficientnet_depth_coefficient", type=float, default=1.0, help="Depth coefficient for EfficientNet3D")
+    efficientnet_group.add_argument("--efficientnet_initial_filters", type=int, default=32, help="Initial filters for EfficientNet3D")
+    efficientnet_group.add_argument("--efficientnet_filters_multiplier", type=float, default=1.2, help="Filters multiplier for EfficientNet3D") # Added filter multiplier
+    efficientnet_group.add_argument("--efficientnet_dropout", type=float, default=0.2, help="Dropout rate for EfficientNet3D (set 0 to disable)")
+
+    # Improved3DCNN Parameters
+    improved_cnn_group = parser.add_argument_group("Improved3DCNN arguments")
+    improved_cnn_group.add_argument("--improved_cnn_initial_filters", type=int, default=32, help="Initial filters for Improved3DCNN")
+    improved_cnn_group.add_argument("--improved_cnn_filters_multiplier", type=float, default=2.0, help="Filters multiplier for Improved3DCNN") # Added filter multiplier
+    improved_cnn_group.add_argument("--improved_cnn_num_conv_layers", type=int, default=3, help="Number of conv layers for Improved3DCNN") # Added num_conv_layers
+    improved_cnn_group.add_argument("--improved_cnn_use_se", action="store_true", help="Use SE blocks in Improved3DCNN")
+    improved_cnn_group.add_argument("--improved_cnn_dropout_rate", type=float, default=0.3, help="Dropout rate for Improved3DCNN")
+
+    args = parser.parse_args()
+
+    num_demographics = 6  # Number of demographic features
+
+    if args.model_type == "improved_cnn":
+        model = Improved3DCNN(
+            num_demographics=num_demographics,
+            initial_filters=args.improved_cnn_initial_filters,
+            filters_multiplier=args.improved_cnn_filters_multiplier,
+            num_conv_layers=args.improved_cnn_num_conv_layers,
+            use_se=args.improved_cnn_use_se,
+            dropout_rate=args.improved_cnn_dropout_rate,
+        )
+
+    elif args.model_type == "large":
+        model = Large3DCNN(
+            num_demographics=num_demographics,
+            num_conv_layers=args.large_cnn_layers,
+            initial_filters=args.large_cnn_filters,
+            filters_multiplier=args.large_cnn_filters_multiplier,
+            use_bn=args.large_cnn_use_bn,
+            use_se=args.large_cnn_use_se,
+            use_dropout=args.large_cnn_use_dropout,
+            dropout_rate=args.large_cnn_dropout_rate
+        )
+
+    elif args.model_type == "resnet":
+        model = ResNet3D(
+            num_demographics=num_demographics,
+            num_blocks_per_layer=args.resnet_layers,
+            initial_filters=args.resnet_initial_filters,
+            filters_multiplier=args.resnet_filters_multiplier,
+            use_se=args.resnet_use_se,
+            use_dropout=args.resnet_dropout
+        )
+
+    elif args.model_type == "densenet":
+        model = DenseNet3D(
+            num_demographics=num_demographics,
+            growth_rate=args.densenet_growth_rate,
+            num_dense_layers=args.densenet_layers,
+            initial_filters=args.densenet_initial_filters,
+            transition_filters_multiplier=args.densenet_transition_filters_multiplier,
+            use_se_blocks=args.densenet_use_se,
+            use_dropout=args.densenet_dropout,
+        )
+    elif args.model_type == "resnext3d":
+        model = ResNeXt3D(
+            num_demographics=num_demographics,
+            num_blocks_per_layer=args.resnext_layers,
+            cardinality=args.resnext_cardinality,
+            bottleneck_width=args.resnext_bottleneck_width,
+            initial_filters=args.resnext_initial_filters,
+            filters_multiplier=args.resnext_filters_multiplier,
+            use_se=args.resnext_use_se,
+            use_dropout=args.resnext_dropout,
+        )
+    elif args.model_type == "efficientnet3d":
+        model = EfficientNet3D(
+            num_demographics=num_demographics,
+            width_coefficient=args.efficientnet_width_coefficient,
+            depth_coefficient=args.efficientnet_depth_coefficient,
+            initial_filters=args.efficientnet_initial_filters,
+            filters_multiplier=args.efficientnet_filters_multiplier,
+            use_dropout=args.efficientnet_dropout,
+        )
+
+
+    else:
+        raise ValueError(f"Invalid model_type: {args.model_type}")
+
+    train_model(
+        csv_file=args.csv_file,
+        image_dir=args.image_dir,
+        model=model,
+        model_type=args.model_type,
+        batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
+        num_epochs=args.num_epochs,
+        use_wandb=args.use_wandb,
+        pretrained_model_path=args.pretrained_model_path,
+        use_cuda=args.use_cuda,
+        split_strategy=args.split_strategy,
+        test_size=args.test_size,
+        bins=args.bins,
+        output_dir=args.output_dir,
+        wandb_prefix=args.wandb_prefix,
+        weight_decay=args.weight_decay
+    )
+
+if __name__ == "__main__":
+    main()
