@@ -85,7 +85,7 @@ def objective(trial):
         "--model_type", model_type,
         "--csv_file", "./trainingdata/mock_dataset/mock_data.csv",
         "--image_dir", "./trainingdata/mock_dataset/images",
-        "--num_epochs", "10",
+        "--num_epochs", "2",
         "--batch_size", str(batch_size),
         "--learning_rate", str(learning_rate),
         "--weight_decay", str(weight_decay),
@@ -94,6 +94,7 @@ def objective(trial):
         "--output_dir", "./optuna_saved_models",
         "--use_cuda",
         "--use_wandb",
+        "--store_model","0",
         "--wandb_prefix", "SWEEP_",
     ]
 
@@ -182,7 +183,7 @@ def objective(trial):
         raise optuna.TrialPruned()  #prune trial if training fails
 
     
-    mae_match = re.search(r"Epoch \d+ Test MAE: ([0-9.]+)", output_str)
+    mae_match = re.search(r".*Epoch \d+ Test MAE: ([0-9.]+)", output_str)
     if mae_match:
         mae = float(mae_match.group(1))
         logging.info(f"Trial {trial.number} finished with MAE: {mae}")
@@ -208,8 +209,8 @@ def objective(trial):
     else:
         logging.error("MAE not found in train.py output. See trial log: {trial_log_path}")
         logging.error(output_str)
-        raise Exception("MAE not found in train.py output")
-
+        # raise Exception("MAE not found in train.py output") # Remove this line
+        return float('inf') # return large MAE instead of raising an exception so it won't fail right at the start
 
 def create_parameter_charts(study_results_df, output_dir="./optuna_charts"):
     os.makedirs(output_dir, exist_ok=True)
