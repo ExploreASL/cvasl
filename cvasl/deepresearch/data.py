@@ -26,11 +26,12 @@ class BrainAgeDataset(Dataset):
         logging.info(f"CSV file loaded: {csv_file}")
         self.image_dir = image_dir
         self.transform = transform
-        # Create a mapping dictionary from participant IDs to filenames
         self.id_to_filename = {}
         recognized_files_count = 0
         skipped_files_count = 0
         all_files_in_dir = set(os.listdir(image_dir))
+        valid_participant_ids = []  # List to store valid participant IDs
+
         for participant_id in self.data_df["participant_id"].values:
             original_filename_base = f"{participant_id}"
             transformed_filename_base = None
@@ -38,42 +39,58 @@ class BrainAgeDataset(Dataset):
             if len(parts) == 2:
                 id_part, suffix = parts
                 if (
-                    len(id_part) > 2 and id_part[-1].isdigit(
-                    ) and id_part[-2].isdigit()
-                ):  # check if last 2 chars are digits
-                    # remove last two digits
+                    len(id_part) > 2 and id_part[-1].isdigit() and id_part[-2].isdigit()
+                ):
                     transformed_id_part = id_part[:-2]
                     transformed_filename_base = f"{transformed_id_part}_{suffix}"
             found_match = False
+            image_path = None # Initialize image_path here
+
             for filename in all_files_in_dir:
                 if original_filename_base in filename:
-                    self.id_to_filename[participant_id] = filename
-                    recognized_files_count += 1
+                    image_path = os.path.join(image_dir, filename) # Construct path here
                     found_match = True
-                    break  # Assuming one to one mapping, break after finding the first match
+                    break
             if not found_match and transformed_filename_base:
                 for filename in all_files_in_dir:
                     if transformed_filename_base in filename:
-                        self.id_to_filename[participant_id] = filename
-                        recognized_files_count += 1
+                        image_path = os.path.join(image_dir, filename) # Construct path here
                         found_match = True
                         break
-            if not found_match:
+
+            if found_match and image_path: # Check if image_path is not None and found_match is True
+                try:
+                    # Attempt to load and preprocess to check for errors early
+                    self.load_and_preprocess(image_path)
+                    self.id_to_filename[participant_id] = os.path.basename(image_path) # Store just the filename
+                    recognized_files_count += 1
+                    valid_participant_ids.append(participant_id) # Add to valid IDs
+                except Exception as e:
+                    skipped_files_count += 1
+                    logging.warning(
+                        f"Error loading/preprocessing image for participant ID: {participant_id} at {image_path}. Skipping. Error: {e}"
+                    )
+            else:
                 skipped_files_count += 1
                 logging.warning(
                     f"No image file found for participant ID: {participant_id}"
                 )
+
         logging.info(
             f"Number of files in image directory: {len(all_files_in_dir)}")
         logging.info(
             f"Number of recognized image files: {recognized_files_count}")
         logging.info(
-            f"Number of skipped participant IDs (no matching image files): {skipped_files_count}"
+            f"Number of skipped participant IDs (no matching or loadable image files): {skipped_files_count}"
         )
         logging.info(
             f"Number of participant IDs with filenames mapped: {len(self.id_to_filename)}"
         )
         logging.info(f"Found {len(self.id_to_filename)} matching image files.")
+
+        # Filter the dataframe to keep only valid participant IDs
+        self.data_df = self.data_df[self.data_df['participant_id'].isin(valid_participant_ids)].copy()
+
         self.data_df = self.preprocess_data(self.data_df)
         logging.info("Preprocessing of the dataframe done")
 
