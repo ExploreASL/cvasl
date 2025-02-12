@@ -12,7 +12,6 @@ from scipy.stats import pearsonr
 import logging
 import wandb
 import argparse
-import json
 
 from data import BrainAgeDataset
 from utils import create_demographics_table, create_prediction_chart
@@ -184,9 +183,9 @@ def train_model(
     else:
         raise ValueError(f"Invalid split strategy: {split_strategy}")
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers = 4, pin_memory=True)
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers = 2, pin_memory=True)
     test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False, num_workers = 4, pin_memory=True)
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers = 2, pin_memory=True)
     logging.info("Data loaders created")
 
     
@@ -364,7 +363,7 @@ def main():
     parser.add_argument(
         "--use_cuda",
         action="store_true",
-        default=False,
+        default=True,
         help="Enable CUDA (GPU) if available",
     )
     parser.add_argument(

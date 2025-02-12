@@ -1870,7 +1870,8 @@ class BrainAgeAnalyzer:
     def run_all_analyses(self):
         """Loads models, predicts ages, and performs all analyses."""
         logging.info(f"Number of samples in validation dataset: {len(self.val_dataset)}")
-        val_dataset = [sample for sample in self.val_dataset if sample is not None] # Remove none samples
+        #val_dataset = [sample for sample in self.val_dataset if sample is not None] # Remove none samples
+        val_dataset = self.val_dataset
         logging.info(f"Number of samples after filtering for missing data: {len(val_dataset)}")
 
         for model_file in os.listdir(self.model_dir):
