@@ -21,7 +21,7 @@ from models.efficientnet3d import EfficientNet3D
 from models.improvedcnn3d import Improved3DCNN
 from models.resnet3d import ResNet3D
 from models.resnext3d import ResNeXt3D
-
+import datetime
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("high")
 
@@ -50,7 +50,8 @@ def train_model(
     bins=10,
     output_dir="./saved_models",
     wandb_prefix="",
-    weight_decay=0.05
+    weight_decay=0.05,
+    store_model=True,
 ):
     logging.info("Starting training process...")
     os.makedirs(output_dir, exist_ok=True)
@@ -204,8 +205,9 @@ def train_model(
         verbose=True,
     )
     logging.info(f"Loss function and optimizer set up.")
-
-    best_model_path = os.path.join(output_dir, f"best_{param_str}.pth")
+    #get current date time
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    best_model_path = os.path.join(output_dir, f"{param_str}_{current_time}.pth")
     if not pretrained_model_path:
         best_test_mae = float("inf")
         epochs_no_improve = 0
@@ -252,15 +254,15 @@ def train_model(
             if round(test_mae, 2) < round(best_test_mae, 2):
                 epochs_no_improve = 0
                 best_test_mae = test_mae
-                _sd = cmodel.state_dict()
-                _sd = {key.replace("_orig_mod.", ""): value for key, value in _sd.items()}
-                model.load_state_dict(_sd)
-                # torch.save(_sd, best_model_path)
-                torch.save(model, best_model_path)
+                if store_model:
+                    _sd = cmodel.state_dict()
+                    _sd = {key.replace("_orig_mod.", ""): value for key, value in _sd.items()}
+                    model.load_state_dict(_sd)
+                    torch.save(model, best_model_path)
 
-                logging.info(
-                    f"Model saved at epoch {epoch} as test MAE {test_mae} is better than previous best {best_test_mae}"
-                )
+                    logging.info(
+                        f"Model saved at epoch {epoch} as test MAE {test_mae} is better than previous best {best_test_mae}"
+                    )
             else:
                 epochs_no_improve += 1
                 if epochs_no_improve >= 10:
@@ -366,6 +368,13 @@ def main():
         default=True,
         help="Enable CUDA (GPU) if available",
     )
+    parser.add_argument(
+        "--store_model",
+        type=bool,
+        default=True,
+        help="Store the best model",
+    )
+
     parser.add_argument(
         "--split_strategy",
         type=str,
@@ -558,7 +567,8 @@ def main():
         bins=args.bins,
         output_dir=args.output_dir,
         wandb_prefix=args.wandb_prefix,
-        weight_decay=args.weight_decay
+        weight_decay=args.weight_decay,
+        store_model=args.store_model,
     )
 
 if __name__ == "__main__":
