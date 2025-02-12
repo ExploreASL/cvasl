@@ -206,7 +206,7 @@ def train_model(
     )
     logging.info(f"Loss function and optimizer set up.")
     #get current date time
-    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     best_model_path = os.path.join(output_dir, f"{param_str}_{current_time}.pth")
     if not pretrained_model_path:
         best_test_mae = float("inf")
