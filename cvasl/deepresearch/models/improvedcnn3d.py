@@ -50,13 +50,14 @@ class PreActResBlock3D(nn.Module):  # Define outside the class
 
 
 class Improved3DCNN(nn.Module):
-    def __init__(self, num_demographics, initial_filters=32, filters_multiplier=2, num_conv_layers=3, use_se=True, dropout_rate=0.3):
+    def __init__(self, num_demographics, initial_filters=32, filters_multiplier=2, num_conv_layers=3, use_se=True, dropout_rate=0.3, use_demographics=False):
         super().__init__()
         self.initial_filters = initial_filters
         self.filters_multiplier = filters_multiplier
         self.num_conv_layers = num_conv_layers
         self.use_se = use_se
         self.dropout_rate = dropout_rate
+        self.use_demographics = use_demographics
 
         current_filters = initial_filters
         self.conv1 = nn.Conv3d(1, current_filters, kernel_size=3, padding=1)
@@ -89,7 +90,8 @@ class Improved3DCNN(nn.Module):
 
         self.fc1 = nn.Linear(flattened_size, 128)
         self.dropout = nn.Dropout(p=dropout_rate)
-        self.fc2 = nn.Linear(128 + num_demographics, 1)
+        fc2_input_size = 128 + num_demographics if self.use_demographics else 128
+        self.fc2 = nn.Linear(fc2_input_size, 1)
 
 
     def forward(self, x, demographics):
@@ -98,7 +100,8 @@ class Improved3DCNN(nn.Module):
         x = self.global_avg_pool(x)
         x = self.flatten(x)
         x = self.dropout(self.relu(self.fc1(x)))
-        x = torch.cat((x, demographics), dim=1)
+        if self.use_demographics:
+            x = torch.cat((x, demographics), dim=1)
         x = self.fc2(x)
         return x
 
@@ -107,6 +110,11 @@ class Improved3DCNN(nn.Module):
         if self.use_se:
             name += "_SE"
         name += f"_dropout{self.dropout_rate}"
+        if self.use_demographics:
+            name += "_with_demographics"  #indicate when using demographics
+        else:
+            name += "_without_demographics"  #indicate when not using demographics
+        
         return name
 
     def get_params(self):
@@ -116,6 +124,7 @@ class Improved3DCNN(nn.Module):
             "num_conv_layers": self.num_conv_layers,
             "use_se": self.use_se,
             "dropout_rate": self.dropout_rate,
+            "use_demographics": self.use_demographics,  # Include the switch
             "architecture": "Improved3DCNN",
         }
 

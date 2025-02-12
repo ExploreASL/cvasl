@@ -369,10 +369,9 @@ def main():
         help="Enable CUDA (GPU) if available",
     )
     parser.add_argument(
-        "--store_model",
-        type=bool,
-        default=True,
-        help="Store the best model",
+      "--store_model",
+      action="store_true",
+      help="Store the best model",
     )
 
     parser.add_argument(

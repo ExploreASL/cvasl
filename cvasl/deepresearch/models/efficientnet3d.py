@@ -41,13 +41,14 @@ class MBConvBlock3D(nn.Module):
     
 class EfficientNet3D(nn.Module):
     """EfficientNet-B0 3D implementation."""
-    def __init__(self, num_demographics, initial_filters=32, width_coefficient=1.0, depth_coefficient=1.0, filters_multiplier=1.2, use_dropout=True):
+    def __init__(self, num_demographics, initial_filters=32, width_coefficient=1.0, depth_coefficient=1.0, filters_multiplier=1.2, use_dropout=True, use_demographics=False):
         super().__init__()
         self.width_coefficient = width_coefficient
         self.depth_coefficient = depth_coefficient
         self.filters_multiplier = filters_multiplier
         self.use_dropout = use_dropout
         self.initial_filters = initial_filters
+        self.use_demographics = use_demographics
 
         self.initial_filters = int(initial_filters * width_coefficient)
         self.last_filters = int(1280 * width_coefficient) # Standard EfficientNet last filter size
@@ -81,7 +82,8 @@ class EfficientNet3D(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
         self.dropout_layer = nn.Dropout(0.2) if use_dropout and use_dropout > 0 else nn.Identity()
         self.fc = nn.Linear(self.last_filters, 128)
-        self.fc_out = nn.Linear(128 + num_demographics, 1)
+        fc_out_size = 128 + num_demographics if self.use_demographics else 128
+        self.fc_out = nn.Linear(fc_out_size, 1)
     def forward(self, x, demographics):
         x = self.relu_stem(self.bn_stem(self.conv_stem(x)))
 
@@ -92,7 +94,8 @@ class EfficientNet3D(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.dropout_layer(x)
         x = self.fc(x)
-        x = torch.cat((x, demographics), dim=1)
+        if self.use_demographics:
+            x = torch.cat((x, demographics), dim=1)
         x = self.fc_out(x)
         return x
 
@@ -103,6 +106,11 @@ class EfficientNet3D(nn.Module):
         if self.use_dropout > 0:
             name += "_DO"
         name += f"_dropout{self.use_dropout}"
+        if self.use_demographics:
+            name += "_with_demographics"  #indicate when using demographics
+        else:
+            name += "_without_demographics"  #indicate when not using demographics
+        
         return name
 
     def get_params(self):
@@ -113,5 +121,6 @@ class EfficientNet3D(nn.Module):
             "initial_filters": self.initial_filters,
             "filters_multiplier": self.filters_multiplier,
             "use_dropout": self.use_dropout,
+            "use_demographics": self.use_demographics,  # Include the switch
             "architecture": "EfficientNet3D"
         }

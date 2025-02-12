@@ -6,7 +6,7 @@ class Large3DCNN(nn.Module):
     """
         Large 3D CNN with adjustable parameters: number of convolutional layers, initial filters, filter multiplier, use of BN, dropout, SE blocks.
     """
-    def __init__(self, num_demographics, num_conv_layers=3, initial_filters=16, filters_multiplier=2, use_bn=True, use_dropout=True, use_se=False, dropout_rate=0.2):
+    def __init__(self, num_demographics, num_conv_layers=3, initial_filters=16, filters_multiplier=2, use_bn=True, use_dropout=True, use_se=False, dropout_rate=0.2, use_demographics=False):
         super(Large3DCNN, self).__init__()
         self.num_conv_layers = num_conv_layers
         self.initial_filters = initial_filters
@@ -15,7 +15,8 @@ class Large3DCNN(nn.Module):
         self.use_dropout = use_dropout
         self.use_se = use_se
         self.dropout_rate = dropout_rate
-
+        self.use_demographics = use_demographics
+        
         self.conv_layers = nn.ModuleList()
         self.pool_layers = nn.ModuleList()
         self.bn_layers = nn.ModuleList()
@@ -51,7 +52,8 @@ class Large3DCNN(nn.Module):
 
         self.fc1 = nn.Linear(flattened_size, 128)
         self.relu4 = nn.ReLU()
-        self.fc2 = nn.Linear(128 + num_demographics, 1)
+        fc2_input_size = 128 + num_demographics if self.use_demographics else 128
+        self.fc2 = nn.Linear(fc2_input_size, 1)
         self.dropout = nn.Dropout(dropout_rate) if use_dropout else nn.Identity()
 
 
@@ -73,7 +75,8 @@ class Large3DCNN(nn.Module):
 
         x = self.flatten(x)
         x = self.dropout(self.relu4(self.fc1(x)))
-        x = torch.cat((x, demographics), dim=1)
+        if self.use_demographics:
+            x = torch.cat((x, demographics), dim=1)
         x = self.fc2(x)
         return x
 
@@ -88,6 +91,11 @@ class Large3DCNN(nn.Module):
         if self.use_dropout:
             name += "_DO"
         name += f"_dropout{self.dropout_rate}" # Include dropout rate in name
+        if self.use_demographics:
+            name += "_with_demographics"  #indicate when using demographics
+        else:
+            name += "_without_demographics"  #indicate when not using demographics
+        
         return name
 
     def get_params(self):
@@ -100,5 +108,6 @@ class Large3DCNN(nn.Module):
             "use_se": self.use_se,
             "use_dropout": self.use_dropout,
             "dropout_rate": self.dropout_rate, # Include dropout rate in params
+            "use_demographics": self.use_demographics,  # Include the switch
             "architecture": "Large3DCNN"
         }

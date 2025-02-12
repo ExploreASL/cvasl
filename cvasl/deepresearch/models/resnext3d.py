@@ -58,7 +58,7 @@ class ResNeXt3DBlock(nn.Module):
 
 class ResNeXt3D(nn.Module):
     """ResNeXt3D Network."""
-    def __init__(self, num_demographics, num_blocks_per_layer=[2, 2, 2], cardinality=32, bottleneck_width=4, initial_filters=64, filters_multiplier=2, use_se=False, use_dropout=True):
+    def __init__(self, num_demographics, num_blocks_per_layer=[2, 2, 2], cardinality=32, bottleneck_width=4, initial_filters=64, filters_multiplier=2, use_se=False, use_dropout=True, use_demographics=False):
         super().__init__()
         self.num_blocks_per_layer = num_blocks_per_layer
         self.cardinality = cardinality
@@ -67,6 +67,7 @@ class ResNeXt3D(nn.Module):
         self.filters_multiplier = filters_multiplier
         self.use_se = use_se
         self.use_dropout = use_dropout
+        self.use_demographics = use_demographics
 
         self.initial_filters = initial_filters
         self.conv1 = nn.Conv3d(1, self.initial_filters, kernel_size=7, stride=2, padding=3, bias=False)
@@ -85,7 +86,8 @@ class ResNeXt3D(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
         self.fc1 = nn.Linear(current_filters, 64)
         self.dropout_layer = nn.Dropout(0.5) if use_dropout else nn.Identity()
-        self.fc2 = nn.Linear(64 + num_demographics, 1)
+        fc2_input_size = 64 + num_demographics if self.use_demographics else 64
+        self.fc2 = nn.Linear(fc2_input_size, 1)
 
     def _make_layer(self, in_channels, out_channels, num_blocks, stride=1, cardinality=32, bottleneck_width=4, use_se=False):
         layers = []
@@ -106,7 +108,8 @@ class ResNeXt3D(nn.Module):
         x = self.fc1(x)
         x = self.relu(x)
         x = self.dropout_layer(x)
-        x = torch.cat((x, demographics), dim=1)
+        if self.use_demographics:
+            x = torch.cat((x, demographics), dim=1)
         x = self.fc2(x)
         return x
 
@@ -118,6 +121,11 @@ class ResNeXt3D(nn.Module):
             name += "_SE"
         if self.use_dropout:
             name += "_DO"
+        if self.use_demographics:
+            name += "_with_demographics"  #indicate when using demographics
+        else:
+            name += "_without_demographics"  #indicate when not using demographics
+            
         return name
 
     def get_params(self):
@@ -130,5 +138,6 @@ class ResNeXt3D(nn.Module):
             "filters_multiplier": self.filters_multiplier,
             "use_se": self.use_se,
             "use_dropout": self.use_dropout,
+            "use_demographics": self.use_demographics,  # Include the switch
             "architecture": "ResNeXt3D"
         }

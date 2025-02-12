@@ -94,7 +94,6 @@ def objective(trial):
         "--output_dir", "./optuna_saved_models",
         "--use_cuda",
         "--use_wandb",
-        "--store_model","0",
         "--wandb_prefix", "SWEEP_",
     ]
 
