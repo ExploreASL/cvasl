@@ -181,8 +181,7 @@ def objective(trial):
         logging.error(error_str)
         raise optuna.TrialPruned()  #prune trial if training fails
 
-    
-    mae_match = re.search(r".*Epoch \d+ Test MAE: ([0-9.]+)", output_str)
+    mae_match = re.search(r"Final Test MAE: ([0-9.]+)", output_str)
     if mae_match:
         mae = float(mae_match.group(1))
         logging.info(f"Trial {trial.number} finished with MAE: {mae}")
