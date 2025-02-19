@@ -352,7 +352,7 @@ def process_single_model(model_path, test_data_dir, base_output_dir, device):
         model_name = match.group(1)
     else:
         model_name = 'unknown' 
-    model = torch.load(model_path, map_location='cuda', weights_only = False)
+    model = torch.load(model_path, map_location=device, weights_only = False)
     logging.info("Loaded model: %s of type %s", model_filename, model_name)
 
     test_data_name = os.path.basename(os.path.normpath(test_data_dir))
