@@ -368,7 +368,7 @@ def main():
     parser = argparse.ArgumentParser(description="XAI Visualization for Brain Age Models")
     parser.add_argument('--models_dir', type=str, default='/home/radv/samiri/my-scratch/fmodels/',
                         help="Directory containing the saved model .pth files")
-    parser.add_argument("--test_csv", type=str, default="/home/radv/samiri/my-scratch/trainingdata/topmri.csv", help="Path to the training CSV file")
+    parser.add_argument("--test_csv", type=str, default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri.csv", help="Path to the training CSV file")
     parser.add_argument('--test_data_dir', type=str,
                         default='/home/radv/samiri/my-scratch/trainingdata/masked/',
                         help="Directory containing the test data (CSV and image folder)")
