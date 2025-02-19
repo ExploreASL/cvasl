@@ -61,11 +61,11 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
     """Create directories for specified visualization methods"""
     all_methods = {
         'gradcam': GradCAM,
-        'hirescam': HiResCAM,
-        'gradcam++': GradCAMPlusPlus,
-        'xgradcam': XGradCAM,
-        'eigencam': EigenGradCAM,
-        'layercam': LayerCAM
+        # 'hirescam': HiResCAM,
+        # 'gradcam++': GradCAMPlusPlus,
+        # 'xgradcam': XGradCAM,
+        # 'eigencam': EigenGradCAM,
+        # 'layercam': LayerCAM
     }
 
     # Filter methods if specific ones are requested
