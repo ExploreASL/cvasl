@@ -374,7 +374,7 @@ def process_single_model(model_path, test_data_dir, base_output_dir, device):
 
 def main():
     parser = argparse.ArgumentParser(description="XAI Visualization for Brain Age Models")
-    parser.add_argument('--models_dir', type=str, default='/home/radv/samiri/my-scratch/fmodels/trainedmodels_unmasked',
+    parser.add_argument('--models_dir', type=str, default='/home/radv/samiri/my-scratch/fmodels/',
                         help="Directory containing the saved model .pth files")
     parser.add_argument('--test_data_dir', type=str,
                         default='/home/radv/samiri/my-scratch/trainingdata/masked/',
