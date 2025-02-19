@@ -79,9 +79,27 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
     return all_methods
 
 def get_target_layers(model):
-    """Get the target layers for visualization"""
-    #not implemented
-    return None
+    """Get the target layers for visualization based on model type."""
+    model_name = model.model.__class__.__name__ # Access the wrapped model
+
+    if model_name == 'Large3DCNN':
+        return [model.model.conv_layers[-1]]  # Last Conv3d layer
+    elif model_name == 'DenseNet3D':
+        return [model.model.trans2[1]] # Transition layer before last avg pool
+    elif model_name == 'EfficientNet3D':
+        return [model.model.conv_head] # Head convolution before avg pool
+    elif model_name == 'Improved3DCNN':
+        # Access the last layer in the sequential conv_layers
+        if isinstance(model.model.conv_layers[-1], nn.MaxPool3d): # check if last layer is pool
+            return [model.model.conv_layers[-5]] # Target the conv layer before pool and relu and SE block
+        else:
+            return [model.model.conv_layers[-2]] # Target the conv layer before relu and SE block
+    elif model_name == 'ResNet3D':
+        return [model.model.layer3[-1].conv2] # Last conv layer in last ResNet block of layer3
+    elif model_name == 'ResNeXt3D':
+        return [model.model.layer3[-1].conv3] # Last conv layer in last ResNeXt block of layer3
+    else:
+        return None # Default or unknown model type
 
 def normalize_cam(cam):
     """Normalize CAM output to range [0, 1]"""
@@ -339,7 +357,7 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
     """Loads a model based on its filename using load_model_with_params."""
     model_filename = os.path.basename(model_path)
     
-    match = re.search(r'best__(.+?)_', model_filename)
+    match = re.search(r'_(.+?)_layer', model_filename)
     if match:
         model_name = match.group(1)
     else:
@@ -366,17 +384,17 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
 
 def main():
     parser = argparse.ArgumentParser(description="XAI Visualization for Brain Age Models")
-    parser.add_argument('--models_dir', type=str, default='/home/radv/samiri/my-scratch/fmodels/',
+    parser.add_argument('--models_dir', type=str, default='cvasl/deepresearch/saved_models_test',
                         help="Directory containing the saved model .pth files")
-    parser.add_argument("--test_csv", type=str, default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri.csv", help="Path to the training CSV file")
+    parser.add_argument("--test_csv", type=str, default="cvasl/deepresearch/trainingdata/test/mock_data.csv", help="Path to the training CSV file")
     parser.add_argument('--test_data_dir', type=str,
-                        default='/home/radv/samiri/my-scratch/trainingdata/masked/',
+                        default='cvasl/deepresearch/trainingdata/test/images/',
                         help="Directory containing the test data (CSV and image folder)")
-    parser.add_argument('--output_dir', type=str, default='/home/radv/samiri/my-scratch/xai/masked/topmri',
+    parser.add_argument('--output_dir', type=str, default='cvasl/deepresearch/xai',
                         help="Base output directory for visualizations")
     parser.add_argument('--method', type=str, default='gradcam',
                         help="Comma-separated list of XAI methods (gradcam, layercam, etc.) or 'all'")
-    parser.add_argument('--device', type=str, default='cuda',
+    parser.add_argument('--device', type=str, default='cpu',
                         choices=['cuda', 'cpu'], help="Device to use for computation")
     args = parser.parse_args()
 
