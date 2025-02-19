@@ -333,16 +333,8 @@ def normalize_cam(cam):
     cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam) + 1e-7)
     return cam.astype(np.float16)
 
-def find_csv_file(directory):
-    """Find the single CSV file in the given directory"""
-    csv_files = [f for f in os.listdir(directory) if f.endswith('.csv')]
-    if not csv_files:
-        raise FileNotFoundError(f"No CSV file found in {directory}")
-    if len(csv_files) > 1:
-        raise ValueError(f"Multiple CSV files found in {directory}. Expected only one.")
-    return os.path.join(directory, csv_files[0])
 
-def process_single_model(model_path, test_data_dir, base_output_dir, device):
+def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device):
     """Process a single model for XAI visualization"""
     """Loads a model based on its filename using load_model_with_params."""
     model_filename = os.path.basename(model_path)
@@ -359,7 +351,7 @@ def process_single_model(model_path, test_data_dir, base_output_dir, device):
     model_output_dir = os.path.join(base_output_dir, model_name, test_data_name)
     os.makedirs(model_output_dir, exist_ok=True)
 
-    dataset = BrainAgeDataset(test_data_dir)
+    dataset = BrainAgeDataset(csv_path, test_data_dir)
     dataset = [sample for sample in dataset if sample is not None]
 
     num_demographics = 6
@@ -376,6 +368,7 @@ def main():
     parser = argparse.ArgumentParser(description="XAI Visualization for Brain Age Models")
     parser.add_argument('--models_dir', type=str, default='/home/radv/samiri/my-scratch/fmodels/',
                         help="Directory containing the saved model .pth files")
+    parser.add_argument("--test_csv", type=str, default="/home/radv/samiri/my-scratch/trainingdata/topmri.csv", help="Path to the training CSV file")
     parser.add_argument('--test_data_dir', type=str,
                         default='/home/radv/samiri/my-scratch/trainingdata/masked/',
                         help="Directory containing the test data (CSV and image folder)")
@@ -404,7 +397,7 @@ def main():
         model_path = os.path.join(args.models_dir, model_file)
         try:
             output_dir = process_single_model(
-                model_path, args.test_data_dir, args.output_dir, device
+                args.test_csv, model_path, args.test_data_dir, args.output_dir, device
 
             )
             logging.info(f"Successfully processed model {model_file}. Results saved in {output_dir}")
