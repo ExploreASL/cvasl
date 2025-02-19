@@ -29,6 +29,13 @@ from pytorch_grad_cam import (
     EigenGradCAM,
     LayerCAM
 )
+from models.cnn import Large3DCNN
+from models.densenet3d import DenseNet3D
+from models.efficientnet3d import EfficientNet3D
+from models.improvedcnn3d import Improved3DCNN
+from models.resnet3d import ResNet3D
+from models.resnext3d import ResNeXt3D
+from data import BrainAgeDataset
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,449 +45,6 @@ torch.manual_seed(42)
 np.random.seed(42)
 
 
-class BrainAgeDataset(Dataset):
-    def __init__(self, data_dir, transform=None):
-        logging.info("Initializing BrainAgeDataset...")
-        self.data_dir = data_dir
-        self.transform = transform
-        self.csv_file = None
-        self.image_dir = None
-
-        # Find the csv file and image directory within the root folder
-        for item in os.listdir(data_dir):
-            if item.endswith(".csv"):
-                self.csv_file = os.path.join(data_dir,item)
-            elif os.path.isdir(os.path.join(data_dir,item)):
-                self.image_dir = os.path.join(data_dir, item)
-
-        if self.csv_file is None:
-          raise FileNotFoundError("No csv file found inside the input folder")
-        if self.image_dir is None:
-          raise FileNotFoundError("No image folder found inside the input folder")
-
-
-        self.data_df = pd.read_csv(self.csv_file)
-        logging.info(f"CSV file loaded: {self.csv_file}")
-
-
-        # Create a mapping dictionary from participant IDs to filenames
-        self.id_to_filename = {}
-        recognized_files_count = 0
-        skipped_files_count = 0
-        all_files_in_dir = set(os.listdir(self.image_dir))
-
-        for participant_id in self.data_df['participant_id'].values:
-            original_filename_base = f"{participant_id}"
-            transformed_filename_base = None
-
-            parts = participant_id.rsplit('_', 1)
-            if len(parts) == 2:
-                id_part, suffix = parts
-                if len(id_part) > 2 and id_part[-1].isdigit() and id_part[-2].isdigit(): # check if last 2 chars are digits
-                    transformed_id_part = id_part[:-2] # remove last two digits
-                    transformed_filename_base = f"{transformed_id_part}_{suffix}"
-
-
-            found_match = False
-            for filename in all_files_in_dir:
-                if original_filename_base in filename:
-                    self.id_to_filename[participant_id] = filename
-                    recognized_files_count += 1
-                    found_match = True
-                    break # Assuming one to one mapping, break after finding the first match
-
-            if not found_match and transformed_filename_base:
-                for filename in all_files_in_dir:
-                     if transformed_filename_base in filename:
-                        self.id_to_filename[participant_id] = filename
-                        recognized_files_count += 1
-                        found_match = True
-                        break
-
-            if not found_match:
-                skipped_files_count += 1
-                logging.warning(f"No image file found for participant ID: {participant_id}")
-
-
-        logging.info(f"Number of files in image directory: {len(all_files_in_dir)}")
-        logging.info(f"Number of recognized image files: {recognized_files_count}")
-        logging.info(f"Number of skipped participant IDs (no matching image files): {skipped_files_count}")
-        logging.info(f"Number of participant IDs with filenames mapped: {len(self.id_to_filename)}")
-
-
-        logging.info(f"Found {len(self.id_to_filename)} matching image files.")
-        # Preprocessing the data_df
-        self.data_df = self.preprocess_data(self.data_df)
-        logging.info("Preprocessing of the dataframe done")
-
-    def preprocess_data(self, df):
-            # Select required columns
-            logging.info("Selecting and preprocessing relevant columns")
-            df = df[["participant_id","Age","Sex","Site","LD","PLD","Labelling","Readout"]].copy()
-            # Convert categorical features
-            categorical_cols = ["Sex", "Site", "Labelling", "Readout"]
-            for col in categorical_cols:
-                logging.info(f"Encoding categorical column: {col}")
-                le = LabelEncoder()
-                df[col] = le.fit_transform(df[col])
-            # Convert numerical features to float
-            numerical_cols = ["Age", "LD", "PLD"]
-            for col in numerical_cols:
-                logging.info(f"Converting column to float: {col}")
-                df[col] = df[col].astype(float)
-            return df
-
-    def __len__(self):
-        return len(self.data_df)
-
-    def __getitem__(self, idx):
-        patient_id = self.data_df.iloc[idx]["participant_id"]
-        logging.debug(f"Getting item at index {idx} for patient ID: {patient_id}")
-
-        if patient_id in self.id_to_filename:
-          image_name = self.id_to_filename[patient_id]
-          image_path = os.path.join(self.image_dir, image_name)
-          logging.debug(f"Loading and preprocessing image: {image_path}")
-          # Load and pre-process image
-          try:
-              image = self.load_and_preprocess(image_path)
-          except Exception as e:
-              logging.error(f"Error loading/preprocessing image {image_path}: {e}")
-              return None #skip this sample
-        else:
-          logging.warning(f"Skipping patient ID: {patient_id} as image file was not found")
-          return None #skip this sample
-
-        # Get the data row
-        data_row = self.data_df.iloc[idx]
-        # Extract data and labels
-        age = data_row["Age"]
-        demographics = data_row[["Sex", "Site", "LD", "PLD", "Labelling", "Readout"]].values.astype(float) #get demographic data as numpy array
-        sample = {"image": image, "age": torch.tensor(age, dtype=torch.float32), "demographics": torch.tensor(demographics, dtype=torch.float32)}
-        logging.debug(f"Returning sample for patient: {patient_id}")
-        return sample
-
-    def load_and_preprocess(self, image_path):
-        """
-        Loads, preprocesses, and handles NaN values in the NIfTI image.
-        """
-        logging.debug(f"Loading image data from: {image_path}")
-        img = nib.load(image_path)
-        data = img.get_fdata()
-        logging.debug(f"Image data loaded with shape: {data.shape}")
-        data = np.squeeze(data)  # Remove the last dimension which is 1
-        logging.debug(f"Image data squeezed to shape: {data.shape}")
-        # Handle NaNs: Replace with mean of non-NaN voxels
-        mask = ~np.isnan(data)
-        mean_val = np.mean(data[mask]) if np.any(mask) else 0 #check if mask is non-empty. if not, then the value is zero
-        logging.debug(f"Replacing NaNs with mean value: {mean_val}")
-        data[~mask] = mean_val
-        # Intensity normalization (standard scaling)
-        mean = np.mean(data)
-        std = np.std(data)
-        logging.debug(f"Mean: {mean}, Std: {std}")
-        if std > 0:
-          data = (data - mean) / std # Avoid division by zero
-        else:
-          data = data - mean
-        logging.debug(f"Returning preprocessed image data with shape: {data.shape}")
-        return data.astype(np.float32) #ensure that data type is float32
-
-
-class Small3DCNN(nn.Module):
-    def __init__(self, num_demographics):
-        super(Small3DCNN, self).__init__()
-        self.conv1 = nn.Conv3d(1, 8, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm3d(8)
-        self.relu1 = nn.ReLU()
-        self.pool1 = nn.MaxPool3d(kernel_size=2)
-        self.conv2 = nn.Conv3d(8, 16, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm3d(16)
-        self.relu2 = nn.ReLU()
-        self.pool2 = nn.MaxPool3d(kernel_size=2)
-        self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(16 * 30 * 36 * 30, 64) #manually computed based on the final shape after max pooling
-        self.relu3 = nn.ReLU()
-        self.fc2 = nn.Linear(64 + num_demographics, 1)  #combined the 64 features with demographic information
-        self.dropout = nn.Dropout(0.2) #Adding dropout
-
-    def forward(self, x, demographics):
-        x = self.pool1(self.relu1(self.bn1(self.conv1(x))))
-        x = self.pool2(self.relu2(self.bn2(self.conv2(x))))
-        x = self.flatten(x)
-        x = self.dropout(self.relu3(self.fc1(x)))
-        x = torch.cat((x, demographics), dim=1) #concatenate image and demographics
-        x = self.fc2(x)
-        return x
-
-class Small3DCNN(nn.Module):
-    def __init__(self, num_demographics):
-        super(Small3DCNN, self).__init__()
-        self.conv1 = nn.Conv3d(1, 8, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm3d(8)
-        self.relu1 = nn.ReLU()
-        self.pool1 = nn.MaxPool3d(kernel_size=2)
-        self.conv2 = nn.Conv3d(8, 16, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm3d(16)
-        self.relu2 = nn.ReLU()
-        self.pool2 = nn.MaxPool3d(kernel_size=2)
-        self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(16 * 30 * 36 * 30, 64) #manually computed based on the final shape after max pooling
-        self.relu3 = nn.ReLU()
-        self.fc2 = nn.Linear(64 + num_demographics, 1)  #combined the 64 features with demographic information
-        self.dropout = nn.Dropout(0.2) #Adding dropout
-    def forward(self, x, demographics):
-        x = self.pool1(self.relu1(self.bn1(self.conv1(x))))
-        x = self.pool2(self.relu2(self.bn2(self.conv2(x))))
-        x = self.flatten(x)
-        x = self.dropout(self.relu3(self.fc1(x)))
-        x = torch.cat((x, demographics), dim=1) #concatenate image and demographics
-        x = self.fc2(x)
-        return x
-
-class Large3DCNN(nn.Module):
-    def __init__(self, num_demographics):
-        super(Large3DCNN, self).__init__()
-        self.conv1 = nn.Conv3d(1, 16, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm3d(16)
-        self.relu1 = nn.ReLU()
-        self.pool1 = nn.MaxPool3d(kernel_size=2)
-        self.conv2 = nn.Conv3d(16, 32, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm3d(32)
-        self.relu2 = nn.ReLU()
-        self.pool2 = nn.MaxPool3d(kernel_size=2)
-        self.conv3 = nn.Conv3d(32, 64, kernel_size=3, padding=1)
-        self.bn3 = nn.BatchNorm3d(64)
-        self.relu3 = nn.ReLU()
-        self.pool3 = nn.MaxPool3d(kernel_size=2)
-        self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(64 * 15 * 18 * 15, 128) #manually computed based on the final shape after max pooling
-        self.relu4 = nn.ReLU()
-        self.fc2 = nn.Linear(128 + num_demographics, 1)  #combined the 128 features with demographic information
-        self.dropout = nn.Dropout(0.2) #Adding dropout
-
-    def forward(self, x, demographics):
-        x = self.pool1(self.relu1(self.bn1(self.conv1(x))))
-        x = self.pool2(self.relu2(self.bn2(self.conv2(x))))
-        x = self.pool3(self.relu3(self.bn3(self.conv3(x))))
-        x = self.flatten(x)
-        x = self.dropout(self.relu4(self.fc1(x)))
-        x = torch.cat((x, demographics), dim=1) #concatenate image and demographics
-        x = self.fc2(x)
-        return x
-
-import torch
-import torch.nn as nn
-import logging
-
-class ResNet3DBlock(nn.Module):
-    """
-    Input shape maintained through padding=1 with stride=1
-    Output shape = input shape when stride=1
-    Output shape = input shape // stride when stride>1
-    """
-    def __init__(self, in_channels, out_channels, stride=1):
-        super(ResNet3DBlock, self).__init__()
-        self.conv1 = nn.Conv3d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1)
-        self.bn1 = nn.BatchNorm3d(out_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm3d(out_channels)
-
-        self.shortcut = nn.Sequential()
-        if stride != 1 or in_channels != out_channels:
-            self.shortcut = nn.Sequential(
-                nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=stride),
-                nn.BatchNorm3d(out_channels)
-            )
-
-    def forward(self, x):
-        identity = self.shortcut(x)
-        out = self.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
-        out += identity
-        out = self.relu(out)
-        return out
-
-class DenseBlock3D(nn.Module):
-    """
-    Maintains spatial dimensions while increasing channel depth
-    Output channels = in_channels + (growth_rate * num_layers)
-    """
-    def __init__(self, in_channels, growth_rate, num_layers):
-        super(DenseBlock3D, self).__init__()
-        self.layers = nn.ModuleList()
-        current_channels = in_channels
-
-        for _ in range(num_layers):
-            layer = nn.Sequential(
-                nn.BatchNorm3d(current_channels),
-                nn.ReLU(inplace=True),
-                nn.Conv3d(current_channels, growth_rate, kernel_size=3, padding=1)
-            )
-            self.layers.append(layer)
-            current_channels += growth_rate
-
-    def forward(self, x):
-        features = [x]
-        for layer in self.layers:
-            new_features = layer(torch.cat(features, 1))
-            features.append(new_features)
-        return torch.cat(features, 1)
-
-class ResNet3D(nn.Module):
-    """
-    For input shape (1, 120, 144, 120):
-    1. Initial conv + pool: (32, 30, 36, 30)
-    2. Layer1: maintains shape
-    3. Layer2: (64, 15, 18, 15)
-    4. Layer3: (128, 8, 9, 8)
-    """
-    def __init__(self, num_demographics):
-        super(ResNet3D, self).__init__()
-
-        # Initial conv: (1, H, W, D) -> (32, H/2, W/2, D/2)
-        self.conv1 = nn.Conv3d(1, 32, kernel_size=7, stride=2, padding=3)
-        self.bn1 = nn.BatchNorm3d(32)
-        self.relu = nn.ReLU(inplace=True)
-        # After maxpool: (32, H/4, W/4, D/4)
-        self.maxpool = nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
-
-        # Maintains spatial dimensions
-        self.layer1 = self._make_layer(32, 32, 2)
-        # Halves spatial dimensions
-        self.layer2 = self._make_layer(32, 64, 2, stride=2)
-        # Halves spatial dimensions again
-        self.layer3 = self._make_layer(64, 128, 2, stride=2)
-
-        self.avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
-        self.fc1 = nn.Linear(128, 64)
-        self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(64 + num_demographics, 1)
-
-    def _make_layer(self, in_channels, out_channels, num_blocks, stride=1):
-        layers = []
-        layers.append(ResNet3DBlock(in_channels, out_channels, stride))
-        for _ in range(1, num_blocks):
-            layers.append(ResNet3DBlock(out_channels, out_channels))
-        return nn.Sequential(*layers)
-
-    def forward(self, x, demographics):
-        # Input shape logging
-        logging.debug(f"Input shape: {x.shape}")
-
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        logging.debug(f"After initial conv: {x.shape}")
-
-        x = self.maxpool(x)
-        logging.debug(f"After maxpool: {x.shape}")
-
-        x = self.layer1(x)
-        logging.debug(f"After layer1: {x.shape}")
-
-        x = self.layer2(x)
-        logging.debug(f"After layer2: {x.shape}")
-
-        x = self.layer3(x)
-        logging.debug(f"After layer3: {x.shape}")
-
-        x = self.avgpool(x)
-        logging.debug(f"After avgpool: {x.shape}")
-
-        x = torch.flatten(x, 1)
-        logging.debug(f"After flatten: {x.shape}")
-
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-        logging.debug(f"After FC1: {x.shape}")
-
-        x = torch.cat((x, demographics), dim=1)
-        logging.debug(f"After concatenation with demographics: {x.shape}")
-
-        x = self.fc2(x)
-        return x
-
-class DenseNet3D(nn.Module):
-    """
-    For input shape (1, 120, 144, 120):
-    1. Initial conv + pool: (32, 30, 36, 30)
-    2. Dense1 + trans1: (64, 15, 18, 15)
-    3. Dense2 + trans2: (128, 8, 9, 8)
-    """
-    def __init__(self, num_demographics, growth_rate=16):
-        super(DenseNet3D, self).__init__()
-
-        # Initial convolution: (1, H, W, D) -> (32, H/2, W/2, D/2)
-        self.conv1 = nn.Conv3d(1, 32, kernel_size=7, stride=2, padding=3)
-        self.bn1 = nn.BatchNorm3d(32)
-        self.relu = nn.ReLU(inplace=True)
-        # After maxpool: (32, H/4, W/4, D/4)
-        self.maxpool = nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
-
-        # First dense block: 32 -> 32 + (4 * growth_rate) channels
-        self.dense1 = DenseBlock3D(32, growth_rate, num_layers=4)
-        # Transition reduces channels and spatial dimensions by 2
-        self.trans1 = nn.Sequential(
-            nn.BatchNorm3d(32 + 4 * growth_rate),
-            nn.Conv3d(32 + 4 * growth_rate, 64, kernel_size=1),
-            nn.AvgPool3d(kernel_size=2, stride=2)
-        )
-
-        # Second dense block: 64 -> 64 + (4 * growth_rate) channels
-        self.dense2 = DenseBlock3D(64, growth_rate, num_layers=4)
-        # Final transition
-        self.trans2 = nn.Sequential(
-            nn.BatchNorm3d(64 + 4 * growth_rate),
-            nn.Conv3d(64 + 4 * growth_rate, 128, kernel_size=1),
-            nn.AvgPool3d(kernel_size=2, stride=2)
-        )
-
-        self.avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
-        self.fc1 = nn.Linear(128, 64)
-        self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(64 + num_demographics, 1)
-
-    def forward(self, x, demographics):
-        # Input shape logging
-        logging.debug(f"Input shape: {x.shape}")
-
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        logging.debug(f"After initial conv: {x.shape}")
-
-        x = self.maxpool(x)
-        logging.debug(f"After maxpool: {x.shape}")
-
-        x = self.dense1(x)
-        logging.debug(f"After dense1: {x.shape}")
-
-        x = self.trans1(x)
-        logging.debug(f"After trans1: {x.shape}")
-
-        x = self.dense2(x)
-        logging.debug(f"After dense2: {x.shape}")
-
-        x = self.trans2(x)
-        logging.debug(f"After trans2: {x.shape}")
-
-        x = self.avgpool(x)
-        logging.debug(f"After avgpool: {x.shape}")
-
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-        logging.debug(f"After FC1: {x.shape}")
-
-        x = torch.cat((x, demographics), dim=1)
-        logging.debug(f"After concatenation with demographics: {x.shape}")
-
-        x = self.fc2(x)
-        return x
 
 
 class BrainAgeWrapper(torch.nn.Module):
@@ -497,11 +61,11 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
     """Create directories for specified visualization methods"""
     all_methods = {
         'gradcam': GradCAM,
-        # 'hirescam': HiResCAM,
-        # 'gradcam++': GradCAMPlusPlus,
-        # 'xgradcam': XGradCAM,
-        # 'eigencam': EigenGradCAM,
-        # 'layercam': LayerCAM
+        'hirescam': HiResCAM,
+        'gradcam++': GradCAMPlusPlus,
+        'xgradcam': XGradCAM,
+        'eigencam': EigenGradCAM,
+        'layercam': LayerCAM
     }
 
     # Filter methods if specific ones are requested
@@ -516,16 +80,8 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
 
 def get_target_layers(model):
     """Get the target layers for visualization"""
-    if isinstance(model.model, Large3DCNN):
-        return [model.model.conv3]
-    elif isinstance(model.model, Small3DCNN):
-        return [model.model.conv2]
-    elif isinstance(model.model, ResNet3D):
-        return [model.model.layer3[-1].conv2]
-    elif isinstance(model.model, DenseNet3D):
-        return [model.model.trans2[1]]
-    else:
-        raise ValueError(f"Unsupported model type: {type(model.model)}")
+    #not implemented
+    return None
 
 def normalize_cam(cam):
     """Normalize CAM output to range [0, 1]"""
@@ -788,14 +344,17 @@ def find_csv_file(directory):
 
 def process_single_model(model_path, test_data_dir, base_output_dir, device):
     """Process a single model for XAI visualization"""
+    """Loads a model based on its filename using load_model_with_params."""
     model_filename = os.path.basename(model_path)
-    # Extract model type from the filename (format: best_model-{type}_...)
-    if 'model-' in model_filename:
-        model_type = model_filename.split('model-')[1].split('_')[0]
+    
+    match = re.search(r'best__(.+?)_', model_filename)
+    if match:
+        model_name = match.group(1)
     else:
-        model_type = 'large'  # Default if pattern not found
+        model_name = 'unknown' 
+    model = torch.load(model_path, map_location='cuda', weights_only = False)
+    logging.info("Loaded model: %s of type %s", model_filename, model_name)
 
-    model_name = os.path.splitext(model_filename)[0]
     test_data_name = os.path.basename(os.path.normpath(test_data_dir))
     model_output_dir = os.path.join(base_output_dir, model_name, test_data_name)
     os.makedirs(model_output_dir, exist_ok=True)
@@ -805,21 +364,6 @@ def process_single_model(model_path, test_data_dir, base_output_dir, device):
 
     num_demographics = 6
     # Initialize the appropriate model
-    if model_type == 'small':
-        model = Small3DCNN(num_demographics).to(device)
-    elif model_type == 'large':
-        model = Large3DCNN(num_demographics).to(device)
-    elif model_type == 'resnet':
-        model = ResNet3D(num_demographics).to(device)
-    elif model_type == 'densenet':
-        model = DenseNet3D(num_demographics).to(device)
-    else:
-        raise ValueError(f"Unsupported model type: {model_type}")
-
-    # Load state dict
-    state_dict = torch.load(model_path, map_location=device, weights_only=True)
-    state_dict = {key.replace("_orig_mod.", ""): value for key, value in state_dict.items()}
-    model.load_state_dict(state_dict)
 
     # Enable gradients
     for param in model.parameters():
