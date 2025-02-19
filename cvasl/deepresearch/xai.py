@@ -374,12 +374,12 @@ def process_single_model(model_path, test_data_dir, base_output_dir, device):
 
 def main():
     parser = argparse.ArgumentParser(description="XAI Visualization for Brain Age Models")
-    parser.add_argument('--models_dir', type=str, default='~/my-scratch/fmodels/trainedmodels_unmasked',
+    parser.add_argument('--models_dir', type=str, default='/home/radv/samiri/my-scratch/fmodels/trainedmodels_unmasked',
                         help="Directory containing the saved model .pth files")
     parser.add_argument('--test_data_dir', type=str,
                         default='/home/radv/samiri/my-scratch/trainingdata/masked/',
                         help="Directory containing the test data (CSV and image folder)")
-    parser.add_argument('--output_dir', type=str, default='xai/masked/topmri',
+    parser.add_argument('--output_dir', type=str, default='/home/radv/samiri/my-scratch/xai/masked/topmri',
                         help="Base output directory for visualizations")
     parser.add_argument('--method', type=str, default='gradcam',
                         help="Comma-separated list of XAI methods (gradcam, layercam, etc.) or 'all'")
