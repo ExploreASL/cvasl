@@ -290,8 +290,6 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                 orig_image = image.detach().cpu().squeeze().numpy()
                 grayscale_cam = normalize_cam(grayscale_cam)
 
-                # REMOVED individual sample plotting
-
                 # Update accumulators
                 if image_accumulator is None:
                     image_accumulator = np.zeros_like(orig_image, dtype=np.float32)
@@ -366,7 +364,7 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
     logging.info("Loaded model: %s of type %s", model_filename, model_name)
 
     test_data_name = os.path.basename(os.path.normpath(test_data_dir))
-    model_output_dir = os.path.join(base_output_dir, model_name, test_data_name)
+    model_output_dir = os.path.join(base_output_dir, model_name, model_filename.replace('.pth', ''))
     os.makedirs(model_output_dir, exist_ok=True)
 
     dataset = BrainAgeDataset(csv_path, test_data_dir)
