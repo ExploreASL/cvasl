@@ -783,7 +783,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
     """Main visualization function."""
     methods = create_visualization_dirs(output_dir, methods_to_run)
     model.eval()
-    loader = DataLoader(dataset, batch_size=1, shuffle=False)
+    loader = DataLoader(dataset, batch_size=1, num_workers=1, shuffle=False)
     atlas_data, _ = load_atlas(atlas_path)  # Keep atlas loading
 
     if atlas_data is None:
@@ -839,7 +839,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                         target_layers = get_target_layers(wrapped_model)
                         cam_method_dir = os.path.join(output_dir, method_name)
                         cam_object = method_class(model=wrapped_model, target_layers=target_layers)
-                        grayscale_cam = cam_object(input_tensor=image)[0]
+                        grayscale_cam = np.squeeze(cam_object(input_tensor=image)[0])
 
                     orig_image = batch['image'].squeeze().numpy()
                     # --- Keep Target Size for Atlas ---
