@@ -21,6 +21,8 @@ from models.efficientnet3d import EfficientNet3D
 from models.improvedcnn3d import Improved3DCNN
 from models.resnet3d import ResNet3D
 from models.resnext3d import ResNeXt3D
+from models.vit3d import VisionTransformer3D
+
 import datetime
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("high")
@@ -414,13 +416,13 @@ def main():
         type=str,
         default="large",
         choices=[
-            "small",
             "large",
             "resnet",
             "densenet",
             "resnext3d",
             "efficientnet3d",
             "improved_cnn",
+            "vit3d",
         ],
         help="Type of model to use",
     )
@@ -478,6 +480,19 @@ def main():
     improved_cnn_group.add_argument("--improved_cnn_num_conv_layers", type=int, default=3, help="Number of conv layers for Improved3DCNN") # Added num_conv_layers
     improved_cnn_group.add_argument("--improved_cnn_use_se", action="store_true", help="Use SE blocks in Improved3DCNN")
     improved_cnn_group.add_argument("--improved_cnn_dropout_rate", type=float, default=0.3, help="Dropout rate for Improved3DCNN")
+    
+    # VisionTransformer3D Parameters
+    vit3d_group = parser.add_argument_group("VisionTransformer3D arguments")
+    vit3d_group.add_argument("--vit3d_patch_size", type=int, nargs='+', default=[16, 16, 16], help="Patch size for ViT3D (list of 3 ints)")
+    vit3d_group.add_argument("--vit3d_embed_dim", type=int, default=768, help="Embedding dimension for ViT3D")
+    vit3d_group.add_argument("--vit3d_depth", type=int, default=12, help="Depth (number of layers) for ViT3D")
+    vit3d_group.add_argument("--vit3d_num_heads", type=int, default=12, help="Number of attention heads for ViT3D")
+    vit3d_group.add_argument("--vit3d_mlp_ratio", type=float, default=4.0, help="MLP ratio for ViT3D")
+    vit3d_group.add_argument("--vit3d_qkv_bias", action="store_true", help="Use QKV bias in ViT3D attention")
+    vit3d_group.add_argument("--vit3d_drop_rate", type=float, default=0.0, help="Dropout rate for ViT3D")
+    vit3d_group.add_argument("--vit3d_attn_drop_rate", type=float, default=0.0, help="Attention dropout rate for ViT3D")
+    vit3d_group.add_argument("--vit3d_drop_path_rate", type=float, default=0.0, help="Drop path rate for ViT3D")
+    vit3d_group.add_argument("--vit3d_global_pool", action="store_true", help="Use global average pooling in ViT3D")    
 
     args = parser.parse_args()
 
@@ -546,7 +561,23 @@ def main():
             use_dropout=args.efficientnet_dropout,
         )
 
-
+    elif args.model_type == "vit3d":
+        model = VisionTransformer3D(
+            num_demographics=num_demographics,
+            img_size=[121, 145, 121], 
+            patch_size=args.vit3d_patch_size,
+            embed_dim=args.vit3d_embed_dim,
+            depth=args.vit3d_depth,
+            num_heads=args.vit3d_num_heads,
+            mlp_ratio=args.vit3d_mlp_ratio,
+            qkv_bias=args.vit3d_qkv_bias,
+            drop_rate=args.vit3d_drop_rate,
+            attn_drop_rate=args.vit3d_attn_drop_rate,
+            drop_path_rate=args.vit3d_drop_path_rate,
+            global_pool=args.vit3d_global_pool,
+            use_demographics=True
+        )
+            
     else:
         raise ValueError(f"Invalid model_type: {args.model_type}")
 
