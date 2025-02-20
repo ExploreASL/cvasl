@@ -313,7 +313,6 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                     # Define target size for resizing (assuming you want to match slice size)
                     target_height, target_width = orig_image.shape[1], orig_image.shape[2] # Assuming HWC order after squeezing
                     target_size = (target_width, target_height) # cv2.resize expects (width, height)
-                    print(f"Target size for resize: {target_size}")
 
 
                     grayscale_cam = normalize_cam(grayscale_cam, target_size=target_size) # Pass target_size to normalize_cam
