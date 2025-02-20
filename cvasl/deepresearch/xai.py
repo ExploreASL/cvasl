@@ -839,13 +839,15 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                         target_layers = get_target_layers(wrapped_model)
                         cam_method_dir = os.path.join(output_dir, method_name)
                         cam_object = method_class(model=wrapped_model, target_layers=target_layers)
-                        print('==================',image.shape)
+                        print('1==================',image.shape)
                         _cam = cam_object(input_tensor=image)
                         
                         if _cam.ndim == 5:
-                            _cam = _cam[0,0]
+                            _cam = np.squeeze(_cam)
+                            print('2==================',image.shape)
                         else:
-                            _cam = _cam[0]
+                            _cam = np.squeeze(_cam)
+                            print('3==================',image.shape)
                         grayscale_cam = np.squeeze(_cam)
 
                     orig_image = batch['image'].squeeze().numpy()
