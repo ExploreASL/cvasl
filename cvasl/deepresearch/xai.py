@@ -38,7 +38,8 @@ from models.improvedcnn3d import Improved3DCNN
 from models.resnet3d import ResNet3D
 from models.resnext3d import ResNeXt3D
 from data import BrainAgeDataset
-
+import seaborn as sns 
+from scipy.stats import pearsonr
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
