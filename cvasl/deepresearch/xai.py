@@ -840,7 +840,6 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                         cam_method_dir = os.path.join(output_dir, method_name)
                         cam_object = method_class(model=wrapped_model, target_layers=target_layers)
                         
-                        print('1==================',image.shape)
                         _cam = cam_object(input_tensor=image)                        
                         if _cam.ndim == 5:
                             _cam = np.squeeze(_cam)
@@ -937,7 +936,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
 
             except Exception as e:
                 tb_str = traceback.format_exc()
-                print(f"Error processing sample {batch_idx}: {str(e)}\nTraceback:\n{tb_str}")
+                print(f"Error processing sample {batch_idx} for method {method_name}: {str(e)}\nTraceback:\n{tb_str}")
 
     for method_name in methods.keys():
         method_dir = os.path.join(output_dir, method_name)
