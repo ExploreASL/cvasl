@@ -839,7 +839,13 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                         target_layers = get_target_layers(wrapped_model)
                         cam_method_dir = os.path.join(output_dir, method_name)
                         cam_object = method_class(model=wrapped_model, target_layers=target_layers)
-                        grayscale_cam = np.squeeze(cam_object(input_tensor=image)[0])
+                        _cam = cam_object(input_tensor=image)
+                        print('==================',_cam.ndim)
+                        if _cam.ndim == 4:
+                            _cam = _cam[0,0]
+                        else:
+                            _cam = _cam[0]
+                        grayscale_cam = np.squeeze(_cam)
 
                     orig_image = batch['image'].squeeze().numpy()
                     # --- Keep Target Size for Atlas ---
