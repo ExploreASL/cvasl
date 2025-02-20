@@ -18,6 +18,8 @@ import argparse
 from math import ceil
 torch.backends.cudnn.benchmark = True  # Optimizes CUDA operations
 torch.cuda.empty_cache()
+import traceback
+import cv2
 
 from pytorch_grad_cam import (
     GradCAM,
@@ -61,11 +63,11 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
     """Create directories for specified visualization methods"""
     all_methods = {
         'gradcam': GradCAM,
-        # 'hirescam': HiResCAM,
-        # 'gradcam++': GradCAMPlusPlus,
-        # 'xgradcam': XGradCAM,
-        # 'eigencam': EigenGradCAM,
-        # 'layercam': LayerCAM
+        'hirescam': HiResCAM,
+        'gradcam++': GradCAMPlusPlus,
+        'xgradcam': XGradCAM,
+        'eigencam': EigenGradCAM,
+        'layercam': LayerCAM
     }
 
     # Filter methods if specific ones are requested
@@ -101,11 +103,16 @@ def get_target_layers(model):
     else:
         return None # Default or unknown model type
 
-def normalize_cam(cam):
-    """Normalize CAM output to range [0, 1]"""
+def normalize_cam(cam, target_size=None): # Add target_size argument to normalize_cam
+    """Memory-efficient normalization and resizing"""
     cam = np.maximum(cam, 0)
     cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam) + 1e-7)
-    return cam.astype(np.float16)  # Reduce memory footprint
+
+    if target_size is not None: # Resize if target_size is provided
+        cam_resized = cv2.resize(cam, target_size, interpolation=cv2.INTER_LINEAR) # Use cv2.resize
+        return cam_resized.astype(np.float16)
+    return cam.astype(np.float16)
+
 
 def plot_slices_with_overlay(image, cam, slice_indices=None, alpha=0.5, actual_age=None, predicted_age=None):
     """Plot original and overlay images for all three anatomical planes"""
@@ -213,12 +220,15 @@ def plot_all_slices_side_by_side(image, cam, plane='axial', num_slices=25,
     pass # Removed plotting of individual slices
 
 
-def plot_average_summary(avg_image, avg_cam,age_range=None):
-    """Create 2x3 grid showing average image and heatmap across planes"""
+def plot_average_summary(avg_cam, output_dir, prefix=""):
+    """Create 2x3 grid showing average image and heatmap across planes, saves to output_dir"""
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
     planes = ['sagittal', 'axial', 'coronal']
-    if age_range:
-        fig.suptitle(age_range, y=1.02, fontsize=14, weight='bold')
+    # Removed age_range from function signature
+
+    # Create dummy avg_image for plotting - not really used in plot_average_summary, but needed for function signature
+    avg_image = np.zeros(avg_cam.shape) # Create a dummy average image
+
     # Normalize averages
     avg_image_norm = (avg_image - avg_image.min()) / (avg_image.max() - avg_image.min())
     avg_cam_norm = (avg_cam - avg_cam.min()) / (avg_cam.max() - avg_cam.min() + 1e-7)
@@ -241,12 +251,12 @@ def plot_average_summary(avg_image, avg_cam,age_range=None):
             img_slice = avg_image_norm[slice_idx, :, :]
             cam_slice = avg_cam_norm[slice_idx, :, :]
 
-        # Average image
-        axes[0, col].imshow(img_slice, cmap='gray')
+        # Average image (dummy image being plotted)
+        axes[0, col].imshow(img_slice, cmap='gray') # plotting dummy image
         axes[0, col].set_title(f'Average {plane.capitalize()} Image')
 
         # Average heatmap
-        axes[1, col].imshow(img_slice, cmap='gray')
+        axes[1, col].imshow(img_slice, cmap='gray') # plotting dummy image
         axes[1, col].imshow(cam_slice, cmap='jet', alpha=0.5)
         axes[1, col].set_title(f'Average {plane.capitalize()} Heatmap')
 
@@ -254,21 +264,26 @@ def plot_average_summary(avg_image, avg_cam,age_range=None):
         ax.axis('off')
 
     plt.tight_layout()
-    return fig
+
+    # Save the figure to output_dir using prefix
+    filename = os.path.join(output_dir, f"{prefix}average_summary.png") # Construct filename with prefix
+    fig.savefig(filename, bbox_inches='tight', dpi=300) # Save the figure
+    plt.close(fig) # Close the figure to free memory
 
 
 def generate_xai_visualizations(model, dataset, output_dir, device='cuda', methods_to_run=['all']):
-    """Main visualization function with memory optimizations, only averages plotted"""
-    methods = create_visualization_dirs(output_dir, methods_to_run)
+    """Main visualization function with memory optimizations, now supports multiple methods and summary plots"""
+    methods = create_visualization_dirs(output_dir, methods_to_run) # methods is now a dict of method names and classes
     model.eval()
     loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    # Initialize accumulators for averages
-    image_accumulator = None
-    cam_accumulator = None
-    total_samples = 0
+    # Initialize accumulators for averages for each method
+    method_accumulators = {method_name: {'image': None, 'cam': None, 'count': 0} for method_name in methods.keys()}
     age_bins = np.linspace(0, 100, 11) # 11 to get 10 bins, 0-10, 10-20, ..., 90-100
-    bin_accumulators = {i: {'image': None, 'cam': None, 'count': 0} for i in range(10)} # Initialize for bins 0-9 (bin 1 to 10)
+    bin_accumulators = {
+        method_name: {i: {'image': None, 'cam': None, 'count': 0} for i in range(len(age_bins))}
+        for method_name in methods.keys()
+    } # Initialize for bins 0-9 (bin 1 to 10) for each method
 
 
     with torch.no_grad():
@@ -282,72 +297,77 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                 wrapped_model = BrainAgeWrapper(model, demographics)
                 predicted_age = wrapped_model(image).detach().item()
 
-                with torch.enable_grad():
-                    target_layers = get_target_layers(wrapped_model)
-                    cam = GradCAM(model=wrapped_model, target_layers=target_layers)
-                    grayscale_cam = cam(input_tensor=image)[0]#.cpu().numpy()
+                target_layers = get_target_layers(wrapped_model)
 
-                orig_image = image.detach().cpu().squeeze().numpy()
-                grayscale_cam = normalize_cam(grayscale_cam)
+                # Iterate through visualization methods
+                for method_name, method_class in methods.items():
+                    cam_method_dir = os.path.join(output_dir, method_name) # Directory for current method
+                    cam_object = method_class(model=wrapped_model, target_layers=target_layers) # Instantiate CAM method
 
-                # Update accumulators
-                if image_accumulator is None:
-                    image_accumulator = np.zeros_like(orig_image, dtype=np.float32)
-                    cam_accumulator = np.zeros_like(grayscale_cam, dtype=np.float32)
-                image_accumulator += orig_image.astype(np.float32)
-                cam_accumulator += grayscale_cam.astype(np.float32)
-                total_samples += 1
+                    with torch.enable_grad():
+                        target_layers = get_target_layers(wrapped_model)
+                        cam = GradCAM(model=wrapped_model, target_layers=target_layers)
+                        grayscale_cam = cam(input_tensor=image)[0]#.cpu().numpy()
 
-                # Update age bins
-                bin_idx = np.digitize(actual_age, age_bins) - 1
-                bin_idx = max(0, min(bin_idx, 9)) # Ensure bin_idx is within 0-9
-                if bin_accumulators[bin_idx]['image'] is None:
-                    bin_accumulators[bin_idx]['image'] = np.zeros_like(orig_image, dtype=np.float32)
-                    bin_accumulators[bin_idx]['cam'] = np.zeros_like(grayscale_cam, dtype=np.float32)
-                bin_accumulators[bin_idx]['image'] += orig_image.astype(np.float32)
-                bin_accumulators[bin_idx]['cam'] += grayscale_cam.astype(np.float32)
-                bin_accumulators[bin_idx]['count'] += 1
+                    orig_image = image.detach().cpu().squeeze().numpy()
+                    # Define target size for resizing (assuming you want to match slice size)
+                    target_height, target_width = orig_image.shape[1], orig_image.shape[2] # Assuming HWC order after squeezing
+                    target_size = (target_width, target_height) # cv2.resize expects (width, height)
+                    print(f"Target size for resize: {target_size}")
+
+
+                    grayscale_cam = normalize_cam(grayscale_cam, target_size=target_size) # Pass target_size to normalize_cam
+
+                    # Update accumulators for current method
+                    if method_accumulators[method_name]['image'] is None:
+                        method_accumulators[method_name]['image'] = np.zeros_like(orig_image, dtype=np.float32)
+                        method_accumulators[method_name]['cam'] = np.zeros_like(grayscale_cam, dtype=np.float32)
+                    method_accumulators[method_name]['image'] += orig_image.astype(np.float32)
+                    method_accumulators[method_name]['cam'] += grayscale_cam.astype(np.float32)
+                    method_accumulators[method_name]['count'] += 1
+
+                    # Update age bins for current method
+                    bin_idx = np.digitize(actual_age, age_bins) - 1
+                    bin_idx = max(0, min(bin_idx, 9)) # Ensure bin_idx is within 0-9
+                    if bin_accumulators[method_name][bin_idx]['image'] is None:
+                        bin_accumulators[method_name][bin_idx]['image'] = np.zeros_like(orig_image, dtype=np.float32)
+                        bin_accumulators[method_name][bin_idx]['cam'] = np.zeros_like(grayscale_cam, dtype=np.float32)
+                    bin_accumulators[method_name][bin_idx]['image'] += orig_image.astype(np.float32)
+                    bin_accumulators[method_name][bin_idx]['cam'] += grayscale_cam.astype(np.float32)
+                    bin_accumulators[method_name][bin_idx]['count'] += 1
 
 
             except Exception as e:
-                print(f"Error processing sample {batch_idx}: {str(e)}")
+                # Get the full traceback as a string
+                tb_str = traceback.format_exc()
+                print(f"Error processing sample {batch_idx}: {str(e)}\nTraceback:\n{tb_str}")
 
             # Memory cleanup
-            del wrapped_model, image, demographics, grayscale_cam
+            del wrapped_model, image, demographics, grayscale_cam, cam_object
             torch.cuda.empty_cache()
             gc.collect()
 
-    # Generate final averages
-    gradcam_dir = os.path.join(output_dir, 'gradcam')
+    # Generate final averages for each method
+    for method_name in methods.keys():
+        method_dir = os.path.join(output_dir, method_name)
+        if method_accumulators[method_name]['count'] > 0:
+            avg_image = method_accumulators[method_name]['image'] / method_accumulators[method_name]['count']
+            avg_cam = method_accumulators[method_name]['cam'] / method_accumulators[method_name]['count']
 
-    if total_samples > 0:
-        avg_image = image_accumulator / total_samples
-        avg_cam = cam_accumulator / total_samples
+            # Dataset-wide averages - using new grid plot for planes
+            generate_average_heatmaps(avg_cam, method_dir, prefix="dataset_") # Modified to use generate_average_heatmaps which now does grid plots
+            plot_average_summary(avg_cam, method_dir, prefix="dataset_") # Call for dataset-wide summary plot
 
-        # Dataset-wide averages - using new grid plot for planes
-        generate_average_heatmaps(avg_cam, gradcam_dir, prefix="dataset_") # Modified to use generate_average_heatmaps which now does grid plots
+            # Age-binned averages
+            for bin_idx in range(10): # Loop through all 10 bins (0-9)
+                if bin_accumulators[method_name][bin_idx]['count'] > 0:
 
+                    bin_avg_image = bin_accumulators[method_name][bin_idx]['image'] / bin_accumulators[method_name][bin_idx]['count']
+                    bin_avg_cam = bin_accumulators[method_name][bin_idx]['cam'] / bin_accumulators[method_name][bin_idx]['count']
 
-        # Age-binned averages
-        for bin_idx in range(10): # Loop through all 10 bins (0-9)
-            if bin_accumulators[bin_idx]['count'] > 0:
-                # Calculate age range string
-                lower = age_bins[bin_idx]
-                upper = age_bins[bin_idx+1]
-                age_range = f"Age Range: {lower:.1f}-{upper:.1f} years"
-
-                bin_avg_image = bin_accumulators[bin_idx]['image'] / bin_accumulators[bin_idx]['count']
-                bin_avg_cam = bin_accumulators[bin_idx]['cam'] / bin_accumulators[bin_idx]['count']
-
-                # Age-binned averages - using new grid plot for planes
-                generate_average_heatmaps(bin_avg_cam, gradcam_dir, prefix=f"age_bin_{bin_idx+1}_") # Modified to use generate_average_heatmaps
-
-
-def normalize_cam(cam):
-    """Memory-efficient normalization"""
-    cam = np.maximum(cam, 0)
-    cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam) + 1e-7)
-    return cam.astype(np.float16)
+                    # Age-binned averages - using new grid plot for planes
+                    generate_average_heatmaps(bin_avg_cam, method_dir, prefix=f"age_bin_{bin_idx+1}_") # Modified to use generate_average_heatmaps
+                    plot_average_summary(bin_avg_cam, method_dir, prefix=f"age_bin_{bin_idx+1}_") # Call for age-binned summary plot
 
 
 def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device):
@@ -390,7 +410,7 @@ def main():
                         help="Directory containing the test data (CSV and image folder)")
     parser.add_argument('--output_dir', type=str, default='cvasl/deepresearch/xai',
                         help="Base output directory for visualizations")
-    parser.add_argument('--method', type=str, default='gradcam',
+    parser.add_argument('--method', type=str, default='all',
                         help="Comma-separated list of XAI methods (gradcam, layercam, etc.) or 'all'")
     parser.add_argument('--device', type=str, default='cpu',
                         choices=['cuda', 'cpu'], help="Device to use for computation")
