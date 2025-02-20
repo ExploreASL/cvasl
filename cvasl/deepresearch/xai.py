@@ -841,7 +841,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                         cam_object = method_class(model=wrapped_model, target_layers=target_layers)
                         _cam = cam_object(input_tensor=image)
                         print('==================',_cam.ndim)
-                        if _cam.ndim == 4:
+                        if _cam.ndim == 5:
                             _cam = _cam[0,0]
                         else:
                             _cam = _cam[0]
