@@ -8,6 +8,9 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import LabelEncoder
 from pytorch_grad_cam import GradCAM, HiResCAM, GradCAMPlusPlus, XGradCAM, AblationCAM, LayerCAM, EigenGradCAM
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import logging
 import csv
@@ -68,10 +71,12 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
     all_methods = {
         'gradcam': GradCAM,
         'hirescam': HiResCAM,
-        'gradcam++': GradCAMPlusPlus,
-        'xgradcam': XGradCAM,
+        #'gradcam++': GradCAMPlusPlus,
+        #'xgradcam': XGradCAM,
         'eigencam': EigenGradCAM,
-        'layercam': LayerCAM
+        'layercam': LayerCAM,
+        # 'ablationcam': AblationCAM,
+        # 'scorecam': ScoreCAM
     }
 
     # Filter methods if specific ones are requested
