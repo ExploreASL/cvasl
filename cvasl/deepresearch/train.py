@@ -267,7 +267,7 @@ def train_model(
                     )
             else:
                 epochs_no_improve += 1
-                if epochs_no_improve >= 10:
+                if epochs_no_improve >= 20:
                     logging.info(
                         f"Early stopping at epoch {epoch} as test MAE did not improve over 20 epochs"
                     )
