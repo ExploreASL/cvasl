@@ -203,7 +203,7 @@ def train_model(
         optimizer,
         mode='min',
         factor=0.5,
-        patience=10,
+        patience=15,
         verbose=True,
     )
     logging.info(f"Loss function and optimizer set up.")
