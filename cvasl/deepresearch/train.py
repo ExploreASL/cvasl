@@ -203,7 +203,7 @@ def train_model(
         optimizer,
         mode='min',
         factor=0.5,
-        patience=15,
+        patience=30,
         verbose=True,
     )
     logging.info(f"Loss function and optimizer set up.")
@@ -253,6 +253,8 @@ def train_model(
                     }
                 )
                 scheduler.step(test_mae)
+                #log if learning rate changes
+                logging.info(f"-> Learning rate: {optimizer.param_groups[0]['lr']}") if optimizer.param_groups[0]['lr'] != learning_rate else None
             if round(test_mae, 2) < round(best_test_mae, 2):
                 epochs_no_improve = 0
                 best_test_mae = test_mae
@@ -267,7 +269,7 @@ def train_model(
                     )
             else:
                 epochs_no_improve += 1
-                if epochs_no_improve >= 20:
+                if epochs_no_improve >= 40:
                     logging.info(
                         f"Early stopping at epoch {epoch} as test MAE did not improve over 20 epochs"
                     )
