@@ -203,7 +203,7 @@ def train_model(
         optimizer,
         mode='min',
         factor=0.5,
-        patience=30,
+        patience=20,
         verbose=True,
     )
     logging.info(f"Loss function and optimizer set up.")
@@ -255,7 +255,7 @@ def train_model(
             scheduler.step(test_mae)
             #log if learning rate changes
             logging.info(f"-> Learning rate: {optimizer.param_groups[0]['lr']}") if optimizer.param_groups[0]['lr'] != learning_rate else None
-            if round(test_mae, 2) < round(best_test_mae, 2):
+            if round(test_mae, 1) < round(best_test_mae, 1):
                 epochs_no_improve = 0
                 best_test_mae = test_mae
                 if store_model:
