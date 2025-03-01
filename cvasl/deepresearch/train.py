@@ -495,6 +495,9 @@ def main():
     vit3d_group.add_argument("--vit3d_attn_drop_rate", type=float, default=0.0, help="Attention dropout rate for ViT3D")
     vit3d_group.add_argument("--vit3d_drop_path_rate", type=float, default=0.0, help="Drop path rate for ViT3D")
     vit3d_group.add_argument("--vit3d_global_pool", action="store_true", help="Use global average pooling in ViT3D")    
+    vit3d_group.add_argument("--use_cls_token", action="store_true", help="Use CLS token in ViT3D")
+    vit3d_group.add_argument("--use_hybrid_embed", action="store_true", help="Use hybrid embedding in ViT3D")
+    vit3d_group.add_argument("--hybrid_kernel_size", type=int, default=3, help="Hybrid embedding kernel size for ViT3D")
 
     args = parser.parse_args()
 
@@ -577,6 +580,9 @@ def main():
             attn_drop_rate=args.vit3d_attn_drop_rate,
             drop_path_rate=args.vit3d_drop_path_rate,
             global_pool=args.vit3d_global_pool,
+            use_cls_token = args.use_cls_token,
+            use_hybrid_embed = args.use_hybrid_embed,
+            hybrid_kernel_size = args.hybrid_kernel_size,
             use_demographics=True
         )
             
