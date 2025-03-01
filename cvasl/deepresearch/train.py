@@ -580,9 +580,9 @@ def main():
             attn_drop_rate=args.vit3d_attn_drop_rate,
             drop_path_rate=args.vit3d_drop_path_rate,
             global_pool=args.vit3d_global_pool,
-            use_cls_token = args.use_cls_token,
-            use_hybrid_embed = args.use_hybrid_embed,
-            hybrid_kernel_size = args.hybrid_kernel_size,
+            use_cls_token = args.vit3d_use_cls_token,
+            use_hybrid_embed = args.vit3d_use_hybrid_embed,
+            hybrid_kernel_size = args.vit3d_hybrid_kernel_size,
             use_demographics=True
         )
             
