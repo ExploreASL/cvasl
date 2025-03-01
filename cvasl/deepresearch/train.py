@@ -21,7 +21,7 @@ from models.efficientnet3d import EfficientNet3D
 from models.improvedcnn3d import Improved3DCNN
 from models.resnet3d import ResNet3D
 from models.resnext3d import ResNeXt3D
-from models.vit3d import VisionTransformer3D
+from models.vit3d import VisionTransformer3D, BrainAgeLoss
 
 import datetime
 torch.backends.cudnn.benchmark = True
@@ -255,7 +255,7 @@ def train_model(
             scheduler.step(test_mae)
             #log if learning rate changes
             logging.info(f"-> Learning rate: {optimizer.param_groups[0]['lr']}") if optimizer.param_groups[0]['lr'] != learning_rate else None
-            if round(test_mae, 1) < round(best_test_mae, 1):
+            if round(test_mae, 2) < round(best_test_mae, 2):
                 epochs_no_improve = 0
                 best_test_mae = test_mae
                 if store_model:
