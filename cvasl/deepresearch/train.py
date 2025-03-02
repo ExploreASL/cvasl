@@ -197,14 +197,32 @@ def train_model(
     logging.info(f"Model created: {cmodel.get_name() if hasattr(cmodel, 'get_name') else model_type}")
 
     criterion = nn.L1Loss()
-    optimizer = optim.Adam(
-        cmodel.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode='min',
-        factor=0.5,
-        patience=20,
-        verbose=True,
+    #optimizer = optim.Adam(cmodel.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    # scheduler = optim.lr_scheduler.CosineAnnealingLR.ReduceLROnPlateau(
+    #     optimizer,
+    #     mode='min',
+    #     factor=0.5,
+    #     patience=20,
+    #     verbose=True,
+    # )
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    warmup_epochs = 20
+    eta_min = 1e-6
+    warmup_scheduler = optim.lr_scheduler.LinearLR(
+    optimizer,
+    start_factor=1e-8/learning_rate,  # Start from a very small LR
+    end_factor=1.0,              # Reach initial_lr at the end of warmup
+    total_iters=warmup_epochs    # Number of warmup epochs
+    )
+    main_scheduler = optim.lr_scheduler.CosineAnnealingLR(
+    optimizer,
+    T_max=num_epochs - warmup_epochs,  # Adjust T_max for warmup
+    eta_min=eta_min
+    )
+    scheduler = optim.lr_scheduler.SequentialLR(
+    optimizer,
+    schedulers=[warmup_scheduler, main_scheduler],
+    milestones=[warmup_epochs]  # Switch to main_scheduler after warmup
     )
     logging.info(f"Loss function and optimizer set up.")
     #get current date time
@@ -252,6 +270,7 @@ def train_model(
                         "test_pearson": test_pearson,
                     }
                 )
+            #scheduler.step(test_mae)
             scheduler.step(test_mae)
             #log if learning rate changes
             logging.info(f"-> Learning rate: {optimizer.param_groups[0]['lr']}") if optimizer.param_groups[0]['lr'] != learning_rate else None
