@@ -271,7 +271,7 @@ def train_model(
                     }
                 )
             #scheduler.step(test_mae)
-            scheduler.step(test_mae)
+            scheduler.step()
             #log if learning rate changes
             logging.info(f"-> Learning rate: {optimizer.param_groups[0]['lr']}") if optimizer.param_groups[0]['lr'] != learning_rate else None
             if round(test_mae, 2) < round(best_test_mae, 2):
