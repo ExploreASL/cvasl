@@ -886,50 +886,51 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
 
                     # --- KEEP Regional/Atlas Code ---
                     if atlas_data is not None:
-                        if grayscale_cam is not None:
+                        atlas_cam = grayscale_cam.copy()
+                        if atlas_cam is not None:
                             if atlas_data_resampled is None:
                                 current_atlas_shape = atlas_data.shape
                                 zoom_factors = [ts / as_ for ts, as_ in zip(target_atlas_shape, current_atlas_shape)]
                                 atlas_data_resampled = scipy.ndimage.zoom(atlas_data, zoom_factors, order=0)
-                            if not isinstance(grayscale_cam, np.ndarray):
+                            if not isinstance(atlas_cam, np.ndarray):
                                 logging.error(f"Grayscale CAM is not a numpy array, skipping resize and regional analysis for sample {batch_idx}")
-                                grayscale_cam = None
-                            elif np.isnan(grayscale_cam).any() or np.isinf(grayscale_cam).any():
+                                atlas_cam = None
+                            elif np.isnan(atlas_cam).any() or np.isinf(atlas_cam).any():
                                 logging.error(f"Grayscale CAM contains NaN or Inf values, skipping resize and regional analysis for sample {batch_idx}")
-                                grayscale_cam = None
-                            elif grayscale_cam.size == 0:
+                                atlas_cam = None
+                            elif atlas_cam.size == 0:
                                 logging.error(f"Grayscale CAM is empty, skipping resize and regional analysis for sample {batch_idx}")
-                                grayscale_cam = None
-                            elif grayscale_cam.shape != atlas_data_resampled.shape:
-                                if grayscale_cam.ndim == 2:
-                                    grayscale_cam = cv2.resize(grayscale_cam, (atlas_data_resampled.shape[2], atlas_data_resampled.shape[1]), interpolation=cv2.INTER_LINEAR)
-                                    grayscale_cam = np.expand_dims(grayscale_cam, axis=0)
-                                elif grayscale_cam.ndim == 3:
+                                atlas_cam = None
+                            elif atlas_cam.shape != atlas_data_resampled.shape:
+                                if atlas_cam.ndim == 2:
+                                    atlas_cam = cv2.resize(atlas_cam, (atlas_data_resampled.shape[2], atlas_data_resampled.shape[1]), interpolation=cv2.INTER_LINEAR)
+                                    atlas_cam = np.expand_dims(atlas_cam, axis=0)
+                                elif atlas_cam.ndim == 3:
                                     resized_slices = []
-                                    for d in range(grayscale_cam.shape[2]):
-                                        slice_2d = grayscale_cam[:, :, d]
+                                    for d in range(atlas_cam.shape[2]):
+                                        slice_2d = atlas_cam[:, :, d]
                                         resized_slice = cv2.resize(
                                             slice_2d,
                                             (atlas_data_resampled.shape[2], atlas_data_resampled.shape[1]),
                                             interpolation=cv2.INTER_LINEAR
                                         )
                                         resized_slices.append(resized_slice)
-                                    grayscale_cam = np.stack(resized_slices, axis=2)
-                                    grayscale_cam = grayscale_cam.transpose(1, 0, 2)
+                                    atlas_cam = np.stack(resized_slices, axis=2)
+                                    atlas_cam = atlas_cam.transpose(1, 0, 2)
 
-                            regional_intensities = calculate_regional_intensity(grayscale_cam, atlas_data_resampled)
+                            regional_intensities = calculate_regional_intensity(atlas_cam, atlas_data_resampled)
 
                             if regional_intensities:
                                 regional_heatmap = create_regional_heatmap(regional_intensities, atlas_data_resampled)
 
                                 # Accumulate regional heatmap (KEEP)
                                 if atlas_data is not None:
-                                    method_accumulators[method_name]['cam'] += grayscale_cam.astype(np.float32)
+                                    method_accumulators[method_name]['cam'] += atlas_cam.astype(np.float32)
                                     method_accumulators[method_name]['regional_cam'] += regional_heatmap.astype(np.float32)
                                 
                                 # Bin regional heatmap (KEEP)
                                 if atlas_data is not None:
-                                    bin_accumulators[method_name][bin_idx]['cam'] += grayscale_cam.astype(np.float32)
+                                    bin_accumulators[method_name][bin_idx]['cam'] += atlas_cam.astype(np.float32)
                                     bin_accumulators[method_name][bin_idx]['regional_cam'] += regional_heatmap.astype(np.float32)
 
                                 for region_label, intensity in regional_intensities.items():
