@@ -72,17 +72,6 @@ class BrainAgeAnalyzer:
         logging.info("Loaded model: %s of type %s", model_filename, model_type)
         return model, model_type
     
-    def _create_summary_dataframe(self, results_bag, results_norm):
-      """Helper function to create a summary DataFrame of test results."""
-      df_bag = pd.DataFrame(results_bag).T.reset_index().rename(columns={'index': 'Test', 0: 'Statistic', 1: "P-value"})
-      df_norm = pd.DataFrame(results_norm).T.reset_index().rename(columns={'index': 'Test', 0: 'Statistic', 1: "P-value"})
-      df_bag['Data'] = 'BAG'
-      df_norm['Data'] = 'Normative Deviation'
-
-      df_summary = pd.concat([df_bag, df_norm], ignore_index=True)
-      df_summary = df_summary[['Data', 'Test', 'Statistic', 'P-value']]
-      return df_summary    
-
     def predict_ages(self, model, val_dataset):
         """Predicts ages for the validation dataset using the given model."""
         val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
@@ -169,14 +158,6 @@ class BrainAgeAnalyzer:
             results['white'] = {'statistic': np.nan, 'p_value': np.nan}
 
         
-        try:
-            gq_f_value, gq_p_value, gq_order = het_goldfeldquandt(binned_data['brain_age_gap'],
-                                                                   binned_data['actual_age'],
-                                                                   alternative='increasing')
-            results['goldfeld_quandt'] = {'statistic': gq_f_value, 'p_value': gq_p_value, 'order': gq_order}
-        except Exception as e:
-            logging.warning(f"Goldfeld-Quandt test failed for {model_name}: {e}")
-            results['goldfeld_quandt'] = {'statistic': np.nan, 'p_value': np.nan, 'order': None}
 
         title = (
             "Brain Age Gap (BAG) vs. Actual Age. This plot shows the difference between predicted and actual age. "
@@ -276,271 +257,6 @@ class BrainAgeAnalyzer:
             f.write(summary_str)
 
         return {"results": results, "binned_data": binned_data}
-
-
-
-
-    def calculate_normative_deviations(self, train_data, val_data, model_name, model_type, age_bins=np.linspace(20, 90, 8)):
-        """Calculates normative deviations (z-scores of BAG) and assesses heteroscedasticity."""
-        output_dir = os.path.join(self.output_root, "normative")
-        os.makedirs(output_dir, exist_ok=True)
-
-        train_binned_data = train_data.copy()
-        val_binned_data = val_data.copy()
-
-        train_binned_data['age_bin'] = pd.cut(train_binned_data['actual_age'], bins=age_bins, labels=False, include_lowest=True, right=True)
-        val_binned_data['age_bin'] = pd.cut(val_binned_data['actual_age'], bins=age_bins, labels=False, include_lowest=True, right=True)
-
-        normative_deviations = []
-        heteroscedasticity_results = []  # Store test results
-
-        for bin_label, bin_group in val_binned_data.groupby('age_bin'):
-            if bin_label not in train_binned_data['age_bin'].unique():
-                logging.warning(f"Age bin {bin_label} not found in training data, skipping.")
-                continue
-
-            train_bin_group = train_binned_data[train_binned_data['age_bin'] == bin_label]['brain_age_gap']
-            val_bin_group = bin_group['brain_age_gap']
-
-            if train_bin_group.empty:
-                logging.warning(f"No training data for age bin {bin_label}, skipping.")
-                continue
-
-            mean_bag = train_bin_group.mean()
-            std_bag = train_bin_group.std()
-
-            if len(train_bin_group) > 2:  # Need at least 3 samples for these tests
-                try:
-                    levene_stat, levene_p = levene(train_bin_group, val_bin_group)
-                    bartlett_stat, bartlett_p = bartlett(train_bin_group, val_bin_group)
-
-                    heteroscedasticity_results.append({
-                        'age_bin_label': f"{age_bins[int(bin_label)]:.1f}-{age_bins[int(bin_label)+1]:.1f}" if bin_label < len(age_bins)-1 else f">={age_bins[-1]:.1f}",
-                        'levene_stat': levene_stat,
-                        'levene_p': levene_p,
-                        'bartlett_stat': bartlett_stat,
-                        'bartlett_p': bartlett_p,
-                    })
-                except ValueError:
-                    logging.warning(f"Heteroscedasticity tests failed for age bin {bin_label} (likely due to constant values).")
-            else:
-                logging.warning(f"Insufficient data for heteroscedasticity tests in age bin {bin_label}.")
-
-            bin_norm_deviations = zscore(val_bin_group, ddof=1) if std_bag > 0 else np.zeros_like(val_bin_group)
-
-            for i, bag_zscore in enumerate(bin_norm_deviations):
-                normative_deviations.append({
-                    'participant_id': bin_group.iloc[i]['participant_id'],
-                    'normative_bag': bag_zscore,
-                    'age_bin_label': f"{age_bins[int(bin_label)]:.1f}-{age_bins[int(bin_label)+1]:.1f}" if bin_label < len(age_bins)-1 else f">={age_bins[-1]:.1f}",
-                })
-
-        norm_dev_df = pd.DataFrame(normative_deviations)
-        output_path_csv = os.path.join(output_dir, f"normative_deviations.csv")
-        norm_dev_df.to_csv(output_path_csv, index=False)
-        logging.info(f"Normative deviations saved to: {output_path_csv}")
-
-        heteroscedasticity_df = pd.DataFrame(heteroscedasticity_results)
-        if not heteroscedasticity_df.empty:
-            output_path_het = os.path.join(output_dir, f"heteroscedasticity_tests.csv")
-            heteroscedasticity_df.to_csv(output_path_het, index=False)
-            logging.info(f"Heteroscedasticity test results saved to: {output_path_het}")
-
-
-        self.plot_normative_deviations(train_binned_data, val_binned_data, model_name, model_type, age_bins, norm_dev_df)
-
-        return norm_dev_df
-
-
-    def plot_normative_deviations(self, train_data, val_data, model_name, model_type, age_bins, norm_dev_df):
-        """Generates visualizations of the normative model and deviations."""
-        output_dir = os.path.join(self.output_root, "normative")
-        os.makedirs(output_dir, exist_ok=True)
-
-        plt.figure(figsize=(10, 6))
-        sns.scatterplot(x='actual_age', y='brain_age_gap', data=train_data, alpha=0.5, label='Training Data')
-        
-        bin_means = train_data.groupby('age_bin')['brain_age_gap'].mean()
-        bin_stds = train_data.groupby('age_bin')['brain_age_gap'].std()
-        bin_centers = (age_bins[:-1] + age_bins[1:]) / 2
-
-        bin_means = bin_means.dropna()
-        bin_stds = bin_stds.dropna()
-        bin_centers_filtered = bin_centers[:len(bin_means)] # Make sure lengths match
-
-        plt.plot(bin_centers_filtered, bin_means, color='red', label='Mean BAG')
-        plt.fill_between(bin_centers_filtered, bin_means - bin_stds, bin_means + bin_stds, color='red', alpha=0.2, label='Mean ± 1 SD')
-        
-        plt.xlabel("Chronological Age")
-        plt.ylabel("Brain Age Gap (BAG)")
-        plt.title(wrap_title("Training Data: Brain Age Gap vs. Chronological Age.  Points show individual BAG values.  The red line shows the average BAG within each age bin, and the shaded area represents one standard deviation above and below this average.  This plot visualizes the expected BAG and its variability across age."),fontsize=9)
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"bag_vs_age_train.png"))
-        plt.close()
-
-
-        plt.figure(figsize=(10, 6))
-        # Merge normative deviations with validation data for plotting
-        val_data_with_z = pd.merge(val_data, norm_dev_df, on='participant_id', how='left')
-
-        cmap = plt.get_cmap('coolwarm')
-        norm = plt.Normalize(val_data_with_z['normative_bag'].min(), val_data_with_z['normative_bag'].max())
-
-        plt.scatter(val_data_with_z['actual_age'], val_data_with_z['brain_age_gap'], c=val_data_with_z['normative_bag'], cmap=cmap, norm=norm, alpha=0.7)
-        plt.colorbar(label='Normative BAG (Z-score)')
-
-        plt.xlabel("Chronological Age")
-        plt.ylabel("Brain Age Gap (BAG)")
-        plt.title(wrap_title("Validation Data: Brain Age Gap vs. Chronological Age with Z-scores. Each point represents an individual's BAG, colored by its normative deviation (z-score).  Red indicates higher BAG than expected for age, blue indicates lower BAG. The color intensity reflects the magnitude of the deviation."),fontsize=9)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"bag_vs_age_val_zscore.png"))
-        plt.close()
-
-
-
-        plt.figure(figsize=(8, 5))
-        sns.histplot(norm_dev_df['normative_bag'], kde=True)
-        plt.xlabel("Normative BAG (Z-score)")
-        plt.ylabel("Frequency")
-        plt.title(wrap_title("Distribution of Normative Deviations (Z-scores). This histogram shows how the z-scores (normative BAG values) are distributed.  A standard normal distribution (mean=0, SD=1) is expected if the model assumptions hold. Deviations from this shape can indicate issues with the model or data."),fontsize=9)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"normative_deviations_dist.png"))
-        plt.close()
-
-
-        plt.figure(figsize=(10, 6))
-        sns.scatterplot(x='actual_age', y='normative_bag', data=val_data_with_z, alpha=0.7)
-        plt.axhline(0, color='black', linestyle='--')  # Add a horizontal line at z=0
-        plt.xlabel("Chronological Age")
-        plt.ylabel("Normative BAG (Z-score)")
-        plt.title(wrap_title("Validation Data: Normative Deviations (Z-scores) vs. Chronological Age. Each point represents an individual's z-score.  This plot helps visualize if there are any systematic trends in the deviations with age (e.g., increasing or decreasing variance), which could indicate model limitations."),fontsize=9)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"normative_deviations_vs_age.png"))
-        plt.close()
-
-
-    def analyze_normative_deviation_stats(self, norm_dev_df, model_name, model_type):
-        """Calculates descriptive statistics and tests for heteroscedasticity."""
-        output_dir = os.path.join(self.output_root, "normative")
-        os.makedirs(output_dir, exist_ok=True)
-
-        norm_dev_stats = []
-        all_normative_bags = []
-        all_bin_labels = []
-
-        for bin_label in sorted(norm_dev_df['age_bin_label'].unique()):
-            bin_group = norm_dev_df[norm_dev_df['age_bin_label'] == bin_label]['normative_bag']
-
-            bin_stat = {
-                'age_bin_label': bin_label,
-                'mean_norm_bag': bin_group.mean(),
-                'std_norm_bag': bin_group.std(),
-                'median_norm_bag': bin_group.median(),
-                'iqr_norm_bag': np.percentile(bin_group, 75) - np.percentile(bin_group, 25),
-                'count': bin_group.count()
-            }
-            norm_dev_stats.append(bin_stat)
-            all_normative_bags.extend(bin_group.tolist())
-            all_bin_labels.extend([bin_label] * bin_group.count()) # Add the bin labels for each value
-
-        try:
-            bf_stat, bf_pvalue = stats.levene(*[norm_dev_df[norm_dev_df['age_bin_label'] == lbl]['normative_bag'] for lbl in sorted(norm_dev_df['age_bin_label'].unique())], center='median')
-            norm_dev_stats.append({
-                'age_bin_label': 'Overall',
-                'bf_statistic': bf_stat,
-                'bf_pvalue': bf_pvalue
-            })
-        except ValueError as e:
-            logging.warning(f"Brown-Forsythe test failed: {e}.  Likely due to a bin with only one sample.")
-            norm_dev_stats.append({
-                'age_bin_label': 'Overall',
-                'bf_statistic': np.nan,
-                'bf_pvalue': np.nan
-            })
-
-        norm_dev_stats_df = pd.DataFrame(norm_dev_stats)
-        output_path_csv = os.path.join(output_dir, f"normative_deviation_stats.csv")
-        norm_dev_stats_df.to_csv(output_path_csv, index=False)
-        logging.info(f"Normative deviation statistics saved to: {output_path_csv}")
-
-        self.visualize_normative_deviations(norm_dev_df, output_dir, model_name, model_type)
-
-        return norm_dev_stats_df
-
-    def visualize_normative_deviations(self, norm_dev_df, output_dir, model_name, model_type):
-        """Generates visualizations of normative deviations."""
-
-        plt.figure(figsize=(12, 6))
-        sns.boxplot(x='age_bin_label', y='normative_bag', data=norm_dev_df, order=sorted(norm_dev_df['age_bin_label'].unique()))
-        plt.axhline(0, color='red', linestyle='--')  # Add a horizontal line at z-BAG = 0
-        plt.title(wrap_title("Distribution of Normalized Brain-Age Gap (z-BAG) Across Age Bins\nThis plot shows the spread of z-BAG values within each age group.  Each box represents an age bin, with the central line showing the median, the box edges showing the 25th and 75th percentiles (IQR), and the whiskers extending to the most extreme data points within 1.5 times the IQR.  Outliers beyond this range are plotted individually.  A z-BAG of 0 (red dashed line) indicates the predicted brain age matches the chronological age.  Values above 0 suggest an older-appearing brain, and values below 0 suggest a younger-appearing brain.  Compare the spread (box height and whisker length) across bins to assess heteroscedasticity:  wider boxes indicate greater variability in z-BAG for that age group."),fontsize=9)
-        plt.xlabel("Age Bin")
-        plt.ylabel("Normalized Brain-Age Gap (z-BAG)")
-        plt.xticks(rotation=45, ha="right")  # Rotate x-axis labels for readability
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"boxplot_zBAG_by_age_bin.png"))
-        plt.close()
-
-        plt.figure(figsize=(12, 6))
-        # Calculate mean and std within each bin, then merge back into the original dataframe
-        bin_stats = norm_dev_df.groupby('age_bin_label')['normative_bag'].agg(['mean', 'std']).reset_index()
-        norm_dev_df = norm_dev_df.merge(bin_stats, on='age_bin_label', suffixes=('', '_bin'))
-        
-        norm_dev_df['age_representative'] = norm_dev_df['age_bin_label'].apply(lambda x: np.mean([float(a) for a in x.split('-')]))
-
-        plt.scatter(norm_dev_df['age_representative'], norm_dev_df['normative_bag'], alpha=0.5, label='Individual z-BAG')
-        
-        norm_dev_df = norm_dev_df.sort_values('age_representative')
-
-        plt.plot(norm_dev_df['age_representative'], norm_dev_df['mean'], color='red', label='Mean z-BAG')
-
-        plt.fill_between(norm_dev_df['age_representative'], norm_dev_df['mean'] - norm_dev_df['std'], norm_dev_df['mean'] + norm_dev_df['std'], color='red', alpha=0.2, label='Standard Deviation')
-
-
-        plt.title(wrap_title("Scatterplot of Normalized Brain-Age Gap (z-BAG) vs. Age with Standard Deviation\nThis plot shows the relationship between age and z-BAG. Each point represents an individual.  The red line shows the average z-BAG within each age bin. The shaded red area represents one standard deviation above and below the mean z-BAG for each bin. Wider shaded areas indicate greater variability (heteroscedasticity) in the z-BAG for that age range.  The plot helps visualize how the spread of z-BAG changes with age."),fontsize=9)
-        plt.xlabel("Age")
-        plt.ylabel("Normalized Brain-Age Gap (z-BAG)")
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"scatterplot_zBAG_vs_age.png"))
-        plt.close()
-
-
-        plt.figure(figsize=(12, 6))
-        sns.violinplot(x='age_bin_label', y='normative_bag', data=norm_dev_df, order=sorted(norm_dev_df['age_bin_label'].unique()))
-        plt.axhline(0, color='red', linestyle='--')
-        plt.title(wrap_title("Distribution of Normalized Brain-Age Gap (z-BAG) Across Age Bins (Violin Plot)\nThis plot, similar to the boxplot, shows the distribution of z-BAG within each age group.  The wider parts of the violins indicate higher density of data points, showing the shape of the distribution. The white dot represents the median, the thick black bar the interquartile range (IQR), and the thin black line the 95% confidence interval. A z-BAG of 0 (red dashed line) indicates predicted brain age matches chronological age.  Compare the shape and spread of the violins to assess heteroscedasticity."),fontsize=9)
-        plt.xlabel("Age Bin")
-        plt.ylabel("Normalized Brain-Age Gap (z-BAG)")
-        plt.xticks(rotation=45, ha="right")
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"violinplot_zBAG_by_age_bin.png"))
-        plt.close()
-        
-    def plot_normative_deviation_distribution(self, norm_dev_df, model_name, model_type):
-        """Plots histogram and density plot for normative deviations (z-BAG)."""
-        output_dir = self.output_root
-        os.makedirs(output_dir, exist_ok=True)
-
-        plt.figure(figsize=(8, 6))
-        plt.hist(norm_dev_df["normative_bag"], bins=20, alpha=0.7, label="Normative BAG (Z-score)")
-        try:
-            kde = gaussian_kde(norm_dev_df["normative_bag"])
-            x_grid = np.linspace(min(norm_dev_df["normative_bag"]), max(norm_dev_df["normative_bag"]), 1000)
-            plt.plot(x_grid, kde(x_grid), color="blue", label="Density (Normative BAG)")
-        except np.linalg.LinAlgError as e:
-            logging.warning(f"Could not calculate density for normative BAG: {e}")
-        plt.title(f"{model_name} - Distribution of Normative Brain Age Gap (Z-scores)")
-        plt.xlabel("Normative Brain Age Gap (Z-score)")
-        plt.ylabel("Frequency")
-        plt.legend()
-        plt.tight_layout()
-        output_path = os.path.join(output_dir, f"normative_deviation_distribution.png")
-        plt.savefig(output_path)
-        plt.close()
-        logging.info(f"Normative deviation distribution plot saved to: {output_path}")
-
 
     def calculate_ccc(self, data, model_name, model_type):
         """
@@ -735,53 +451,9 @@ class BrainAgeAnalyzer:
             group_cols (list or str, optional):  Grouping columns (must match calculate_descriptive_stats).
             output_dir (str): Directory to save the plots.  Creates if it doesn't exist.
         """
-
         
         output_dir = os.path.join(self.output_root, "desc_stats") # Default output directory
         os.makedirs(output_dir, exist_ok=True)
-        plt.figure(figsize=(8, 6))
-        sns.regplot(x='actual_age', y='predicted_age', data=data, scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
-        min_val = min(data['actual_age'].min(), data['predicted_age'].min())
-        max_val = max(data['actual_age'].max(), data['predicted_age'].max())
-        plt.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='--', label='Perfect Agreement')
-        plt.title(wrap_title(f"Scatter Plot of Predicted vs. Actual Age\nThis plot shows the relationship between predicted and actual ages. Each point represents a subject.  The red line is the best-fit line, and the dashed black line represents perfect agreement (where predicted age equals actual age). Deviations from the dashed line indicate prediction errors.  A tighter clustering around the dashed line suggests better model performance."), fontsize=9)
-        plt.xlabel("Actual Age")
-        plt.ylabel("Predicted Age")
-        plt.legend()
-        plt.tight_layout()
-        scatter_plot_path = os.path.join(output_dir, f"scatter_plot.png")
-        plt.savefig(scatter_plot_path)
-        plt.close()
-        logging.info(f"Scatter plot saved to: {scatter_plot_path}")
-
-        plt.figure(figsize=(8, 6))
-        data['mean_age'] = (data['actual_age'] + data['predicted_age']) / 2
-        sns.regplot(x='mean_age', y='brain_age_gap', data=data, scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
-        mean_diff = data['brain_age_gap'].mean()
-        std_diff = data['brain_age_gap'].std()
-        plt.axhline(mean_diff, color='blue', linestyle='-', label=f'Mean Difference: {mean_diff:.2f}')
-        plt.axhline(mean_diff + 1.96 * std_diff, color='green', linestyle='--', label=f'+1.96 SD: {mean_diff + 1.96 * std_diff:.2f}')
-        plt.axhline(mean_diff - 1.96 * std_diff, color='green', linestyle='--', label=f'-1.96 SD: {mean_diff - 1.96 * std_diff:.2f}')
-        plt.title(wrap_title("Bland-Altman Plot\nThis plot assesses the agreement between predicted and actual ages.  The x-axis shows the average of predicted and actual age, and the y-axis shows the difference (predicted - actual). The blue line is the mean difference, and the green lines represent the 95% limits of agreement (mean ± 1.96 * standard deviation of the differences).  Points outside these limits are considered outliers."), fontsize=9)
-        plt.xlabel("Mean of Predicted and Actual Age")
-        plt.ylabel("Predicted Age - Actual Age (Brain Age Gap)")
-        plt.legend()
-        plt.tight_layout()
-        bland_altman_plot_path = os.path.join(output_dir, f"bland_altman_plot.png")
-        plt.savefig(bland_altman_plot_path)
-        plt.close()
-        logging.info(f"Bland-Altman plot saved to: {bland_altman_plot_path}")
-
-        plt.figure(figsize=(8, 6))
-        sns.histplot(data['brain_age_gap'], kde=True) 
-        plt.title(wrap_title("Distribution of Brain Age Gap\nThis histogram shows the distribution of the brain age gap (predicted age - actual age).  A symmetrical distribution centered around zero indicates good model performance.  Skewness or a shift from zero suggests systematic over- or under-estimation."), fontsize=9)
-        plt.xlabel("Brain Age Gap")
-        plt.ylabel("Frequency")
-        plt.tight_layout()
-        bag_hist_path = os.path.join(output_dir, "brain_age_gap_histogram.png")
-        plt.savefig(bag_hist_path)
-        plt.close()
-        logging.info(f"Brain Age Gap histogram saved to: {bag_hist_path}")
 
         if group_cols:
             if isinstance(group_cols, str):
@@ -1026,180 +698,6 @@ class BrainAgeAnalyzer:
         plt.close()
         logging.info(f"Predicted vs. Actual Age per Bin plot saved to: {pred_vs_actual_per_bin_path}")
         
-    def calculate_icc(self, data):
-        """Calculates Intra-Class Correlation Coefficient (ICC2) between predicted and actual age.
-
-        This function calculates the ICC2 (two-way random effects, absolute agreement)
-        to assess the agreement between the predicted age from the model and the
-        actual chronological age.  ICC2 measures absolute agreement, meaning it
-        penalizes systematic differences (bias) between predicted and actual ages.
-
-        Args:
-            data (pd.DataFrame): A DataFrame with columns 'participant_id', 'actual_age',
-                                 and 'predicted_age'.
-
-        Returns:
-            tuple: A tuple containing:
-                - icc_value (float): The calculated ICC2 value.
-                - icc_results (pd.DataFrame): The full ICC results table from pingouin.intraclass_corr.
-
-        Raises:
-            ValueError: If the input DataFrame does not have the required columns.
-        """
-        output_dir = self.output_root
-        os.makedirs(output_dir, exist_ok=True)
-
-        if not all(col in data.columns for col in ['participant_id', 'actual_age', 'predicted_age']):
-            raise ValueError("Input DataFrame must contain 'participant_id', 'actual_age', and 'predicted_age' columns.")
-
-        icc_data = pd.melt(data,
-                        id_vars=['participant_id'],
-                        value_vars=['actual_age', 'predicted_age'],
-                        var_name='Rater',
-                        value_name='Age')
-
-        icc_data = icc_data.rename(columns={'participant_id': 'Subject', 'Age': 'ratings'})
-
-        icc_results = pg.intraclass_corr(data=icc_data, targets='Subject', raters='Rater', ratings='ratings')
-
-        icc_value = icc_results.loc[icc_results['Type'] == 'ICC2', 'ICC'].values[0]
-
-        output_path_csv = os.path.join(output_dir, f"icc_results.csv")
-        icc_results.to_csv(output_path_csv)
-        logging.info(f"ICC results saved to: {output_path_csv}")
-
-        output_path_txt = os.path.join(output_dir, f"icc_value.txt")
-        with open(output_path_txt, 'w') as f:
-            f.write(f"ICC Value (ICC2): {icc_value:.4f}\n")
-        logging.info(f"ICC value saved to: {output_path_txt}")
-        self.visualize_and_analyze_icc(icc_value, icc_results, data)
-
-        return icc_value, icc_results
-
-    def visualize_and_analyze_icc(self, icc_value, icc_results, data):
-        """Visualizes and analyzes Brain Age Gap (BAG) and ICC results.
-
-        Performs a deep dive into the Brain Age Gap (BAG), including:
-        - Scatter plot of predicted vs. actual age.
-        - Bland-Altman plot of BAG vs. average age.
-        - Histogram of BAG.
-        - BAG analysis by age bins.
-        - Calculates and reports Pearson and Spearman correlations.
-
-        Args:
-            icc_results_tuple (tuple): The output from calculate_icc, containing
-                                       (icc_value, icc_results, data).
-        """
-        output_dir = os.path.join(self.output_root, "icc")
-        os.makedirs(output_dir, exist_ok=True)
-
-        data['BAG'] = data['predicted_age'] - data['actual_age']
-
-        min_val = min(data['actual_age'].min(), data['predicted_age'].min())
-        max_val = max(data['actual_age'].max(), data['predicted_age'].max())
-        plt.figure(figsize=(8, 6))
-        plt.scatter(data['actual_age'], data['predicted_age'], alpha=0.5)
-        plt.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='--', label='Perfect Agreement')
-        sns.regplot(x='actual_age', y='predicted_age', data=data, scatter=False, color='red', label='Best-Fit Line')
-
-        plt.title(wrap_title(f"Scatter Plot of Predicted vs. Actual Age\nThis plot visualizes the relationship between the ages predicted by the model and the actual ages of the subjects.  Each point represents a single subject. The black dashed line indicates perfect agreement (predicted age equals actual age).  The red line is the line of best fit.  Closer clustering around the dashed line indicates better model performance. Deviations represent prediction errors."),fontsize=9)
-
-        plt.xlabel("Actual Age")
-        plt.ylabel("Predicted Age")
-        plt.legend()
-        plt.tight_layout()
-        scatter_plot_path = os.path.join(output_dir, f"scatter_plot.png")
-        plt.savefig(scatter_plot_path)
-        plt.close()
-        logging.info(f"Scatter plot saved to: {scatter_plot_path}")
-
-        data['average_age'] = (data['actual_age'] + data['predicted_age']) / 2
-        mean_diff = data['BAG'].mean()
-        std_diff = data['BAG'].std()
-
-        plt.figure(figsize=(8, 6))
-        plt.scatter(data['average_age'], data['BAG'], alpha=0.5)
-        plt.axhline(mean_diff, color='blue', linestyle='-', label=f'Mean BAG: {mean_diff:.2f}')
-        plt.axhline(mean_diff + 1.96 * std_diff, color='red', linestyle='--', label=f'+1.96 SD: {mean_diff + 1.96 * std_diff:.2f}')
-        plt.axhline(mean_diff - 1.96 * std_diff, color='red', linestyle='--', label=f'-1.96 SD: {mean_diff - 1.96 * std_diff:.2f}')
-
-        plt.title(wrap_title("Bland-Altman Plot of Brain Age Gap (BAG)\nThis plot assesses the agreement between predicted and actual ages by showing the difference (BAG) against the average age. The blue line represents the mean BAG, indicating any systematic bias.  The red dashed lines represent the 95% limits of agreement (mean ± 1.96 * standard deviation of BAG).  Ideally, most points should fall within these limits, and there should be no trend (e.g., increasing BAG with increasing age)."), fontsize=9)
-        plt.xlabel("Average of Actual and Predicted Age")
-        plt.ylabel("Brain Age Gap (BAG)")
-        plt.legend()
-        plt.tight_layout()
-        bland_altman_path = os.path.join(output_dir, f"bland_altman_plot.png")
-        plt.savefig(bland_altman_path)
-        plt.close()
-        logging.info(f"Bland-Altman plot saved to: {bland_altman_path}")
-
-        plt.figure(figsize=(8, 6))
-        sns.histplot(data['BAG'], kde=True)
-        plt.title(wrap_title("Histogram of Brain Age Gap (BAG)\nThis histogram shows the distribution of BAG values.  A symmetrical distribution centered around zero indicates good model performance with no systematic over- or under-estimation.  The curve is a kernel density estimate, providing a smoothed representation of the distribution."), fontsize=9)
-
-        plt.xlabel("Brain Age Gap (BAG)")
-        plt.ylabel("Frequency")
-        plt.tight_layout()
-        histogram_path = os.path.join(output_dir, f"bag_histogram.png")
-        plt.savefig(histogram_path)
-        plt.close()
-        logging.info(f"BAG histogram saved to: {histogram_path}")
-
-        num_bins = 5  # Adjust as needed
-        data['age_bin'] = pd.cut(data['actual_age'], bins=num_bins, labels=False)
-
-        bag_stats = data.groupby('age_bin')['BAG'].agg(['mean', 'std', 'count']).reset_index()
-        bag_stats['age_bin_label'] = data.groupby('age_bin')['actual_age'].apply(lambda x: f"{x.min():.1f}-{x.max():.1f}")
-        bag_stats = bag_stats.rename(columns = {'mean':'BAG Mean', 'std':"BAG STD",	'count':"N"})
-        print(bag_stats)
-        plt.figure(figsize=(10, 6))
-        plt.bar(bag_stats['age_bin_label'], bag_stats['BAG Mean'], yerr=bag_stats['BAG STD'], capsize=5)
-        plt.title(wrap_title("Mean Brain Age Gap (BAG) by Age Bin\nThis plot shows the average BAG and its standard deviation for different age groups.  It helps to identify if the model's performance varies across different age ranges. Error bars represent the standard deviation of the BAG within each bin."), fontsize=9)
-        plt.xlabel("Age Bin")
-        plt.ylabel("Mean BAG")
-        plt.xticks(rotation=45, ha="right")
-        plt.tight_layout()
-        bag_by_age_path = os.path.join(output_dir, f"bag_by_age_bin.png")
-        plt.savefig(bag_by_age_path)
-        plt.close()
-        logging.info(f"BAG by age bin plot saved to: {bag_by_age_path}")
-        bag_stats_path = os.path.join(output_dir, f"bag_stats_by_age.csv")
-        bag_stats.to_csv(bag_stats_path)
-        logging.info(f"BAG stats by age saved to: {bag_stats_path}")
-
-        desc_stats = data[['actual_age', 'predicted_age', 'BAG']].describe()
-        desc_stats_path = os.path.join(output_dir, "descriptive_statistics.csv")
-        desc_stats.to_csv(desc_stats_path)
-        logging.info(f"Descriptive statistics saved to: {desc_stats_path}")
-
-
-        pearson_corr, pearson_p = pearsonr(data['actual_age'], data['predicted_age'])
-        spearman_corr, spearman_p = spearmanr(data['actual_age'], data['predicted_age'])
-
-        correlation_df = pd.DataFrame({
-            'Correlation': ['Pearson', 'Spearman'],
-            'Value': [pearson_corr, spearman_corr],
-            'P-value': [pearson_p, spearman_p]
-        })
-
-        correlation_path = os.path.join(output_dir, "correlation_results.csv")
-        correlation_df.to_csv(correlation_path, index=False)
-        logging.info(f"Correlation results saved to: {correlation_path}")
-
-        all_stats = {
-            "Descriptive Statistics": desc_stats,
-            "ICC Results": icc_results,
-            "BAG Stats by Age": bag_stats,
-            "Correlation Results": correlation_df
-        }
-        all_stats_path = os.path.join(output_dir, f"all_stats.txt")
-        with open(all_stats_path, 'w') as f:
-            for key, value in all_stats.items():
-                f.write(f"\n--- {key} ---\n")
-                f.write(str(value))
-                f.write('\n')
-        logging.info(f"all stats saved to: {all_stats_path}")
-
     def analyze_bias_variance_vs_age(self, data, model_name, model_type, age_bins=np.linspace(20, 90, 8)): # Added age_bins parameter
         """Analyzes bias and variance of predicted age across actual age distribution.
 
@@ -1538,51 +1036,6 @@ class BrainAgeAnalyzer:
         plt.close()
         logging.info(f"Histogram saved to: {hist_path}")
             
-    def plot_metrics_vs_age(self, data, model_name, model_type, age_bins=np.linspace(20, 90, 8)): # Added age_bins parameter
-        """Plots MAE of predicted age vs. actual age bins."""
-        output_dir = os.path.join(self.output_root, "metrics_vs_age")
-        os.makedirs(output_dir, exist_ok=True)
-
-        binned_data = data.copy()
-        binned_data['age_bin'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=False, include_lowest=True, right=True) # Right-inclusive bins
-
-
-        metrics_vs_age_stats = []
-        for bin_label, bin_group in binned_data.groupby('age_bin'):
-            actual_ages_bin = bin_group['actual_age']
-            predicted_ages_bin = bin_group['predicted_age']
-
-            mae_bin = mean_absolute_error(actual_ages_bin, predicted_ages_bin) # MAE for this age bin
-            rmse_bin = np.sqrt(mean_squared_error(actual_ages_bin, predicted_ages_bin)) # RMSE
-            r2_bin = r2_score(actual_ages_bin, predicted_ages_bin) # R2
-            pearson_bin, _ = pearsonr(actual_ages_bin, predicted_ages_bin) # Pearson
-
-            bin_stat = {
-                'age_bin_label': f"{age_bins[int(bin_label)]:.1f}-{age_bins[int(bin_label)+1]:.1f}" if bin_label < len(age_bins)-1 else f">={age_bins[int(bin_label)]:.1f}", # Adjusted bin label
-                'mae': mae_bin, # MAE
-                'rmse': rmse_bin, # RMSE
-                'r2': r2_bin, # R2
-                'pearson': pearson_bin, # Pearson
-                'count': len(bin_group)
-            }
-            metrics_vs_age_stats.append(bin_stat)
-        metrics_vs_age_df = pd.DataFrame(metrics_vs_age_stats)
-
-
-        # Plotting MAE vs Age Bin
-        plt.figure(figsize=(8, 6))
-        plt.plot(metrics_vs_age_df['age_bin_label'], metrics_vs_age_df['mae'], marker='o', linestyle='-')
-        plt.title(f'{model_name} - MAE vs. Age Bin')
-        plt.xlabel('Age Bin (Years)')
-        plt.ylabel('Mean Absolute Error (MAE)')
-        plt.grid(True)
-        plt.xticks(rotation=45, ha='right') # Rotate x-axis labels
-        plt.tight_layout()
-        output_path = os.path.join(output_dir, f"mae_vs_age_bin.png")
-        plt.savefig(output_path)
-        plt.close()
-        logging.info(f"MAE vs Age Bin plot saved to: {output_path}")
-        return metrics_vs_age_df
 
     @staticmethod
     def cohen_d(group1, group2):
@@ -1791,55 +1244,6 @@ class BrainAgeAnalyzer:
             plt.close()
             logging.info(f"Violin plot saved to: {violin_plot_path}")
 
-    def plot_histograms_and_density(self, data, model_name, model_type):
-        """Plots histograms and density plots for predicted age, actual age, and BAG."""
-        output_dir = os.path.join(self.output_root, "histogram_density")
-        os.makedirs(output_dir, exist_ok=True)
-        plt.figure(figsize=(18, 5))
-        # Predicted Age
-        plt.subplot(1, 3, 1)
-        plt.hist(data["predicted_age"], bins=20, alpha=0.7, label="Predicted Age")
-        try:
-            kde = gaussian_kde(data["predicted_age"])
-            x_grid = np.linspace(min(data["predicted_age"]), max(data["predicted_age"]), 1000)
-            plt.plot(x_grid, kde(x_grid), color="blue", label="Density (Predicted Age)")
-        except np.linalg.LinAlgError as e:
-            logging.warning(f"Could not calculate density for predicted age: {e}")
-        plt.title(f"{model_name} - Predicted Age")
-        plt.xlabel("Age")
-        plt.ylabel("Frequency")
-        plt.legend()
-        # Actual Age
-        plt.subplot(1, 3, 2)
-        plt.hist(data["actual_age"], bins=20, alpha=0.7, label="Actual Age", color="orange")
-        try:
-            kde = gaussian_kde(data["actual_age"])
-            x_grid = np.linspace(min(data["actual_age"]), max(data["actual_age"]), 1000)
-            plt.plot(x_grid, kde(x_grid), color="red", label="Density (Actual Age)")
-        except np.linalg.LinAlgError as e:
-            logging.warning(f"Could not calculate density for actual age: {e}")
-        plt.title("Actual Age")
-        plt.xlabel("Age")
-        plt.ylabel("Frequency")
-        plt.legend()
-        # BAG
-        plt.subplot(1, 3, 3)
-        plt.hist(data["brain_age_gap"], bins=20, alpha=0.7, label="BAG", color="green") # Corrected column name to brain_age_gap
-        try:
-            kde = gaussian_kde(data["brain_age_gap"]) # Corrected column name to brain_age_gap
-            x_grid = np.linspace(min(data["brain_age_gap"]), max(data["brain_age_gap"]), 1000) # Corrected column name to brain_age_gap
-            plt.plot(x_grid, kde(x_grid), color="purple", label="Density (BAG)")
-        except np.linalg.LinAlgError as e:
-            logging.warning(f"Could not calculate density for BAG: {e}")
-        plt.title("Brain Age Gap (BAG)")
-        plt.xlabel("BAG")
-        plt.ylabel("Frequency")
-        plt.legend()
-        plt.tight_layout()
-        output_path = os.path.join(output_dir, f"hist_density.png")
-        plt.savefig(output_path)
-        plt.close()
-        logging.info(f"Histograms and density plots saved to: {output_path}")
 
     def plot_qq_plots(self, data, model_name, model_type):
         """Creates Q-Q plots for predicted age vs. actual age."""
@@ -1907,15 +1311,6 @@ class BrainAgeAnalyzer:
                         "actual_age": train_actual_ages,
                         "brain_age_gap": np.array(train_predicted_ages) - np.array(train_actual_ages) # Calculate BAG for training data
                     })                    
-                    # Normative Deviation Analysis
-                    logging.info(f"Running normative deviation analysis for model: {model_file}")
-                    norm_dev_df = self.calculate_normative_deviations(train_predictions_df, predictions_df, model_file, model_type) # Pass train_predictions_df and predictions_df
-                    if 'participant_id' in predictions_df.columns and 'participant_id' in norm_dev_df.columns: #check if 'participant_id' in df before merge
-                        predictions_df = pd.merge(predictions_df, norm_dev_df[['participant_id', 'normative_bag']], on='participant_id', how='left') # Merge normative BAGs back into predictions_df
-                    logging.info(f"Normative deviations calculated and merged into predictions_df.")
-                    norm_dev_stats_df = self.analyze_normative_deviation_stats(norm_dev_df, model_file, model_type) # Analyze normative deviations
-                    norm_dev_stats_df.to_csv(os.path.join(self.output_root, f"normative_deviation_stats_{model_file}.csv"), index=False) # Save stats
-                    self.plot_normative_deviation_distribution(norm_dev_df, model_file, model_type)
 
                     # Descriptive Statistics
                     logging.info(f"Running descriptive statistics for model: {model_file}")
@@ -1939,17 +1334,10 @@ class BrainAgeAnalyzer:
                     # Age Bin Analysis for BAG
                     logging.info(f"Running BAG analysis by age bin for model: {model_file}")
                     bag_by_age_bin_df = self.analyze_bag_by_age_bins(predictions_df, model_file, model_type) # Call new function
-                    # Histograms and Density Plots
-                    logging.info(f"Creating histograms and density plots for model: {model_file}")
-                    self.plot_histograms_and_density(predictions_df, model_file, model_type)
                     # Q-Q Plots
                     logging.info(f"Creating Q-Q plots for model: {model_file}")
                     self.plot_qq_plots(predictions_df, model_file, model_type)
                     # ICC Analysis # Add this section here, after QQ plots for example
-                    logging.info(f"Running ICC analysis for model: {model_file}")
-                    icc_value, icc_results_df = self.calculate_icc(predictions_df)
-                    logging.info(f"ICC Value (ICC2) for {model_file}: {icc_value:.4f}")
-                    # CCC Analysis # Add this section after ICC analysis
                     logging.info(f"Running CCC analysis for model: {model_file}")
                     ccc_value = self.calculate_ccc(predictions_df, model_file, model_type)
                     logging.info(f"CCC Value for {model_file}: {ccc_value:.4f}")
@@ -1960,8 +1348,6 @@ class BrainAgeAnalyzer:
                     logging.info(f"Running bias and variance vs age analysis for model: {model_file}")
                     bias_variance_df = self.analyze_bias_variance_vs_age(predictions_df, model_file, model_type) # Call new fF_oriunction
                     # Metrics vs Age Plots (Example: MAE vs Age)
-                    logging.info(f"Creating metrics vs age plots for model: {model_file}")
-                    metrics_vs_age_df = self.plot_metrics_vs_age(predictions_df, model_file, model_type) # Call new function
 
 
                 except Exception as e:
@@ -1969,8 +1355,8 @@ class BrainAgeAnalyzer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Brain Age Analysis Script")
-    parser.add_argument("--train_csv", type=str, default="/home/radv/samiri/my-scratch/trainingdata/topmri.csv", help="Path to the training CSV file")
-    parser.add_argument("--train_img_dir", type=str, default="/home/radv/samiri/my-scratch/trainingdata/topmri/", help="Path to the training image directory")
+    parser.add_argument("--train_csv", type=str, default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri.csv", help="Path to the training CSV file")
+    parser.add_argument("--train_img_dir", type=str, default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri/", help="Path to the training image directory")
     parser.add_argument("--val_csv", type=str, default="/home/radv/samiri/my-scratch/testdata/ADC.csv", help="Path to the validation CSV file")
     parser.add_argument("--val_img_dir", type=str, default="/home/radv/samiri/my-scratch/testdata/", help="Path to the validation image directory")
     parser.add_argument("--model_dir", type=str, default="./saved_models", help="Path to the directory containing saved models")
