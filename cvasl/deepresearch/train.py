@@ -206,11 +206,11 @@ def train_model(
     #     verbose=True,
     # )
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    warmup_epochs = 20
+    warmup_epochs = 10
     eta_min = 1e-6
     warmup_scheduler = optim.lr_scheduler.LinearLR(
     optimizer,
-    start_factor=1e-8/learning_rate,  # Start from a very small LR
+    start_factor=1e-6/learning_rate,  # Start from a very small LR
     end_factor=1.0,              # Reach initial_lr at the end of warmup
     total_iters=warmup_epochs    # Number of warmup epochs
     )
