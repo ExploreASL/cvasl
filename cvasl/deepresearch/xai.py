@@ -24,6 +24,7 @@ torch.cuda.empty_cache()
 import traceback
 import cv2
 import scipy
+
 from pytorch_grad_cam import (
     GradCAM,
     HiResCAM,
@@ -46,6 +47,7 @@ from scipy.stats import pearsonr
 import seaborn as sns
 from matplotlib.colors import ListedColormap
 from scipy.stats import pearsonr
+from scipy.ndimage import zoom
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -53,7 +55,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 torch.manual_seed(42)
 np.random.seed(42)
 
-
+region_names = {
+    1: 'Left Cerebral White Matter',
+    2: 'Left Cerebral Cortex',
+    3: 'Left Lateral Ventricle',
+    4: 'Left Thalamus',
+    # Add all regions up to 91 as per the HarvardOxford subcortical atlas
+    # Refer to FSL's atlas documentation for the full list
+}
 
 
 class BrainAgeWrapper(torch.nn.Module):
@@ -71,12 +80,7 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
     all_methods = {
         'gradcam': GradCAM,
         'hirescam': HiResCAM,
-        #'gradcam++': GradCAMPlusPlus,
-        #'xgradcam': XGradCAM,
-        'eigencam': EigenGradCAM,
         'layercam': LayerCAM,
-        # 'ablationcam': AblationCAM,
-        # 'scorecam': ScoreCAM
     }
 
     # Filter methods if specific ones are requested
@@ -89,26 +93,26 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
 
     return all_methods
 
-def get_target_layers(model):
+def get_target_layers(wrappedmodel):
     """Get the target layers for visualization based on model type."""
-    model_name = model.model.__class__.__name__ # Access the wrapped model
-
+    model = wrappedmodel.model
+    model_name = model.__class__.__name__ # Access the wrapped model
     if model_name == 'Large3DCNN':
-        return [model.model.conv_layers[-1]]  # Last Conv3d layer
+        return [model.conv_layers[-1]]  # Last Conv3d layer
     elif model_name == 'DenseNet3D':
-        return [model.model.trans2[1]] # Transition layer before last avg pool
+        return [model.trans2[1]] # Transition layer before last avg pool
     elif model_name == 'EfficientNet3D':
-        return [model.model.conv_head] # Head convolution before avg pool
+        return [model.conv_head] # Head convolution before avg pool
     elif model_name == 'Improved3DCNN':
         # Access the last layer in the sequential conv_layers
-        if isinstance(model.model.conv_layers[-1], nn.MaxPool3d): # check if last layer is pool
-            return [model.model.conv_layers[-5]] # Target the conv layer before pool and relu and SE block
+        if isinstance(model.conv_layers[-1], nn.MaxPool3d): # check if last layer is pool
+            return [model.conv_layers[-5]] # Target the conv layer before pool and relu and SE block
         else:
-            return [model.model.conv_layers[-2]] # Target the conv layer before relu and SE block
+            return [model.conv_layers[-2]] # Target the conv layer before relu and SE block
     elif model_name == 'ResNet3D':
-        return [model.model.layer3[-1].conv2] # Last conv layer in last ResNet block of layer3
+        return [model.layer3[-1].conv2] # Last conv layer in last ResNet block of layer3
     elif model_name == 'ResNeXt3D':
-        return [model.model.layer3[-1].conv3] # Last conv layer in last ResNeXt block of layer3
+        return [model.layer3[-1].conv3] # Last conv layer in last ResNeXt block of layer3
     else:
         return None # Default or unknown model type
 
@@ -123,90 +127,13 @@ def load_atlas(atlas_path):
         logging.error(f"Error loading atlas from {atlas_path}: {e}\nTraceback:\n{tb_str}")
         return None, None
 
-def calculate_regional_intensity(heatmap, atlas_data_resampled):
-    """Calculates average heatmap intensity for each region in the atlas."""
-    regional_intensities = {}
-    unique_region_labels = np.unique(atlas_data_resampled)[1:]
-
-    for region_label in unique_region_labels:
-        mask = (atlas_data_resampled == region_label)
-        regional_heatmap_values = heatmap[mask]
-        if regional_heatmap_values.size > 0: # Handle empty regions
-            regional_intensities[int(region_label)] = np.mean(regional_heatmap_values) # Use int for keys
-        else:
-            regional_intensities[int(region_label)] = np.nan # or some default value
-
-    return regional_intensities
-
-def plot_regional_intensity_distributions(regional_intensity_data, output_dir, method_name, prefix=""):
-    """Plots boxplots of heatmap intensity distributions per region and method."""
-    df = pd.DataFrame(regional_intensity_data)
-    df_melted = pd.melt(df, var_name='region', value_name='intensity') # Reshape for seaborn
-
-    plt.figure(figsize=(12, 6)) # Adjust figure size as needed
-    sns.boxplot(x='region', y='intensity', data=df_melted) # Or sns.violinplot
-    plt.title(f'{prefix}Heatmap Intensity Distribution per Region - {method_name}')
-    plt.xlabel('Atlas Region Label')
-    plt.ylabel('Heatmap Intensity')
-    plt.xticks(rotation=90) # Rotate x-axis labels if needed
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f"{prefix}{method_name}_regional_intensity_boxplots.png"), bbox_inches='tight', dpi=300)
-    plt.close()
-    
-def plot_average_regional_intensity_barchart(average_regional_intensities, output_dir, method_name, prefix=""):
-    """Plots bar chart of average heatmap intensity per region and method."""
-
-    if type(average_regional_intensities) is list:
-        average_regional_intensities = average_regional_intensities[0] # Take the first element if it's a list
-    regions = list(average_regional_intensities.keys())
-    intensities = list(average_regional_intensities.values())
-
-    plt.figure(figsize=(12, 6)) # Adjust figure size as needed
-    plt.bar(regions, intensities)
-    plt.title(f'{prefix}Average Heatmap Intensity per Region - {method_name}')
-    plt.xlabel('Atlas Region Label')
-    plt.ylabel('Average Heatmap Intensity')
-    plt.xticks(regions, rotation=90) # Ensure x-ticks are region labels and rotate
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f"{prefix}{method_name}_average_regional_intensity_barchart.png"), bbox_inches='tight', dpi=300)
-    plt.close()
-
-def calculate_and_plot_regional_correlation(regional_intensity_age_data, output_dir, method_name, prefix=""):
-    """Calculates and plots correlation between regional heatmap intensity and age."""
-    correlation_results = {}
-    for region_label in regional_intensity_age_data:
-        intensities = regional_intensity_age_data[region_label]['intensities']
-        ages = regional_intensity_age_data[region_label]['ages']
-        if len(intensities) > 1: # Need at least 2 points for correlation
-            corr, p_value = pearsonr(intensities, ages)
-            correlation_results[region_label] = {'correlation': corr, 'p_value': p_value}
-        else:
-            correlation_results[region_label] = {'correlation': np.nan, 'p_value': np.nan} # Handle cases with insufficient data
-
-    # --- Scatter Plots ---
-    for region_label in regional_intensity_age_data:
-        intensities = regional_intensity_age_data[region_label]['intensities']
-        ages = regional_intensity_age_data[region_label]['ages']
-
-        if len(intensities) > 1: # Plot only if there are data points
-            plt.figure(figsize=(8, 6))
-            plt.scatter(ages, intensities)
-            corr_val = correlation_results[region_label]['correlation']
-            plt.title(f'Region {region_label} - Intensity vs. Age (r={corr_val:.2f}) - {method_name}')
-            plt.xlabel('Age')
-            plt.ylabel('Average Heatmap Intensity')
-            plt.tight_layout()
-            plt.savefig(os.path.join(output_dir, f"{prefix}{method_name}_region_{region_label}_scatter.png"), bbox_inches='tight', dpi=300)
-            plt.close()
-
-    # --- (Optional) Brain Map Visualization of Correlations ---
-    # Creating a brain map directly in 3D is complex and beyond a quick snippet.
-    # You would need to map correlation values back onto the atlas volume and visualize it.
-    # For a simpler representation, you could just print the correlation values for each region.
-    print(f"\nCorrelation of Heatmap Intensity with Age - {method_name}:")
-    for region_label, results in correlation_results.items():
-        print(f"Region {region_label}: Correlation = {results['correlation']:.3f}, p-value = {results['p_value']:.3f}")
-        
+def compute_centroid(atlas_slice, label):
+    y, x = np.where(atlas_slice == label)
+    if len(y) == 0:
+        return None
+    centroid_x = np.mean(x)
+    centroid_y = np.mean(y)
+    return centroid_x, centroid_y        
 
 def normalize_cam(cam, target_size=None):
     """Memory-efficient normalization and resizing"""
@@ -214,849 +141,822 @@ def normalize_cam(cam, target_size=None):
     cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam) + 1e-7) # Small value for numerical stability
 
     if target_size is not None: # Resize if target_size is provided
-        cam_resized = cv2.resize(cam, target_size, interpolation=cv2.INTER_LINEAR) # Use cv2.resize
+        #cam_resized = cv2.resize(cam, target_size, interpolation=cv2.INTER_LINEAR) # Use cv2.resize
+        cam_resized = cv2.resize(cam, (target_size[1], target_size[0]), interpolation=cv2.INTER_LINEAR)
         return cam_resized.astype(np.float16)  # Use float16 for memory efficiency
     return cam.astype(np.float16)
 
 
+def load_atlas(atlas_path):
+    """Loads a NIfTI atlas and returns the data and header."""
+    try:
+        atlas_nii = nib.load(atlas_path)
+        atlas_data = atlas_nii.get_fdata()
+        return atlas_data, atlas_nii.affine
+    except Exception as e:
+        tb_str = traceback.format_exc()
+        logging.error(f"Error loading atlas from {atlas_path}: {e}\nTraceback:\n{tb_str}")
+        return None, None
 
-def plot_slices_with_overlay(image, cam, slice_indices=None, alpha=0.5, actual_age=None, predicted_age=None):
-     """Plot original and overlay images for all three anatomical planes"""
-     if slice_indices is None:
-         # Take middle slices if not specified
-         slice_indices = {
-             'axial': image.shape[0] // 2,
-             'coronal': image.shape[1] // 2,
-             'sagittal': image.shape[2] // 2
-         }
-
-     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
-
-     # Normalize image for visualization
-     image_norm = (image - image.min()) / (image.max() - image.min())
-     cam_norm = normalize_cam(cam)
-
-     # Axial view
-     axes[0, 0].imshow(image_norm[slice_indices['axial'], :, :], cmap='gray')
-     axes[1, 0].imshow(image_norm[slice_indices['axial'], :, :], cmap='gray')
-     im = axes[1, 0].imshow(cam_norm[slice_indices['axial'], :, :], cmap='jet', alpha=alpha)
-     axes[0, 0].set_title('Axial - Original')
-     axes[1, 0].set_title('Axial - Overlay')
-     fig.colorbar(im, ax=axes[1,0], label="Heatmap Intensity")
-
-     # Coronal view
-     axes[0, 1].imshow(image_norm[:, slice_indices['coronal'], :], cmap='gray')
-     axes[1, 1].imshow(image_norm[:, slice_indices['coronal'], :], cmap='gray')
-     im = axes[1, 1].imshow(cam_norm[:, slice_indices['coronal'], :], cmap='jet', alpha=alpha)
-     axes[0, 1].set_title('Coronal - Original')
-     axes[1, 1].set_title('Coronal - Overlay')
-     fig.colorbar(im, ax=axes[1,1], label="Heatmap Intensity")
-
-
-     # Sagittal view
-     axes[0, 2].imshow(image_norm[:, :, slice_indices['sagittal']], cmap='gray')
-     axes[1, 2].imshow(image_norm[:, :, slice_indices['sagittal']], cmap='gray')
-     im = axes[1, 2].imshow(cam_norm[:, :, slice_indices['sagittal']], cmap='jet', alpha=alpha)
-     axes[0, 2].set_title('Sagittal - Original')
-     axes[1, 2].set_title('Sagittal - Overlay')
-     fig.colorbar(im, ax=axes[1,2], label="Heatmap Intensity")
-
-
-     for ax in axes.flat:
-         ax.axis('off')
-
-     # Add age information as text above the plots
-     if actual_age is not None and predicted_age is not None:
-         age_text = f'Actual Age: {actual_age:.1f} years\nPredicted Age: {predicted_age:.1f} years'
-         fig.suptitle(age_text, y=0.98, fontsize=12)
-
-     plt.tight_layout()
-     return fig
-
-def plot_all_slices(image, cam, plane='axial', actual_age=None, predicted_age=None, num_slices_per_view=36):
-    """Plot all slices for a given view (axial, coronal, or sagittal) in a grid."""
-    if plane not in ['axial', 'coronal', 'sagittal']:
-        raise ValueError(f"Invalid plane: {plane}. Choose 'axial', 'coronal', or 'sagittal'.")
-
-    num_slices = image.shape[{'axial': 0, 'coronal': 1, 'sagittal': 2}[plane]]
-    slice_indices = np.linspace(0, num_slices - 1, num=min(num_slices_per_view, num_slices), dtype=int)
-
-    rows = ceil(np.sqrt(len(slice_indices)))
-    cols = ceil(len(slice_indices) / rows)
-    fig, axes = plt.subplots(rows, cols, figsize=(cols * 2.5, rows * 2.5), dpi=300)
-
-    image_norm = (image - image.min()) / (image.max() - image.min())
-    cam_norm = normalize_cam(cam)
-
-    for idx, ax in enumerate(axes.flat):
-        if idx < len(slice_indices):
-            slice_idx = slice_indices[idx]
-            if plane == 'axial':
-                img_slice = image_norm[slice_idx, :, :]
-                cam_slice = cam_norm[slice_idx, :, :]
-            elif plane == 'coronal':
-                img_slice = image_norm[:, slice_idx, :]
-                cam_slice = cam_norm[:, slice_idx, :].transpose(1,0)
-            elif plane == 'sagittal':
-                img_slice = image_norm[:, :, slice_idx]
-                cam_slice = cam_norm[:, :, slice_idx].transpose(1,0)
-
-            ax.imshow(img_slice, cmap='gray')
-            im = ax.imshow(cam_slice, cmap='jet', alpha=0.5)
-            ax.set_title(f'Slice {slice_idx}', fontsize='small')
-        ax.axis('off')
-
-    # Add colorbar *after* creating subplots, using figure coordinates.
-    if len(slice_indices) > 0:
-      fig.subplots_adjust(right=0.8)  # Make space for the colorbar on the right.
-      cax = fig.add_axes([0.85, 0.15, 0.05, 0.7])  # [left, bottom, width, height] in figure coordinates.
-      fig.colorbar(im, cax=cax, label="Heatmap Intensity")
-
-    if actual_age is not None and predicted_age is not None:
-        fig.suptitle(f'{plane.capitalize()} View - Act: {actual_age:.1f}, Pred: {predicted_age:.1f}', y=0.99, fontsize=12)
-
-    # No need for tight_layout here, we've manually adjusted spacing.
-    return fig
-
-def generate_average_heatmaps(avg_image, avg_cam, output_dir, prefix=""):
-    """Generate average heatmaps for all planes using plot_all_slices"""
-
-    # Grid plots for each plane
-    for plane in ['axial', 'coronal', 'sagittal']:
-        fig = plot_all_slices(avg_image, avg_cam, plane=plane)
-        fig.savefig(os.path.join(output_dir, f"{prefix}average_{plane}_slices_grid.png"),
-                    bbox_inches='tight', dpi=300)
-        plt.close(fig)
-
-def plot_all_slices_side_by_side(image, cam, plane='axial', num_slices=25,
-                                actual_age=None, predicted_age=None):
-    """Plot 25 slices with original and heatmap side-by-side (5 rows x 10 columns) - REMOVED"""
-    pass # Removed plotting of individual slices
-
-
-def plot_average_summary(avg_image, avg_cam, output_dir, prefix=""):
-    """Create 2x3 grid showing average image and heatmap across planes, saves to output_dir"""
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-    planes = ['sagittal', 'axial', 'coronal']
-
-    # Normalize averages *here*
-    avg_image_norm = (avg_image - avg_image.min()) / (avg_image.max() - avg_image.min())
-    avg_cam_norm = (avg_cam - avg_cam.min()) / (avg_cam.max() - avg_cam.min() + 1e-7) # Add small value
-
-
-    for col, plane in enumerate(planes):
-        # Get middle slice indices
-        slice_idx = {
-            'sagittal': avg_image.shape[0] // 2,
-            'axial': avg_image.shape[2] // 2,
-            'coronal': avg_image.shape[1] // 2
-        }[plane]
-
-        if plane == 'axial':
-            img_slice = avg_image_norm[:, :, slice_idx]
-            cam_slice = avg_cam_norm[:, :, slice_idx]
-        elif plane == 'coronal':
-            img_slice = avg_image_norm[:, slice_idx, :]
-            cam_slice = avg_cam_norm[:, slice_idx, :]
-        elif plane == 'sagittal':
-            img_slice = avg_image_norm[slice_idx, :, :]
-            cam_slice = avg_cam_norm[slice_idx, :, :]
-
-        # Average image
-        axes[0, col].imshow(img_slice, cmap='gray')
-        axes[0, col].set_title(f'Average {plane.capitalize()} Image')
-
-        # Average heatmap
-        im = axes[1, col].imshow(img_slice, cmap='gray')
-        im = axes[1, col].imshow(cam_slice, cmap='jet', alpha=0.5)
-        axes[1, col].set_title(f'Average {plane.capitalize()} Heatmap')
-        fig.colorbar(im, ax=axes[1, col], label='Heatmap Intensity')
-        
-
-    for ax in axes.flat:
-        ax.axis('off')
-
-    plt.tight_layout()
-
-    # Save the figure
-    filename = os.path.join(output_dir, f"{prefix}average_summary.png")
-    fig.savefig(filename, bbox_inches='tight', dpi=300)
-    plt.close(fig)
-
-def plot_regional_intensity_heatmap(regional_intensity_data, output_dir, method_name, prefix="", colormap='viridis'):
+def get_atlas_labels(atlas_path):
     """
-    Plots a heatmap of average regional intensities, using a provided colormap.
+    Extracts unique region labels from the atlas.  Handles both integer and
+    float atlases, and excludes the background (label 0).
 
     Args:
-        regional_intensity_data (dict): Dictionary of regional intensities.  Can be a single dictionary
-                                         or a list of dictionaries (e.g., from multiple samples).
-        output_dir (str): Directory to save the plot.
-        method_name (str): Name of the XAI method.
-        prefix (str, optional): Prefix for the filename. Defaults to "".
-        colormap (str, optional):  Name of the matplotlib colormap to use. Defaults to 'viridis'.
-    """
-
-    if isinstance(regional_intensity_data, list):
-        # If it's a list of dictionaries, average them
-        df = pd.DataFrame(regional_intensity_data)
-        avg_intensities = df.mean(axis=0)
-    else:
-        # If it's a single dictionary, use it directly
-        avg_intensities = pd.Series(regional_intensity_data)
-
-    regions = avg_intensities.index.to_numpy()
-    intensities = avg_intensities.to_numpy()
-
-    plt.figure(figsize=(14, 8))  # Adjust figure size for better readability
-    plt.imshow([intensities], aspect='auto', cmap=colormap)  # Use imshow for heatmap
-    plt.colorbar(label='Average Heatmap Intensity')  # Add colorbar with label
-    plt.yticks([])  # Hide y-ticks (no need for row labels)
-    plt.xticks(ticks=range(len(regions)), labels=regions, rotation=90)  # Show region labels
-    plt.title(f'{prefix}Average Heatmap Intensity per Region - {method_name}')
-    plt.xlabel('Atlas Region Label')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f"{prefix}{method_name}_regional_intensity_heatmap.png"), bbox_inches='tight', dpi=300)
-    plt.close()
-
-
-
-def plot_regional_correlation_heatmap(regional_intensity_age_data, output_dir, method_name, prefix="", colormap='RdBu_r'):
-    """
-    Plots a heatmap of correlations between regional intensities and age, using a diverging colormap.
-
-    Args:
-        regional_intensity_age_data (dict): Nested dictionary containing regional intensities and ages.
-        output_dir (str): Directory to save the plot.
-        method_name (str): Name of the XAI method.
-        prefix (str, optional): Prefix for the filename. Defaults to "".
-        colormap (str, optional):  Name of the diverging matplotlib colormap. Defaults to 'RdBu_r'.
-    """
-
-    correlation_results = {}
-    for region_label in regional_intensity_age_data:
-        intensities = regional_intensity_age_data[region_label]['intensities']
-        ages = regional_intensity_age_data[region_label]['ages']
-        if len(intensities) > 1:
-            corr, _ = pearsonr(intensities, ages)  # Calculate correlation
-            correlation_results[region_label] = corr
-        else:
-            correlation_results[region_label] = np.nan  # Handle cases with insufficient data
-
-    regions = list(correlation_results.keys())
-    correlations = list(correlation_results.values())
-        
-    plt.figure(figsize=(14, 8))  # Adjust for readability
-    plt.imshow([correlations], aspect='auto', cmap=colormap, vmin=-1, vmax=1)  # Diverging colormap, centered at 0
-    plt.colorbar(label='Pearson Correlation Coefficient')
-    plt.yticks([])
-    plt.xticks(ticks=range(len(regions)), labels=regions, rotation=90)
-    plt.title(f'{prefix}Correlation of Heatmap Intensity with Age - {method_name}')
-    plt.xlabel('Atlas Region Label')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f"{prefix}{method_name}_regional_correlation_heatmap.png"), bbox_inches='tight', dpi=300)
-    plt.close()
-
-
-def plot_regional_intensity_difference_heatmap(regional_intensity_data_bin1, regional_intensity_data_bin2, output_dir, method_name, bin1_label, bin2_label, prefix="", colormap='coolwarm'):
-    """
-    Plots a heatmap showing the *difference* in average regional intensities between two age bins.
-
-    Args:
-        regional_intensity_data_bin1 (dict or list): Regional intensity data for the first age bin.
-        regional_intensity_data_bin2 (dict or list): Regional intensity data for the second age bin.
-        output_dir (str): Output directory.
-        method_name (str): Name of the XAI method.
-        bin1_label (str): Label for the first age bin (e.g., "0-10").
-        bin2_label (str): Label for the second age bin (e.g., "80-90").
-        prefix (str, optional): Prefix for filename. Defaults to "".
-        colormap (str): Diverging colormap.
-    """
-
-    if isinstance(regional_intensity_data_bin1, list):
-        df1 = pd.DataFrame(regional_intensity_data_bin1)
-        avg_intensities1 = df1.mean(axis=0)
-    else:
-        avg_intensities1 = pd.Series(regional_intensity_data_bin1)
-
-    if isinstance(regional_intensity_data_bin2, list):
-        df2 = pd.DataFrame(regional_intensity_data_bin2)
-        avg_intensities2 = df2.mean(axis=0)
-    else:
-        avg_intensities2 = pd.Series(regional_intensity_data_bin2)
-    
-    # Ensure both have same regions, take union, fill missing with NaN, use consistent ordering
-    all_regions = sorted(list(set(avg_intensities1.index) | set(avg_intensities2.index)))
-    avg_intensities1 = avg_intensities1.reindex(all_regions, fill_value=np.nan)
-    avg_intensities2 = avg_intensities2.reindex(all_regions, fill_value=np.nan)
-
-    # Calculate the difference
-    intensity_differences = avg_intensities2 - avg_intensities1
-
-    regions = intensity_differences.index.to_numpy()  # Use consistent regions
-    differences = intensity_differences.to_numpy()
-
-    plt.figure(figsize=(14, 8))
-    plt.imshow([differences], aspect='auto', cmap=colormap)  # Use a diverging colormap
-    plt.colorbar(label='Difference in Average Heatmap Intensity')
-    plt.yticks([])
-    plt.xticks(ticks=range(len(regions)), labels=regions, rotation=90)
-    plt.title(f'{prefix}Difference in Average Heatmap Intensity ({bin2_label} - {bin1_label}) - {method_name}')
-    plt.xlabel('Atlas Region Label')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f"{prefix}{method_name}_regional_difference_heatmap_{bin1_label}_{bin2_label}.png"), bbox_inches='tight', dpi=300)
-    plt.close()
-
-def plot_regional_intensity_change_across_bins(regional_intensity_data_bins, output_dir, method_name, prefix="", colormap='viridis'):
-    """
-    Plots a heatmap showing the average regional intensities across multiple age bins.
-
-    Args:
-        regional_intensity_data_bins (dict):  A dictionary where keys are bin labels (e.g., "0-10", "10-20")
-                                            and values are the regional intensity data for that bin
-                                            (either a dict or a list of dicts).
-        output_dir (str): Output directory.
-        method_name (str):  XAI Method name.
-        prefix (str, optional): Prefix for the filename.
-        colormap (str, optional): Colormap for the heatmap.
-    """
-
-    # Find all unique regions across all bins
-    all_regions = set()
-    for bin_data in regional_intensity_data_bins.values():
-        if isinstance(bin_data, list):
-            for sample_data in bin_data:
-                all_regions.update(sample_data.keys())
-        else:
-            all_regions.update(bin_data.keys())
-    all_regions = sorted(list(all_regions))
-
-    # Create a 2D array to store the data for the heatmap
-    heatmap_data = []
-    bin_labels = sorted(regional_intensity_data_bins.keys())  # Ensure consistent bin order
-
-    for bin_label in bin_labels:
-        bin_data = regional_intensity_data_bins[bin_label]
-        if isinstance(bin_data, list):
-            df = pd.DataFrame(bin_data)
-            avg_intensities = df.mean(axis=0)
-        else:
-            avg_intensities = pd.Series(bin_data)
-        # Reindex to ensure all regions are present, fill missing with NaN
-        avg_intensities = avg_intensities.reindex(all_regions, fill_value=np.nan)
-        heatmap_data.append(avg_intensities.to_numpy())
-
-    heatmap_data = np.array(heatmap_data)
-
-    plt.figure(figsize=(16, 10))  # Larger figure for more bins
-    plt.imshow(heatmap_data, aspect='auto', cmap=colormap)
-    plt.colorbar(label='Average Heatmap Intensity')
-    plt.yticks(ticks=range(len(bin_labels)), labels=bin_labels)  # Show bin labels
-    plt.xticks(ticks=range(len(all_regions)), labels=all_regions, rotation=90)
-    plt.title(f'{prefix}Average Heatmap Intensity Across Age Bins - {method_name}')
-    plt.xlabel('Atlas Region Label')
-    plt.ylabel('Age Bin')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f"{prefix}{method_name}_regional_intensity_across_bins.png"), bbox_inches='tight', dpi=300)
-    plt.close()
-
-def overlay_heatmap_on_brain(image, cam, output_path, plane='axial', slice_index=None, alpha=0.5, colormap='jet'):
-    """
-    Overlays a heatmap (CAM) on a brain image slice and saves the result.
-
-    Args:
-        image (numpy.ndarray): The original brain image (3D).
-        cam (numpy.ndarray): The heatmap (CAM) data (3D).  Assumed to be the same shape as image.
-        output_path (str): Path to save the overlaid image.
-        plane (str):  'axial', 'coronal', or 'sagittal'.
-        slice_index (int, optional):  Specific slice to display.  If None, uses the middle slice.
-        alpha (float): Transparency of the heatmap overlay (0-1).
-        colormap (str):  Matplotlib colormap name.
-    """
-
-    # Normalize image and CAM
-    image_norm = (image - image.min()) / (image.max() - image.min())
-    cam_norm = normalize_cam(cam)  # Use the existing normalize_cam function
-
-    # Determine slice index
-    if slice_index is None:
-        slice_index = image.shape[{'axial': 0, 'coronal': 1, 'sagittal': 2}[plane]] // 2
-
-    # Extract the slice
-    if plane == 'axial':
-        img_slice = image_norm[slice_index, :, :]
-        cam_slice = cam_norm[slice_index, :, :]
-    elif plane == 'coronal':
-        img_slice = image_norm[:, slice_index, :]
-        cam_slice = cam_norm[:, slice_index, :]  # Corrected: No transpose here
-    elif plane == 'sagittal':
-        img_slice = image_norm[:, :, slice_index]
-        cam_slice = cam_norm[:, :, slice_index]  # Corrected: No transpose here
-    else:
-        raise ValueError("Invalid plane.  Must be 'axial', 'coronal', or 'sagittal'.")
-
-    # Create the plot
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.imshow(img_slice, cmap='gray')  # Grayscale brain image
-    im = ax.imshow(cam_slice, cmap=colormap, alpha=alpha)  # Overlay heatmap
-    fig.colorbar(im, ax=ax, label="Heatmap Intensity") # Add colorbar
-    ax.axis('off')  # Hide axes
-    plt.tight_layout()
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close(fig)
-
-def generate_average_overlay_heatmaps(avg_image, avg_cam, output_dir, prefix=""):
-    """
-    Generates overlaid heatmap images for all three planes (axial, coronal, sagittal)
-    for the *average* image and CAM.  Saves each plane as a separate image.
-
-    Args:
-        avg_image (numpy.ndarray): The average brain image.
-        avg_cam (numpy.ndarray): The average heatmap (CAM).
-        output_dir (str):  Output directory.
-        prefix (str): Prefix for filenames (e.g., "dataset_" or "age_bin_1_").
-    """
-
-    for plane in ['axial', 'coronal', 'sagittal']:
-        output_path = os.path.join(output_dir, f"{prefix}average_overlay_{plane}.png")
-        overlay_heatmap_on_brain(avg_image, avg_cam, output_path, plane=plane)
-
-
-def generate_average_overlay_heatmaps_grid(avg_image, avg_cam, output_dir, prefix="", num_slices=36):
-    """
-    Generates overlaid heatmap images for multiple slices in each plane,
-    arranged in a grid.  Saves each plane's grid as a separate image.
-    """
-
-    for plane in ['axial', 'coronal', 'sagittal']:
-        num_slices_in_plane = avg_image.shape[{'axial': 0, 'coronal': 1, 'sagittal': 2}[plane]]
-        slice_indices = np.linspace(0, num_slices_in_plane - 1, num=min(num_slices, num_slices_in_plane), dtype=int)
-
-        rows = ceil(np.sqrt(len(slice_indices)))
-        cols = ceil(len(slice_indices) / rows)
-        fig, axes = plt.subplots(rows, cols, figsize=(cols * 2.5, rows * 2.5), dpi=300)
-
-        image_norm = (avg_image - avg_image.min()) / (avg_image.max() - avg_image.min())
-        cam_norm = normalize_cam(avg_cam)
-
-        for idx, ax in enumerate(axes.flat):
-            if idx < len(slice_indices):
-                slice_idx = slice_indices[idx]
-                if plane == 'axial':
-                    img_slice = image_norm[slice_idx, :, :]
-                    cam_slice = cam_norm[slice_idx, :, :]
-                elif plane == 'coronal':
-                    img_slice = image_norm[:, slice_idx, :]
-                    cam_slice = cam_norm[:, slice_idx, :]
-                elif plane == 'sagittal':
-                    img_slice = image_norm[:, :, slice_idx]
-                    cam_slice = cam_norm[:, :, slice_idx]
-
-                ax.imshow(img_slice, cmap='gray')
-                im = ax.imshow(cam_slice, cmap='jet', alpha=0.5)
-                ax.set_title(f'Slice {slice_idx}', fontsize='small')
-            ax.axis('off')
-        if len(slice_indices) > 0:
-            fig.subplots_adjust(right=0.8)
-            cax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-            fig.colorbar(im, cax=cax, label = "Heatmap intensity")
-
-        #plt.tight_layout(h_pad=0.1, w_pad=0.1) # No tight_layout needed.
-        output_path = os.path.join(output_dir, f"{prefix}average_overlay_{plane}_grid.png")
-        plt.savefig(output_path, bbox_inches='tight', dpi=300)
-        plt.close(fig)
-
-def plot_all_slices_voxelwise(image, cam, plane='axial', num_slices_per_view=36):
-    """Plot all slices for a given view (voxel-wise), in a grid."""
-    if plane not in ['axial', 'coronal', 'sagittal']:
-        raise ValueError(f"Invalid plane: {plane}. Choose 'axial', 'coronal', or 'sagittal'.")
-
-    num_slices = image.shape[{'axial': 0, 'coronal': 1, 'sagittal': 2}[plane]]
-    slice_indices = np.linspace(0, num_slices - 1, num=min(num_slices_per_view, num_slices), dtype=int)
-
-    rows = ceil(np.sqrt(len(slice_indices)))
-    cols = ceil(len(slice_indices) / rows)
-    fig, axes = plt.subplots(rows, cols, figsize=(cols * 2.5, rows * 2.5), dpi=300)
-
-    image_norm = (image - image.min()) / (image.max() - image.min())
-    cam_norm = normalize_cam(cam)  # Use your existing normalization
-
-    for idx, ax in enumerate(axes.flat):
-        if idx < len(slice_indices):
-            slice_idx = slice_indices[idx]
-            if plane == 'axial':
-                img_slice = image_norm[slice_idx, :, :]
-                cam_slice = cam_norm[slice_idx, :, :]
-            elif plane == 'coronal':
-                img_slice = image_norm[:, slice_idx, :]
-                cam_slice = cam_norm[:, slice_idx, :].transpose(1,0)
-            elif plane == 'sagittal':
-                img_slice = image_norm[:, :, slice_idx]
-                cam_slice = cam_norm[:, :, slice_idx].transpose(1,0)
-
-            ax.imshow(img_slice, cmap='gray')
-            im = ax.imshow(cam_slice, cmap='jet', alpha=0.5)
-            ax.set_title(f'Slice {slice_idx}', fontsize='small')
-        ax.axis('off')
-
-    # Add colorbar (same as before, adjusted for figure coordinates)
-    if len(slice_indices) > 0:
-      fig.subplots_adjust(right=0.8)
-      cax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-      fig.colorbar(im, cax=cax, label="Heatmap Intensity")
-
-    #No tight_layout needed
-
-    return fig
-
-def generate_average_heatmaps_voxelwise(avg_image, avg_cam, output_dir, prefix=""):
-    """Generate average heatmaps for all planes (voxel-wise, no atlas)"""
-
-    # Grid plots for each plane (using the new plot_all_slices_voxelwise)
-    for plane in ['axial', 'coronal', 'sagittal']:
-        fig = plot_all_slices_voxelwise(avg_image, avg_cam, plane=plane)
-        fig.savefig(os.path.join(output_dir, f"{prefix}average_{plane}_slices_grid_voxelwise.png"),
-                    bbox_inches='tight', dpi=300)
-        plt.close(fig)
-
-def plot_average_summary_voxelwise(avg_image, avg_cam, output_dir, prefix=""):
-    """Create 2x3 grid showing average image and heatmap (voxel-wise)"""
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-    planes = ['sagittal', 'axial', 'coronal']
-
-    # Normalize averages *here*
-    avg_image_norm = (avg_image - avg_image.min()) / (avg_image.max() - avg_image.min())
-    avg_cam_norm = normalize_cam(avg_cam) # Use your existing normalization
-
-    for col, plane in enumerate(planes):
-        # Get middle slice indices
-        slice_idx = {
-            'sagittal': avg_image.shape[0] // 2,
-            'axial': avg_image.shape[2] // 2,
-            'coronal': avg_image.shape[1] // 2
-        }[plane]
-
-        if plane == 'axial':
-            img_slice = avg_image_norm[:, :, slice_idx]
-            cam_slice = avg_cam_norm[:, :, slice_idx]
-        elif plane == 'coronal':
-            img_slice = avg_image_norm[:, slice_idx, :]
-            cam_slice = avg_cam_norm[:, slice_idx, :]
-        elif plane == 'sagittal':
-            img_slice = avg_image_norm[slice_idx, :, :]
-            cam_slice = avg_cam_norm[slice_idx, :, :]
-
-        # Average image
-        axes[0, col].imshow(img_slice, cmap='gray')
-        axes[0, col].set_title(f'Average {plane.capitalize()} Image')
-
-        # Average heatmap
-        im = axes[1, col].imshow(img_slice, cmap='gray')
-        im = axes[1, col].imshow(cam_slice, cmap='jet', alpha=0.5)
-        axes[1, col].set_title(f'Average {plane.capitalize()} Heatmap')
-        fig.colorbar(im, ax=axes[1, col], label='Heatmap Intensity')
-
-
-    for ax in axes.flat:
-        ax.axis('off')
-
-    plt.tight_layout()
-
-    # Save the figure
-    filename = os.path.join(output_dir, f"{prefix}average_summary_voxelwise.png")
-    fig.savefig(filename, bbox_inches='tight', dpi=300)
-    plt.close(fig)
-
-def create_regional_heatmap(regional_intensities, atlas_data_resampled):
-    """
-    Creates a heatmap where each voxel within a region has the average intensity
-    for that region.
-
-    Args:
-        regional_intensities (dict): Dictionary of {region_label: average_intensity}.
-        atlas_data_resampled (np.ndarray): The resampled atlas data.
+        atlas_path (str): Path to the NIfTI atlas file.
 
     Returns:
-        np.ndarray: The regional heatmap.
+        list: A list of unique atlas region labels (excluding 0).  Returns an
+              empty list if the atlas cannot be loaded.
     """
-    regional_heatmap = np.zeros_like(atlas_data_resampled, dtype=np.float32)
-    for region_label, intensity in regional_intensities.items():
-        if not np.isnan(intensity):  # Handle potential NaN values
-            regional_heatmap[atlas_data_resampled == region_label] = intensity
-    return regional_heatmap
+    atlas_data, _ = load_atlas(atlas_path)
+    if atlas_data is None:
+        return []
 
-def generate_xai_visualizations(model, dataset, output_dir, device='cuda', methods_to_run=['all'], atlas_path=None, age_bins = 10):
+    # Flatten the atlas data and get unique values
+    unique_labels = np.unique(atlas_data)
+
+    # Remove 0 (background) and return the rest
+    return [label for label in unique_labels if label != 0]
+
+
+
+def resize_cam(cam, target_size):
+    """
+    Resizes a 3D CAM or image to the target size using trilinear interpolation.
+
+    Args:
+        cam (np.ndarray): The 3D CAM or image.
+        target_size (tuple): The target size (D, H, W).
+
+    Returns:
+        np.ndarray: The resized CAM.  Returns the original CAM if resizing fails.
+    """
+    try:
+        # Convert cam to float32 for cv2.resize
+        cam_float32 = cam.astype(np.float32)
+        
+        # Resize using OpenCV (trilinear interpolation for 3D)
+        resized_cam = cv2.resize(cam_float32, dsize=(target_size[2], target_size[1]), interpolation=cv2.INTER_LINEAR) # Resize H and W
+        # Add depth dimension and use np.repeat to duplicate the resized image across depth
+        resized_cam = np.repeat(resized_cam[np.newaxis, :, :], target_size[0], axis=0)
+
+        return resized_cam
+
+    except Exception as e:
+        tb_str = traceback.format_exc()
+        logging.error(f"Error resizing CAM: {e}\nTraceback:\n{tb_str}")
+        return cam  # Return original in case of failure
+
+
+def compute_region_based_heatmap(cam, atlas_data):
+    """
+    Computes a region-based heatmap where each voxel is assigned the average CAM value of its atlas region.
+    
+    Args:
+        cam (np.ndarray): The 3D CAM heatmap (normalized), shape (D, H, W).
+        atlas_data (np.ndarray): The 3D atlas data with integer region labels, shape (D, H, W).
+    
+    Returns:
+        np.ndarray: The region-based heatmap, same shape as cam, with values constant within each region.
+    """
+    if cam.shape != atlas_data.shape:
+        logging.error(f"CAM shape {cam.shape} does not match atlas shape {atlas_data.shape}")
+        raise ValueError("CAM and atlas must have the same spatial dimensions")
+    
+    unique_labels = np.unique(atlas_data)
+    region_heatmap = np.zeros_like(cam, dtype=np.float32)
+    
+    for label in unique_labels:
+        if label == 0:  # Skip background
+            continue
+        mask = (atlas_data == label)
+        if np.sum(mask) > 0:  # Ensure region has voxels
+            avg_cam = np.mean(cam[mask])
+            region_heatmap[mask] = avg_cam
+    
+    return region_heatmap
+
+
+def generate_xai_visualizations_atlas(model, dataset, output_dir, device='cuda', methods_to_run=['all'], atlas_path=None):
+    methods = create_visualization_dirs(output_dir, methods_to_run)
+    model.eval()
+    loader = DataLoader(dataset, batch_size=1, num_workers=1, shuffle=False)
+    atlas_data, _ = load_atlas(atlas_path)
+    if atlas_data is None:
+        logging.error("Failed to load atlas. Skipping atlas-based visualizations.")
+        return
+
+    view_axes = {'sagittal': 0, 'coronal': 1, 'axial': 2}
+    view_names = ['sagittal', 'coronal', 'axial']
+
+    for method_name, cam_class in methods.items():
+        method_output_dir = os.path.join(output_dir, method_name)
+        all_slices_data = None
+
+        for idx, sample in enumerate(tqdm(loader, desc=f"Processing images for {method_name} (atlas)")):
+            if sample is None:
+                logging.warning(f"Skipping None sample at index {idx}")
+                continue
+
+            image, demographics, brain_age = sample['image'], sample['demographics'], sample['age']
+            image = image.to(device)
+            demographics = demographics.to(device)
+            wrapped_model = BrainAgeWrapper(model, demographics)
+            target_layers = get_target_layers(wrapped_model)
+            cam = cam_class(model=wrapped_model, target_layers=target_layers)
+
+            try:
+                grayscale_cam = cam(input_tensor=image.unsqueeze(0))
+                grayscale_cam = grayscale_cam[0, :]
+                heatmap = normalize_cam(grayscale_cam)
+                img_np = image.cpu().numpy().squeeze()
+
+                if idx == 0:
+                    if atlas_data.shape != img_np.shape:
+                        logging.info(f"Resizing atlas from {atlas_data.shape} to match image shape {img_np.shape}")
+                        zoom_factors = [t / s for t, s in zip(img_np.shape, atlas_data.shape)]
+                        resized_atlas = zoom(atlas_data, zoom_factors, order=0, mode='nearest')
+                    else:
+                        resized_atlas = atlas_data
+
+                    all_slices_data = {view: {slice_idx: {'slices': [], 'heatmaps': []} for slice_idx in range(img_np.shape[view_axes[view]])} for view in view_names}
+
+                region_heatmap = compute_region_based_heatmap(heatmap, resized_atlas)
+
+                for view_name in view_names:
+                    view_axis = view_axes[view_name]
+                    for slice_idx in range(img_np.shape[view_axis]):
+                        slice_data = np.take(img_np, indices=slice_idx, axis=view_axis)
+                        heatmap_slice_data = np.take(region_heatmap, indices=slice_idx, axis=view_axis)
+                        heatmap_resized_third = normalize_cam(heatmap_slice_data, slice_data.shape)
+                        all_slices_data[view_name][slice_idx]['slices'].append(slice_data)
+                        all_slices_data[view_name][slice_idx]['heatmaps'].append(heatmap_resized_third)
+
+            except Exception as e:
+                logging.error(f"Error processing image with {method_name} (atlas): {e}")
+                continue
+
+        for view in view_names:
+            for slice_idx in all_slices_data[view]:
+                slices_list = all_slices_data[view][slice_idx]['slices']
+                heatmaps_list = all_slices_data[view][slice_idx]['heatmaps']
+                if slices_list:
+                    all_slices_data[view][slice_idx]['avg_slice'] = np.mean(np.stack(slices_list, axis=0), axis=0)
+                    all_slices_data[view][slice_idx]['avg_heatmap'] = np.mean(np.stack(heatmaps_list, axis=0), axis=0)
+                else:
+                    all_slices_data[view][slice_idx]['avg_slice'] = np.zeros((64,64))
+                    all_slices_data[view][slice_idx]['avg_heatmap'] = np.zeros((64,64))
+
+        for view_name in view_names:
+            view_data = [(slice_idx, all_slices_data[view_name][slice_idx]['avg_slice'], all_slices_data[view_name][slice_idx]['avg_heatmap']) for slice_idx in sorted(all_slices_data[view_name].keys())]
+            n_slices = len(view_data)
+            if n_slices == 0:
+                continue
+            n_cols = 12
+            n_rows = ceil(n_slices / n_cols)
+
+            fig3, axes3 = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), dpi=600)
+            fig3.suptitle(f"All Slice Heatmaps (Atlas) - {method_name.capitalize()} - {view_name.capitalize()}")
+
+            if n_rows == 1:
+                axes3 = axes3[np.newaxis, :]
+
+            for idx, (slice_idx, avg_slice, avg_heatmap) in enumerate(view_data):
+                row_idx = idx // n_cols
+                col_idx = idx % n_cols
+                ax = axes3[row_idx, col_idx] if axes3.ndim > 1 else axes3[col_idx]
+                ax.imshow(avg_slice, cmap='gray')
+                im = ax.imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
+                ax.set_title(f"Slice {slice_idx}")
+                ax.axis('off')
+
+            if n_slices % n_cols != 0:
+                for j in range(n_slices % n_cols, n_cols):
+                    (axes3[n_rows - 1, j] if axes3.ndim > 1 else axes3[j]).axis('off')
+            cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02]) 
+            fig3.colorbar(mappable=im, cax=cbar_ax, # Use the last 'im' for simplicity.  Better to be explicit (see below).
+             #ax=axes3.ravel().tolist(),  # Pass ALL axes.
+             orientation='horizontal',
+             label='Normalized CAM',
+              shrink=0.6,  # Optional: Adjust size (e.g., make it slightly smaller)
+            #  aspect=40,   # Optional: Adjust aspect ratio (make it wider)
+            #  pad=-0.5     # Optional: Add some padding between colorbar and subplots.
+             )
+            plt.tight_layout()  # Adjust layout for title
+
+            
+            plt.savefig(os.path.join(method_output_dir, f"all_slices_heatmaps_{view_name}_atlas.png"), dpi=600)
+            plt.close(fig3)
+
+def generate_xai_visualizations_atlas_binned(model, dataset, output_dir, device='cuda', methods_to_run=['all'], atlas_path=None, age_bin_width=10):
+    methods = create_visualization_dirs(output_dir, methods_to_run)
+    model.eval()
+    atlas_data, _ = load_atlas(atlas_path)
+    if atlas_data is None:
+        logging.error("Failed to load atlas. Skipping atlas-based visualizations.")
+        return
+
+    max_age = max([sample['age'] for sample in dataset if sample is not None]).item()
+    bin_edges = np.arange(0, max_age + age_bin_width, age_bin_width)
+    if bin_edges[-1] < max_age:
+        bin_edges = np.append(bin_edges, max_age)
+    bin_labels = [f"{int(bin_edges[i])}-{int(bin_edges[i+1])}" for i in range(len(bin_edges) - 1)]
+
+    view_axes = {'sagittal': 0, 'coronal': 1, 'axial': 2}
+    view_names = ['sagittal', 'coronal', 'axial']
+
+    for method_name, cam_class in methods.items():
+        method_output_dir = os.path.join(output_dir, method_name)
+        for bin_idx in range(len(bin_edges) - 1):
+            bin_label = bin_labels[bin_idx]
+            bin_lower = bin_edges[bin_idx]
+            bin_upper = bin_edges[bin_idx + 1]
+            bin_output_dir = os.path.join(method_output_dir, f"bin_{bin_label}")
+            os.makedirs(bin_output_dir, exist_ok=True)
+
+            binned_dataset = [sample for sample in dataset if sample is not None and bin_lower <= sample['age'] < bin_upper]
+            if not binned_dataset:
+                logging.warning(f"No data for age bin {bin_label}. Skipping.")
+                continue
+
+            loader = DataLoader(binned_dataset, batch_size=1, shuffle=False)
+            all_slices_data = None
+
+            for idx, sample in enumerate(tqdm(loader, desc=f"Processing images for {method_name}, bin {bin_label} (atlas)")):
+                if sample is None:
+                    logging.warning(f"Skipping None sample at index {idx}")
+                    continue
+
+                image, demographics, brain_age = sample['image'], sample['demographics'], sample['age']
+                image = image.to(device)
+                demographics = demographics.to(device)
+                wrapped_model = BrainAgeWrapper(model, demographics)
+                target_layers = get_target_layers(wrapped_model)
+                cam = cam_class(model=wrapped_model, target_layers=target_layers)
+
+                try:
+                    grayscale_cam = cam(input_tensor=image.unsqueeze(0))
+                    grayscale_cam = grayscale_cam[0, :]
+                    heatmap = normalize_cam(grayscale_cam)
+                    img_np = image.cpu().numpy().squeeze()
+
+                    if idx == 0:
+                        if atlas_data.shape != img_np.shape:
+                            logging.info(f"Resizing atlas from {atlas_data.shape} to match image shape {img_np.shape}")
+                            zoom_factors = [t / s for t, s in zip(img_np.shape, atlas_data.shape)]
+                            resized_atlas = zoom(atlas_data, zoom_factors, order=0, mode='nearest')
+                        else:
+                            resized_atlas = atlas_data
+
+                        all_slices_data = {view: {slice_idx: {'slices': [], 'heatmaps': []} for slice_idx in range(img_np.shape[view_axes[view]])} for view in view_names}
+
+                    region_heatmap = compute_region_based_heatmap(heatmap, resized_atlas)
+
+                    for view_name in view_names:
+                        view_axis = view_axes[view_name]
+                        for slice_idx in range(img_np.shape[view_axis]):
+                            slice_data = np.take(img_np, indices=slice_idx, axis=view_axis)
+                            heatmap_slice_data = np.take(region_heatmap, indices=slice_idx, axis=view_axis)
+                            heatmap_resized_third = normalize_cam(heatmap_slice_data, slice_data.shape)
+                            all_slices_data[view_name][slice_idx]['slices'].append(slice_data)
+                            all_slices_data[view_name][slice_idx]['heatmaps'].append(heatmap_resized_third)
+
+                except Exception as e:
+                    logging.error(f"Error processing image with {method_name}, bin {bin_label} (atlas): {e}")
+                    continue
+
+            for view in view_names:
+                for slice_idx in all_slices_data[view]:
+                    slices_list = all_slices_data[view][slice_idx]['slices']
+                    heatmaps_list = all_slices_data[view][slice_idx]['heatmaps']
+                    if slices_list:
+                        all_slices_data[view][slice_idx]['avg_slice'] = np.mean(np.stack(slices_list, axis=0), axis=0)
+                        all_slices_data[view][slice_idx]['avg_heatmap'] = np.mean(np.stack(heatmaps_list, axis=0), axis=0)
+                    else:
+                        all_slices_data[view][slice_idx]['avg_slice'] = np.zeros((64,64))
+                        all_slices_data[view][slice_idx]['avg_heatmap'] = np.zeros((64,64))
+
+            for view_name in view_names:
+                view_data = [(slice_idx, all_slices_data[view_name][slice_idx]['avg_slice'], all_slices_data[view_name][slice_idx]['avg_heatmap']) for slice_idx in sorted(all_slices_data[view_name].keys())]
+                n_slices = len(view_data)
+                if n_slices == 0:
+                    continue
+                n_cols = 12
+                n_rows = ceil(n_slices / n_cols)
+
+                fig3, axes3 = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), dpi=600)
+                fig3.suptitle(f"All Slice Heatmaps (Atlas) - {method_name.capitalize()} - {view_name.capitalize()} - Bin: {bin_label}")
+
+                if n_rows == 1:
+                    axes3 = axes3[np.newaxis, :]
+
+                for idx, (slice_idx, avg_slice, avg_heatmap) in enumerate(view_data):
+                    row_idx = idx // n_cols
+                    col_idx = idx % n_cols
+                    ax = axes3[row_idx, col_idx] if axes3.ndim > 1 else axes3[col_idx]
+                    ax.imshow(avg_slice, cmap='gray')
+                    im = ax.imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
+                    ax.set_title(f"Slice {slice_idx}")
+                    ax.axis('off')
+
+                if n_slices % n_cols != 0:
+                    for j in range(n_slices % n_cols, n_cols):
+                        (axes3[n_rows - 1, j] if axes3.ndim > 1 else axes3[j]).axis('off')
+                cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02]) 
+                fig3.colorbar(mappable=im, cax=cbar_ax, # Use the last 'im' for simplicity.  Better to be explicit (see below).
+                #ax=axes3.ravel().tolist(),  # Pass ALL axes.
+                orientation='horizontal',
+                label='Normalized CAM',
+                shrink=0.6,  # Optional: Adjust size (e.g., make it slightly smaller)
+                #  aspect=40,   # Optional: Adjust aspect ratio (make it wider)
+                #  pad=-0.5     # Optional: Add some padding between colorbar and subplots.
+                )
+                plt.tight_layout()  # Adjust layout for title
+
+                plt.savefig(os.path.join(bin_output_dir, f"all_slices_heatmaps_{view_name}_atlas.png"), dpi=600)
+                plt.close(fig3)
+
+
+def generate_xai_visualizations(model, dataset, output_dir, device='cuda', methods_to_run=['all'], atlas_path=None, age_bin_width = 10):
     """Main visualization function."""
     methods = create_visualization_dirs(output_dir, methods_to_run)
     model.eval()
     loader = DataLoader(dataset, batch_size=1, num_workers=1, shuffle=False)
     atlas_data, _ = load_atlas(atlas_path)  # Keep atlas loading
 
-    if atlas_data is None:
-        logging.error("Atlas loading failed, regional analysis skipped.")
-        # Don't return; we still want voxel-wise plots
-    else:
-         # --- Keep Dummy Model for Atlas Resampling ---
-        dummy_image_batch = next(iter(loader))['image'].unsqueeze(1).to(device)
-        dummy_demographics = next(iter(loader))['demographics'].to(device)
-        dummy_wrapped_model = BrainAgeWrapper(model, dummy_demographics)
-        dummy_target_layers = get_target_layers(dummy_wrapped_model)
-        dummy_cam_object = GradCAM(model=dummy_wrapped_model, target_layers=dummy_target_layers)
-        with torch.enable_grad():
-            dummy_grayscale_cam = dummy_cam_object(input_tensor=dummy_image_batch)[0]
-        target_atlas_shape = dummy_grayscale_cam.shape
-        print(f"Dummy grayscale_cam shape: {dummy_grayscale_cam.shape}")
-        print(f"Target shape for atlas resampling: {target_atlas_shape}")
+    view_axes = {'sagittal': 0, 'coronal': 1, 'axial': 2}
+    view_names = ['sagittal', 'coronal', 'axial']
 
-    # --- Accumulators for BOTH Regional and Voxel-wise ---
-    regional_intensity_accumulators = {
-    method_name: [] for method_name in methods.keys()
-    }
-    regional_intensity_age_data_accumulators = {
-        method_name: {region_label: {'intensities': [], 'ages': []} for region_label in np.unique(atlas_data)[1:] if region_label != 0}
-        for method_name in methods.keys()
-    }
+    for method_name, cam_class in methods.items():
+        method_output_dir = os.path.join(output_dir, method_name)
+        avg_middle_slices = {view: [] for view in view_names}
+        avg_middle_heatmaps = {view: [] for view in view_names}
+        avg_all_slices_view = {view: [] for view in view_names}
+        avg_all_heatmaps_view = {view: [] for view in view_names}
+        avg_every_third_slices_heatmaps = [] # List of tuples (view_name, slice_index, slice_data, heatmap_data)
 
-    method_accumulators = {method_name: {'image': None, 'cam': None, 'regional_cam': None, 'voxelwise_cam': None, 'count': 0}
-                           for method_name in methods.keys()}  # Add 'voxelwise_cam'
-    age_bins = np.linspace(0, 100, age_bins + 1)
-    atlas_data_resampled = None # Keep
-    bin_accumulators = {
-        method_name: {i: {'image': None, 'cam': None, 'regional_cam': None, 'voxelwise_cam': None, 'count': 0} for i in range(len(age_bins))}
-        for method_name in methods.keys()
-    }
+        for idx, sample in enumerate(tqdm(loader, desc=f"Processing images for {method_name}")):
+            if sample is None: # Handle None samples
+                logging.warning(f"Skipping None sample at index {idx}")
+                continue
 
-
-
-    with torch.no_grad():
-        for batch_idx, batch in enumerate(tqdm(loader, desc="Processing images")):
-            try:
-                image = batch["image"].unsqueeze(1).to(device)
-                demographics = batch["demographics"].to(device)
-                actual_age = batch["age"].item()
-
-                wrapped_model = BrainAgeWrapper(model, demographics)
-                predicted_age = wrapped_model(image).detach().item()
-
-                target_layers = get_target_layers(wrapped_model)
-
-                for method_name, method_class in methods.items():
-                    with torch.enable_grad():
-                        target_layers = get_target_layers(wrapped_model)
-                        cam_method_dir = os.path.join(output_dir, method_name)
-                        cam_object = method_class(model=wrapped_model, target_layers=target_layers)
-                        
-                        _cam = cam_object(input_tensor=image)                        
-                        if _cam.ndim == 5:
-                            _cam = np.squeeze(_cam)
-                        grayscale_cam = np.squeeze(_cam)
-
-                    orig_image = batch['image'].squeeze().numpy()
-                    # --- Keep Target Size for Atlas ---
-                    target_size = (target_atlas_shape[2], target_atlas_shape[1])
-                    if grayscale_cam is not None:
-                        grayscale_cam_copy = grayscale_cam.copy() # Copy for regional analysis
-                        normalized_grayscale_cam = normalize_cam(grayscale_cam_copy, target_size=target_size)  # For overlays and potential atlas use
-
-                    # --- Voxel-wise Accumulation (BEFORE resizing) ---
-                    if grayscale_cam is not None:
-                        if method_accumulators[method_name]['image'] is None:
-                            method_accumulators[method_name]['image'] = np.zeros_like(orig_image, dtype=np.float32)
-                            method_accumulators[method_name]['voxelwise_cam'] = np.zeros_like(orig_image, dtype=np.float32)  # Voxel-wise CAM
-                            # --- For regional analysis, keep accumulating cam ---
-                            if atlas_data is not None:
-                                 method_accumulators[method_name]['cam'] = np.zeros(target_atlas_shape, dtype=np.float32)
-                                 method_accumulators[method_name]['regional_cam'] = np.zeros(target_atlas_shape, dtype=np.float32)
-                        method_accumulators[method_name]['image'] += orig_image.astype(np.float32)
-                        method_accumulators[method_name]['voxelwise_cam'] += grayscale_cam.astype(np.float32)  # Accumulate raw CAM
-                        method_accumulators[method_name]['count'] += 1
-
-                        bin_idx = np.digitize(actual_age, age_bins) - 1
-                        bin_idx = max(0, min(bin_idx, 9))
-                        if bin_accumulators[method_name][bin_idx]['image'] is None:
-                            bin_accumulators[method_name][bin_idx]['image'] = np.zeros_like(orig_image, dtype=np.float32)
-                            bin_accumulators[method_name][bin_idx]['voxelwise_cam'] = np.zeros_like(orig_image, dtype=np.float32) # Voxel-wise bin
-                            # --- For bins regional analysis, keep accumulating cam ---
-                            if atlas_data is not None:
-                                bin_accumulators[method_name][bin_idx]['cam'] = np.zeros(target_atlas_shape, dtype=np.float32)
-                                bin_accumulators[method_name][bin_idx]['regional_cam'] = np.zeros(target_atlas_shape, dtype=np.float32)
-                        bin_accumulators[method_name][bin_idx]['image'] += orig_image.astype(np.float32)
-                        bin_accumulators[method_name][bin_idx]['voxelwise_cam'] += grayscale_cam.astype(np.float32)
-                        bin_accumulators[method_name][bin_idx]['count'] += 1
-
-
-                    # --- KEEP Regional/Atlas Code ---
-                    if atlas_data is not None:
-                        atlas_cam = grayscale_cam.copy()
-                        if atlas_cam is not None:
-                            if atlas_data_resampled is None:
-                                current_atlas_shape = atlas_data.shape
-                                zoom_factors = [ts / as_ for ts, as_ in zip(target_atlas_shape, current_atlas_shape)]
-                                atlas_data_resampled = scipy.ndimage.zoom(atlas_data, zoom_factors, order=0)
-                            if not isinstance(atlas_cam, np.ndarray):
-                                logging.error(f"Grayscale CAM is not a numpy array, skipping resize and regional analysis for sample {batch_idx}")
-                                atlas_cam = None
-                            elif np.isnan(atlas_cam).any() or np.isinf(atlas_cam).any():
-                                logging.error(f"Grayscale CAM contains NaN or Inf values, skipping resize and regional analysis for sample {batch_idx}")
-                                atlas_cam = None
-                            elif atlas_cam.size == 0:
-                                logging.error(f"Grayscale CAM is empty, skipping resize and regional analysis for sample {batch_idx}")
-                                atlas_cam = None
-                            elif atlas_cam.shape != atlas_data_resampled.shape:
-                                if atlas_cam.ndim == 2:
-                                    atlas_cam = cv2.resize(atlas_cam, (atlas_data_resampled.shape[2], atlas_data_resampled.shape[1]), interpolation=cv2.INTER_LINEAR)
-                                    atlas_cam = np.expand_dims(atlas_cam, axis=0)
-                                elif atlas_cam.ndim == 3:
-                                    resized_slices = []
-                                    for d in range(atlas_cam.shape[2]):
-                                        slice_2d = atlas_cam[:, :, d]
-                                        resized_slice = cv2.resize(
-                                            slice_2d,
-                                            (atlas_data_resampled.shape[2], atlas_data_resampled.shape[1]),
-                                            interpolation=cv2.INTER_LINEAR
-                                        )
-                                        resized_slices.append(resized_slice)
-                                    atlas_cam = np.stack(resized_slices, axis=2)
-                                    atlas_cam = atlas_cam.transpose(1, 0, 2)
-
-                            regional_intensities = calculate_regional_intensity(atlas_cam, atlas_data_resampled)
-
-                            if regional_intensities:
-                                regional_heatmap = create_regional_heatmap(regional_intensities, atlas_data_resampled)
-
-                                # Accumulate regional heatmap (KEEP)
-                                if atlas_data is not None:
-                                    method_accumulators[method_name]['cam'] += atlas_cam.astype(np.float32)
-                                    method_accumulators[method_name]['regional_cam'] += regional_heatmap.astype(np.float32)
-                                
-                                # Bin regional heatmap (KEEP)
-                                if atlas_data is not None:
-                                    bin_accumulators[method_name][bin_idx]['cam'] += atlas_cam.astype(np.float32)
-                                    bin_accumulators[method_name][bin_idx]['regional_cam'] += regional_heatmap.astype(np.float32)
-
-                                for region_label, intensity in regional_intensities.items():
-                                    if not np.isnan(intensity):
-                                        regional_intensity_age_data_accumulators[method_name][region_label]['intensities'].append(intensity)
-                                        regional_intensity_age_data_accumulators[method_name][region_label]['ages'].append(actual_age)
-                            else:
-                                logging.warning(f"Skipping regional heatmap accumulation for sample {batch_idx} due to invalid regional intensities.")
-
-            except Exception as e:
-                tb_str = traceback.format_exc()
-                print(f"Error processing sample {batch_idx} for method {method_name}: {str(e)}\nTraceback:\n{tb_str}")
-
-    for method_name in methods.keys():
-        method_dir = os.path.join(output_dir, method_name)
-        if method_accumulators[method_name]['count'] > 0:
-            avg_image = method_accumulators[method_name]['image'] / method_accumulators[method_name]['count']
-            avg_voxelwise_cam = method_accumulators[method_name]['voxelwise_cam'] / method_accumulators[method_name]['count']  # Voxel-wise average
-
-            # --- Atlas-Based Plots (KEEP) ---
-            if atlas_data is not None:
-                avg_cam = method_accumulators[method_name]['cam'] / method_accumulators[method_name]['count']
-                avg_regional_cam = method_accumulators[method_name]['regional_cam'] / method_accumulators[method_name]['count']
-                generate_average_heatmaps(avg_image, avg_regional_cam, method_dir, prefix="atlas_")  # Use "atlas_" prefix
-                plot_average_summary(avg_image, avg_regional_cam, method_dir, prefix="atlas_")
-                generate_average_overlay_heatmaps(avg_image, avg_regional_cam, method_dir, prefix="atlas_")
-                generate_average_overlay_heatmaps_grid(avg_image, avg_regional_cam, method_dir, prefix="atlas_")
-
-            # --- Voxel-wise Plots (ADD) ---
-            generate_average_heatmaps_voxelwise(avg_image, avg_voxelwise_cam, method_dir, prefix="voxelwise_")  # Use "voxelwise_" prefix
-            plot_average_summary_voxelwise(avg_image, avg_voxelwise_cam, method_dir, prefix="voxelwise_")
-            generate_average_overlay_heatmaps(avg_image, avg_voxelwise_cam, method_dir, prefix="voxelwise_") # Keep the same
-            generate_average_overlay_heatmaps_grid(avg_image, avg_voxelwise_cam, method_dir, prefix="voxelwise_") # Keep the same
-
-            for bin_idx in range(10):
-                if bin_accumulators[method_name][bin_idx]['count'] > 0:
-                    bin_avg_image = bin_accumulators[method_name][bin_idx]['image'] / bin_accumulators[method_name][bin_idx]['count']
-                    bin_avg_voxelwise_cam = bin_accumulators[method_name][bin_idx]['voxelwise_cam'] / bin_accumulators[method_name][bin_idx]['count']  # Voxel-wise bin average
-
-                    # --- Atlas-Based Bin Plots (KEEP) ---
-                    if atlas_data is not None:
-                        bin_avg_cam = bin_accumulators[method_name][bin_idx]['cam'] / bin_accumulators[method_name][bin_idx]['count']
-                        bin_avg_regional_cam = bin_accumulators[method_name][bin_idx]['regional_cam'] / bin_accumulators[method_name][bin_idx]['count']
-                        generate_average_heatmaps(bin_avg_image, bin_avg_regional_cam, method_dir, prefix=f"atlas_age_bin_{bin_idx+1}_")
-                        plot_average_summary(bin_avg_image, bin_avg_regional_cam, method_dir, prefix=f"atlas_age_bin_{bin_idx+1}_")
-                        generate_average_overlay_heatmaps(bin_avg_image, bin_avg_regional_cam, method_dir, prefix=f"atlas_age_bin_{bin_idx+1}_") #Keep
-                        generate_average_overlay_heatmaps_grid(bin_avg_image, bin_avg_regional_cam, method_dir, prefix=f"atlas_age_bin_{bin_idx+1}_") #Keep
-
-                    # --- Voxel-wise Bin Plots (ADD) ---
-                    generate_average_heatmaps_voxelwise(bin_avg_image, bin_avg_voxelwise_cam, method_dir, prefix=f"voxelwise_age_bin_{bin_idx+1}_")
-                    plot_average_summary_voxelwise(bin_avg_image, bin_avg_voxelwise_cam, method_dir, prefix=f"voxelwise_age_bin_{bin_idx+1}_")
-                    generate_average_overlay_heatmaps(bin_avg_image, bin_avg_voxelwise_cam, method_dir, prefix=f"voxelwise_age_bin_{bin_idx+1}_") # Keep the same
-                    generate_average_overlay_heatmaps_grid(bin_avg_image, bin_avg_voxelwise_cam, method_dir, prefix=f"voxelwise_age_bin_{bin_idx+1}_") # Keep the same
-
-            # --- Atlas-Based Regional Analysis (KEEP) ---
-            if atlas_data is not None:
-                if regional_intensity_accumulators[method_name]:
-                    plot_regional_intensity_distributions(regional_intensity_accumulators[method_name], method_dir, method_name)
-                    plot_average_regional_intensity_barchart(regional_intensity_accumulators[method_name], method_dir, method_name)
-                    calculate_and_plot_regional_correlation(regional_intensity_age_data_accumulators[method_name], method_dir, method_name)
-                    plot_regional_intensity_heatmap(regional_intensity_accumulators[method_name], method_dir, method_name, prefix="atlas_") #atlas
-                    plot_regional_correlation_heatmap(regional_intensity_age_data_accumulators[method_name], method_dir, method_name, prefix="atlas_") # atlas
-                else:
-                    logging.warning(f"Skipping regional analysis plots for method '{method_name}' because no regional intensities were calculated.")
-
-                # --- Atlas-Based Bin-wise Regional Analysis (KEEP) ---
-                regional_intensity_data_bins = {}
-                for bin_idx in range(10):
-                    if bin_accumulators[method_name][bin_idx]['count'] > 0:
-                        bin_regional_intensities = []
-                        for batch_idx, batch in enumerate(loader):
-                            # --- KEEP THIS CODE (Atlas Resizing, etc.) ---
-                            if grayscale_cam is not None:  # Check if grayscale_cam exists
-                                if atlas_data_resampled is None: # Only resample atlas once.
-                                    current_atlas_shape = atlas_data.shape
-                                    zoom_factors = [ts / as_ for ts, as_ in zip(target_atlas_shape, current_atlas_shape)] # Calculate zoom factors
-                                    atlas_data_resampled = scipy.ndimage.zoom(atlas_data, zoom_factors, order=0) # order=0 for nearest neighbor (labels)
-
-                                # Resize Logic from above goes here
-                                if grayscale_cam.shape != atlas_data_resampled.shape:
-                                    if grayscale_cam.ndim == 2:
-                                        # If grayscale_cam is 2D, resize and then add a singleton dimension
-                                        grayscale_cam = cv2.resize(grayscale_cam, (atlas_data_resampled.shape[2], atlas_data_resampled.shape[1]), interpolation=cv2.INTER_LINEAR) # Target size reversed!
-                                        grayscale_cam = np.expand_dims(grayscale_cam, axis=0)  # Add the depth dimension back
-                                    elif grayscale_cam.ndim == 3:
-                                        # Resize each depth slice individually
-                                        resized_slices = []
-                                        for d in range(grayscale_cam.shape[2]):
-                                            slice_2d = grayscale_cam[:, :, d]
-                                            resized_slice = cv2.resize(
-                                                slice_2d,
-                                                (atlas_data_resampled.shape[2], atlas_data_resampled.shape[1]),
-                                                interpolation=cv2.INTER_LINEAR
-                                            )
-                                            resized_slices.append(resized_slice)
-                                        # Stack slices back into 3D volume
-                                        grayscale_cam = np.stack(resized_slices, axis=2)
-                                        grayscale_cam = grayscale_cam.transpose(1,0,2)
-                                # ---
-                                actual_age = batch["age"].item()
-                                curr_bin_idx = np.digitize(actual_age, age_bins) - 1
-                                curr_bin_idx = max(0, min(curr_bin_idx, 9))
-                                if curr_bin_idx == bin_idx:
-                                    regional_intensities = calculate_regional_intensity(grayscale_cam, atlas_data_resampled)
-                                    if regional_intensities:
-                                        bin_regional_intensities.append(regional_intensities)
-                        regional_intensity_data_bins[f"{bin_idx*10}-{(bin_idx+1)*10}"] = bin_regional_intensities
-
-                        # --- Difference Heatmap (Compare to first bin) ---
-                        if bin_idx > 0: # Compare each bin with the first bin
-                            plot_regional_intensity_difference_heatmap(
-                                regional_intensity_data_bins[list(regional_intensity_data_bins.keys())[0]],  # First bin data
-                                regional_intensity_data_bins[f"{bin_idx*10}-{(bin_idx+1)*10}"],  # Current bin
-                                method_dir,
-                                method_name,
-                                "0-10",
-                                f"{bin_idx*10}-{(bin_idx+1)*10}",
-                                prefix=f"atlas_age_bin_diff_" #atlas prefix
-                            )
-                plot_regional_intensity_change_across_bins(regional_intensity_data_bins, method_dir, method_name, prefix="atlas_age_bins_") # Atlas prefix
-        # --- (rest of the cleanup: del, torch.cuda.empty_cache(), gc.collect()) ---
-        del wrapped_model, image, demographics, grayscale_cam, cam_object
-        torch.cuda.empty_cache()
-        gc.collect()
+            image, demographics, brain_age = sample['image'], sample['demographics'], sample['age'] # filename is a list
+            image = image.to(device)
+            demographics = demographics.to(device)
+            wrapped_model = BrainAgeWrapper(model, demographics) # Wrap the model
+            # targets = [ClassifierOutputTarget(0)] # For regression, target the output node directly.
+            target_layers = get_target_layers(wrapped_model)
             
 
+            cam = cam_class(model=wrapped_model, target_layers=target_layers)
+
+
+            try:
+                grayscale_cam = cam(input_tensor=image.unsqueeze(0))
+                                 
+                grayscale_cam = grayscale_cam[0, :] # Get rid of batch dimension
+                heatmap = normalize_cam(grayscale_cam)
+                img_np = image.cpu().numpy().squeeze() # Remove batch and channel dims
+
+
+                for view_name in view_names:
+                    view_axis = view_axes[view_name]
+                    slice_index = img_np.shape[view_axis] // 2
+                    original_slice = np.take(img_np, indices=slice_index, axis=view_axis)
+                    heatmap_slice = np.take(heatmap, indices=slice_index, axis=view_axis)
+                    heatmap_resized = normalize_cam(heatmap_slice, original_slice.shape)
+
+                    avg_middle_slices[view_name].append(original_slice)
+                    avg_middle_heatmaps[view_name].append(heatmap_resized)
+
+                    all_slices_view = np.sum(img_np, axis=view_axis)
+                    all_heatmaps_view = np.sum(heatmap, axis=view_axis)
+
+                    avg_all_slices_view[view_name].append(all_slices_view)
+                    avg_all_heatmaps_view[view_name].append(all_heatmaps_view)
+
+                    for slice_idx in range(0, img_np.shape[view_axis]):
+                        slice_data = np.take(img_np, indices=slice_idx, axis=view_axis)
+                        heatmap_slice_data = np.take(heatmap, indices=slice_idx, axis=view_axis)
+                        heatmap_resized_third = normalize_cam(heatmap_slice_data, slice_data.shape)
+                        avg_every_third_slices_heatmaps.append((view_name, slice_idx, slice_data, heatmap_resized_third))
+
+
+            except Exception as e:
+                logging.error(f"Error processing image with {method_name}: {e}")
+                tb_str = traceback.format_exc()
+                logging.error(f"Traceback:\n{tb_str}")
+                continue
+        gc.collect() # Garbage collect after each image
+
+
+        # --- Create Averaged Visualizations ---
+
+        # Figure 1: Average middle slice
+        fig1, axes1 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
+        fig1.suptitle(f"Average Middle Slice Heatmaps - {method_name.capitalize()}")
+        for i, view_name in enumerate(view_names):
+            #avg_slice = np.mean(np.stack(avg_middle_slices[view_name], axis=0), axis=0) if avg_middle_slices[view_name] else np.zeros_like(original_slice)
+            if avg_middle_slices[view_name]:
+                avg_slice = np.mean(np.stack(avg_middle_slices[view_name], axis=0), axis=0)
+            else:
+                avg_slice = np.zeros_like((64,64))
+            avg_heatmap = np.mean(np.stack(avg_middle_heatmaps[view_name], axis=0), axis=0) if avg_middle_heatmaps[view_name] else np.zeros_like(original_slice)
+
+            axes1[0, i].imshow(avg_slice, cmap='gray')
+            axes1[0, i].set_title(f"{view_name.capitalize()} - Avg Slice")
+            axes1[0, i].axis('off')
+
+            axes1[1, i].imshow(avg_slice, cmap='gray')
+            heatmap_im = axes1[1, i].imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
+            #fig1.colorbar(heatmap_im, ax=axes1[1, i])
+            axes1[1, i].set_title(f"{view_name.capitalize()} - Avg Heatmap")
+            axes1[1, i].axis('off')
+        fig1.colorbar(mappable=axes1[1, 2].images[1], ax=axes1[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
+        plt.savefig(os.path.join(method_output_dir, "avg_middle_slice_heatmaps.png"))
+        plt.close(fig1)
+
+
+        # Figure 2: Average all slices combined
+        fig2, axes2 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
+        fig2.suptitle(f"Average All Slices Combined Heatmaps - {method_name.capitalize()}")
+        for i, view_name in enumerate(view_names):
+            avg_slice_view = np.mean(np.stack(avg_all_slices_view[view_name], axis=0), axis=0) if avg_all_slices_view[view_name] else np.zeros_like(all_slices_view)
+            avg_heatmap_view = np.mean(np.stack(avg_all_heatmaps_view[view_name], axis=0), axis=0) if avg_all_heatmaps_view[view_name] else np.zeros_like(all_heatmaps_view)
+
+            axes2[0, i].imshow(avg_slice_view, cmap='gray')
+            axes2[0, i].set_title(f"{view_name.capitalize()} - Avg Combined Slices")
+            axes2[0, i].axis('off')
+
+            axes2[1, i].imshow(avg_slice_view, cmap='gray')
+            axes2[1, i].imshow(avg_heatmap_view, cmap='jet', alpha=0.5, interpolation='none')
+            axes2[1, i].set_title(f"{view_name.capitalize()} - Avg Combined Heatmaps")
+            axes2[1, i].axis('off')
+        fig2.colorbar(mappable=axes2[1, 2].images[1], ax=axes2[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
+        plt.savefig(os.path.join(method_output_dir, "avg_all_slices_heatmaps.png"))
+        plt.close(fig2)
+
+
+        # Figure 3: All slices (modified for separate images per view, 10 columns)
+        for view_name in view_names:
+            # Collect all slices for the current view
+            view_data = []
+            for v_name, slice_idx, slice_data, heatmap_data in avg_every_third_slices_heatmaps:
+                if v_name == view_name:
+                    view_data.append((slice_idx, slice_data, heatmap_data))
+            
+            # Sort by slice index to ensure correct order
+            view_data.sort(key=lambda x: x[0])
+
+            # Get unique slice indices. Since we are accumulating *every third* slice,
+            # we need to reconstruct the *full* slice list.
+            unique_slice_indices = sorted(list(set([x[0] for x in view_data])))
+
+            # Reconstruct full slice list (assuming steps of 1 between original slices)
+            full_slice_indices = []
+            if unique_slice_indices: # Prevent error if list is empty
+              min_slice = min(unique_slice_indices)
+              max_slice = max(unique_slice_indices)
+              full_slice_indices = list(range(min_slice, max_slice+1))
+
+
+            all_slices_data = []
+            for slice_idx in full_slice_indices:
+
+                slice_found = False
+                for v_idx, v_slice, v_heatmap in view_data:
+                    if v_slice.ndim !=2 :
+                        v_slice = np.zeros((100,100))
+                        v_heatmap = np.zeros((100,100))
+                    if v_idx == slice_idx:
+                      all_slices_data.append((slice_idx, v_slice, v_heatmap))
+                      slice_found = True
+                      break #inner
+
+                if not slice_found: # Fill missing with empty
+                    all_slices_data.append((slice_idx, np.zeros_like(view_data[0][1] if view_data else np.zeros((10,10))), np.zeros_like(view_data[0][2] if view_data else np.zeros((10,10)) )))
+
+            view_data = all_slices_data
+            n_slices = len(view_data)
+            n_cols = 12
+            n_rows = ceil(n_slices / n_cols)
+
+            if n_slices == 0:
+                continue
+
+            fig3, axes3 = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), dpi=900)  # Increased DPI and figsize
+            fig3.suptitle(f"All Slice Heatmaps - {method_name.capitalize()} - {view_name.capitalize()}")
+
+            if n_rows == 1:
+                axes3 = axes3[np.newaxis, :]
+
+            for idx, (slice_idx, avg_slice, avg_heatmap) in enumerate(view_data):
+                row_idx = idx // n_cols
+                col_idx = idx % n_cols
+
+                if axes3.ndim == 1:  # Handle single-row case
+                    ax = axes3[col_idx]
+                else:
+                    ax = axes3[row_idx, col_idx]
+
+
+                ax.imshow(avg_slice, cmap='gray')
+                im = ax.imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
+                ax.set_title(f"Slice {slice_idx}")
+                ax.axis('off')
+
+            # Turn off unused axes
+            if n_slices % n_cols != 0:
+                for j in range(n_slices % n_cols, n_cols):
+                    if axes3.ndim == 1:
+                        axes3[j].axis('off')
+                    else:
+                        axes3[n_rows - 1, j].axis('off')
+
+            #add colorbar to bottom of the plot
+            #fig3.colorbar(mappable=axes3[1, 2].images[1], ax=axes3[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
+            #fig3.colorbar(mappable=axes3[1, 2].images[1], ax=axes3[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
+            #plt.tight_layout(rect=[0, 0.02, 1, 0.95]) 
+            cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02]) 
+            fig3.colorbar(mappable=im, cax=cbar_ax, # Use the last 'im' for simplicity.  Better to be explicit (see below).
+             #ax=axes3.ravel().tolist(),  # Pass ALL axes.
+             orientation='horizontal',
+             label='Normalized CAM',
+              shrink=0.6,  # Optional: Adjust size (e.g., make it slightly smaller)
+            #  aspect=40,   # Optional: Adjust aspect ratio (make it wider)
+            #  pad=-0.5     # Optional: Add some padding between colorbar and subplots.
+             )
+            plt.tight_layout()  # Adjust layout for title
+            #plt.tight_layout(rect=[0, 0.15, 1, 0.95])
+            
+            plt.savefig(os.path.join(method_output_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600) # Save with increased DPI
+            plt.close(fig3)
+
+            
+def generate_xai_visualizations_binned(model, dataset, output_dir, device='cuda', methods_to_run=['all'], atlas_path=None, age_bin_width=10):
+    """
+    Generates XAI visualizations, binning the data by age ranges and creating separate plots for each bin.
+
+    Args:
+        model: The trained PyTorch model.
+        dataset: The dataset (must be BrainAgeDataset or compatible).
+        output_dir: Base output directory.
+        device:  'cuda' or 'cpu'.
+        methods_to_run: List of XAI methods (or 'all').
+        atlas_path: Path to the brain atlas NIfTI file.
+        age_bin_width (int or list):  The number of age bins (int) or the bin edges (list).
+                                  If an integer is provided, it creates equally spaced bins.
+    """
+
+    methods = create_visualization_dirs(output_dir, methods_to_run)
+    model.eval()
+
+    # --- Binning Setup ---
+    if isinstance(age_bin_width, int):
+        # Create bins of specified width
+        #min_age = min([sample['age'] for sample in dataset if sample is not None]).item()
+        max_age = max([sample['age'] for sample in dataset if sample is not None]).item()
+        bin_edges = np.arange(0, max_age + age_bin_width, age_bin_width)
+        # Ensure the last bin includes the maximum age
+        if bin_edges[-1] < max_age:
+            bin_edges = np.append(bin_edges, max_age)
+
+
+    else:
+        raise ValueError("age_bin_width must be an integer (width of bins).")
+
+
+    bin_labels = [f"{int(bin_edges[i])}-{int(bin_edges[i+1])}" for i in range(len(bin_edges) - 1)]
+
+
+    view_axes = {'sagittal': 0, 'coronal': 1, 'axial': 2}
+    view_names = ['sagittal', 'coronal', 'axial']
+
+
+    for method_name, cam_class in methods.items():
+        method_output_dir = os.path.join(output_dir, method_name)
+
+        for bin_idx in range(len(bin_edges) - 1):
+            bin_label = bin_labels[bin_idx]
+            bin_lower = bin_edges[bin_idx]
+            bin_upper = bin_edges[bin_idx + 1]
+
+            bin_output_dir = os.path.join(method_output_dir, f"bin_{bin_label}")
+            os.makedirs(bin_output_dir, exist_ok=True)
+            
+            avg_middle_slices = {view: [] for view in view_names}
+            avg_middle_heatmaps = {view: [] for view in view_names}
+            avg_all_slices_view = {view: [] for view in view_names}
+            avg_all_heatmaps_view = {view: [] for view in view_names}
+            avg_every_third_slices_heatmaps = [] # List of tuples (view_name, slice_index, slice_data, heatmap_data)
+
+
+            # --- Data Filtering for the Current Bin ---
+            binned_dataset = [
+                sample for sample in dataset
+                if sample is not None and bin_lower <= sample['age'] < bin_upper
+            ]
+
+            if not binned_dataset:
+                logging.warning(f"No data found for age bin {bin_label}. Skipping.")
+                continue  # Skip to the next bin
+
+            loader = DataLoader(binned_dataset, batch_size=1, shuffle=False)
+
+            for idx, sample in enumerate(tqdm(loader, desc=f"Processing images for {method_name}, bin {bin_label}")):
+                if sample is None: # Handle None samples
+                    logging.warning(f"Skipping None sample at index {idx}")
+                    continue
+                
+                image, demographics, brain_age = sample['image'], sample['demographics'], sample['age']
+                image = image.to(device)
+                demographics = demographics.to(device)
+
+                wrapped_model = BrainAgeWrapper(model, demographics)
+                target_layers = get_target_layers(wrapped_model)
+                cam = cam_class(model=wrapped_model, target_layers=target_layers)
+
+                try:
+                    grayscale_cam = cam(input_tensor=image.unsqueeze(0))
+                    grayscale_cam = grayscale_cam[0, :]
+                    heatmap = normalize_cam(grayscale_cam)
+                    img_np = image.cpu().numpy().squeeze()
+                    
+                    for view_name in view_names:
+                        view_axis = view_axes[view_name]
+                        slice_index = img_np.shape[view_axis] // 2
+                        original_slice = np.take(img_np, indices=slice_index, axis=view_axis)
+                        heatmap_slice = np.take(heatmap, indices=slice_index, axis=view_axis)
+                        heatmap_resized = normalize_cam(heatmap_slice, original_slice.shape)
+
+                        avg_middle_slices[view_name].append(original_slice)
+                        avg_middle_heatmaps[view_name].append(heatmap_resized)
+
+                        all_slices_view = np.sum(img_np, axis=view_axis)
+                        all_heatmaps_view = np.sum(heatmap, axis=view_axis)
+
+                        avg_all_slices_view[view_name].append(all_slices_view)
+                        avg_all_heatmaps_view[view_name].append(all_heatmaps_view)
+
+                        for slice_idx in range(0, img_np.shape[view_axis]):
+                            slice_data = np.take(img_np, indices=slice_idx, axis=view_axis)
+                            heatmap_slice_data = np.take(heatmap, indices=slice_idx, axis=view_axis)
+                            heatmap_resized_third = normalize_cam(heatmap_slice_data, slice_data.shape)
+                            avg_every_third_slices_heatmaps.append((view_name, slice_idx, slice_data, heatmap_resized_third))
+                
+                except Exception as e:
+                    logging.error(f"Error processing image with {method_name}, bin {bin_label}: {e}")
+                    tb_str = traceback.format_exc()
+                    logging.error(f"Traceback:\n{tb_str}")
+                    continue
+            gc.collect()
+
+
+
+            # --- Create Averaged Visualizations (Binned) ---
+            
+            # Figure 1: Average middle slice
+            fig1, axes1 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
+            fig1.suptitle(f"Average Middle Slice Heatmaps - {method_name.capitalize()} - Bin: {bin_label}")
+            for i, view_name in enumerate(view_names):
+                if avg_middle_slices[view_name]:
+                    avg_slice = np.mean(np.stack(avg_middle_slices[view_name], axis=0), axis=0)
+                else:  # Handle empty bin
+                    avg_slice = np.zeros((64, 64))
+                    
+                avg_heatmap = np.mean(np.stack(avg_middle_heatmaps[view_name], axis=0), axis=0) if avg_middle_heatmaps[view_name] else np.zeros_like(avg_slice)
+                
+                axes1[0, i].imshow(avg_slice, cmap='gray')
+                axes1[0, i].set_title(f"{view_name.capitalize()} - Avg Slice")
+                axes1[0, i].axis('off')
+                
+                axes1[1, i].imshow(avg_slice, cmap='gray')
+                heatmap_im = axes1[1, i].imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
+                #fig1.colorbar(heatmap_im, ax=axes1[1, i])
+                axes1[1, i].set_title(f"{view_name.capitalize()} - Avg Heatmap")
+                axes1[1, i].axis('off')
+                #add colorbar to axes[1,i]
+                
+                
+            fig1.colorbar(mappable=axes1[1, 2].images[1], ax=axes1[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
+            plt.savefig(os.path.join(bin_output_dir, "avg_middle_slice_heatmaps.png"))
+            plt.close(fig1)
+            
+            # Figure 2: Average all slices combined
+            fig2, axes2 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
+            fig2.suptitle(f"Average All Slices Combined Heatmaps - {method_name.capitalize()} - Bin: {bin_label}")
+            for i, view_name in enumerate(view_names):
+                
+                avg_slice_view = np.mean(np.stack(avg_all_slices_view[view_name], axis=0), axis=0) if avg_all_slices_view[view_name] else np.zeros_like(avg_all_slices_view[view_name][0] if avg_all_slices_view[view_name] else (64,64))
+                avg_heatmap_view = np.mean(np.stack(avg_all_heatmaps_view[view_name], axis=0), axis=0) if avg_all_heatmaps_view[view_name] else np.zeros_like(avg_slice_view)
+                
+                axes2[0, i].imshow(avg_slice_view, cmap='gray')
+                axes2[0, i].set_title(f"{view_name.capitalize()} - Avg Combined Slices")
+                axes2[0, i].axis('off')
+                
+                axes2[1, i].imshow(avg_slice_view, cmap='gray')
+                axes2[1, i].imshow(avg_heatmap_view, cmap='jet', alpha=0.5, interpolation='none')
+                axes2[1, i].set_title(f"{view_name.capitalize()} - Avg Combined Heatmaps")
+                axes2[1, i].axis('off')
+            
+            fig2.colorbar(mappable=axes2[1, 2].images[1], ax=axes2[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
+            plt.savefig(os.path.join(bin_output_dir, "avg_all_slices_heatmaps.png"))
+            plt.close(fig2)
+
+            # Figure 3: All slices (modified for separate images per view, 10 columns)
+            for view_name in view_names:
+                # Collect all slices for the current view
+                view_data = []
+                for v_name, slice_idx, slice_data, heatmap_data in avg_every_third_slices_heatmaps:
+                    if v_name == view_name:
+                        view_data.append((slice_idx, slice_data, heatmap_data))
+                
+                # Sort by slice index to ensure correct order
+                view_data.sort(key=lambda x: x[0])
+
+                # Get unique slice indices. Since we are accumulating *every third* slice,
+                # we need to reconstruct the *full* slice list.
+                unique_slice_indices = sorted(list(set([x[0] for x in view_data])))
+
+                # Reconstruct full slice list (assuming steps of 1 between original slices)
+                full_slice_indices = []
+                if unique_slice_indices: # Prevent error if list is empty
+                  min_slice = min(unique_slice_indices)
+                  max_slice = max(unique_slice_indices)
+                  full_slice_indices = list(range(min_slice, max_slice+1))
+
+
+                all_slices_data = []
+                for slice_idx in full_slice_indices:
+
+                    slice_found = False
+                    for v_idx, v_slice, v_heatmap in view_data:
+                        if v_slice.ndim !=2 :
+                            v_slice = np.zeros((100,100))
+                            v_heatmap = np.zeros((100,100))
+                        if v_idx == slice_idx:
+                          all_slices_data.append((slice_idx, v_slice, v_heatmap))
+                          slice_found = True
+                          break #inner
+
+                    if not slice_found: # Fill missing with empty
+                        all_slices_data.append((slice_idx, np.zeros_like(view_data[0][1] if view_data else np.zeros((10,10))), np.zeros_like(view_data[0][2] if view_data else np.zeros((10,10)) )))
+
+                view_data = all_slices_data
+                n_slices = len(view_data)
+                n_cols = 12
+                n_rows = ceil(n_slices / n_cols)
+
+                if n_slices == 0:
+                    continue
+
+                fig3, axes3 = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), dpi=900)  # Increased DPI and figsize
+                fig3.suptitle(f"All Slice Heatmaps - {method_name.capitalize()} - {view_name.capitalize()} - Bin: {bin_label}")
+
+                if n_rows == 1:
+                    axes3 = axes3[np.newaxis, :]
+
+                for idx, (slice_idx, avg_slice, avg_heatmap) in enumerate(view_data):
+                    row_idx = idx // n_cols
+                    col_idx = idx % n_cols
+
+                    if axes3.ndim == 1:  # Handle single-row case
+                        ax = axes3[col_idx]
+                    else:
+                        ax = axes3[row_idx, col_idx]
+
+
+                    ax.imshow(avg_slice, cmap='gray')
+                    im = ax.imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
+                    ax.set_title(f"Slice {slice_idx}")
+                    ax.axis('off')
+
+                # Turn off unused axes
+                if n_slices % n_cols != 0:
+                    for j in range(n_slices % n_cols, n_cols):
+                        if axes3.ndim == 1:
+                            axes3[j].axis('off')
+                        else:
+                            axes3[n_rows - 1, j].axis('off')
+
+                
+                cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02]) 
+                fig3.colorbar(mappable=im, cax=cbar_ax, # Use the last 'im' for simplicity.  Better to be explicit (see below).
+                #ax=axes3.ravel().tolist(),  # Pass ALL axes.
+                orientation='horizontal',
+                label='Normalized CAM',
+                shrink=0.6,  # Optional: Adjust size (e.g., make it slightly smaller)
+                #  aspect=40,   # Optional: Adjust aspect ratio (make it wider)
+                #  pad=-0.5     # Optional: Add some padding between colorbar and subplots.
+                )
+                plt.tight_layout()  # Adjust layout for title
+
+                
+                plt.savefig(os.path.join(bin_output_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600) # Save with increased DPI
+                plt.close(fig3)
+                
 def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device,methods_to_run=['all'], atlas_path=None):
     """Process a single model for XAI visualization"""
     """Loads a model based on its filename using load_model_with_params."""
@@ -1083,8 +983,13 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
     # Enable gradients
     for param in model.parameters():
         param.requires_grad = True
-
+    
+    generate_xai_visualizations_atlas(model, dataset, model_output_dir, device, methods_to_run, atlas_path)
+    generate_xai_visualizations_atlas_binned(model, dataset, model_output_dir, device, methods_to_run, atlas_path, age_bin_width=10)    
     generate_xai_visualizations(model, dataset, model_output_dir, device,methods_to_run, atlas_path)
+    generate_xai_visualizations_binned(model, dataset, model_output_dir, device,methods_to_run, atlas_path, age_bin_width=10)
+    
+    
     return model_output_dir
 
 def main():
@@ -1097,7 +1002,7 @@ def main():
                         help="Directory containing the test data (CSV and image folder)")
     parser.add_argument('--output_dir', type=str, default='cvasl/deepresearch/xai',
                         help="Base output directory for visualizations")
-    parser.add_argument('--method', type=str, default='gradcam',
+    parser.add_argument('--method', type=str, default='all',
                         help="Comma-separated list of XAI methods (gradcam, layercam, etc.) or 'all'")
     parser.add_argument('--device', type=str, default='cpu',
                         choices=['cuda', 'cpu'], help="Device to use for computation")
