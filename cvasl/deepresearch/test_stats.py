@@ -60,6 +60,7 @@ class BrainAgeAnalyzer:
         if type(self.validation_img_dir) == str:
             self.validation_img_dir = [self.validation_img_dir]
         self.validation_datasets = [BrainAgeDataset(_c,_v) for _c,_v in zip(self.validation_csv, self.validation_img_dir)]
+        logging.info(f"Loaded {len(self.validation_datasets)} validation datasets.")
 
     def load_model_from_name(self, model_path):
         """Loads a model based on its filename using load_model_with_params."""
@@ -1129,8 +1130,8 @@ class BrainAgeAnalyzer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Brain Age Analysis Script")
-    parser.add_argument("--validation_csv", type=str, default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri.csv", help="Path to the training CSV file")
-    parser.add_argument("--validation_img_dir", type=str, default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri/", help="Path to the training image directory")
+    parser.add_argument("--validation_csv", type=str, nargs='+', default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri.csv", help="Path to the training CSV file")
+    parser.add_argument("--validation_img_dir", type=str, nargs='+', default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri/", help="Path to the training image directory")
     parser.add_argument("--model_dir", type=str, default="./saved_models", help="Path to the directory containing saved models")
     parser.add_argument("--output_root", type=str, default="analysis_results", help="Root directory for analysis outputs")
     parser.add_argument("--use_cuda", action="store_true", default=False, help="Enable CUDA (GPU) if available")
