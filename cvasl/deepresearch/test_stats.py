@@ -60,6 +60,7 @@ class BrainAgeAnalyzer:
         if type(self.validation_img_dir) == str:
             self.validation_img_dir = [self.validation_img_dir]
         self.validation_datasets = [BrainAgeDataset(_c,_v) for _c,_v in zip(self.validation_csv, self.validation_img_dir)]
+        self.validation_dataset_names = [os.path.basename(_c).split(".")[0] for _c in self.validation_csv]
         logging.info(f"Loaded {len(self.validation_datasets)} validation datasets.")
 
     def load_model_from_name(self, model_path):
@@ -1080,6 +1081,8 @@ class BrainAgeAnalyzer:
                         bias_variance_df = self.analyze_bias_variance_vs_age(predictions_df, model_file, model_type) # Call new fF_oriunction
                         # Metrics vs Age Plots (Example: MAE vs Age)
 
+                    for _p,_s in zip(predictions_df_all, self.validation_dataset_names):
+                        _p['Site'] = _s
                     predictions_df = pd.concat(predictions_df_all)
                     demographics_df = pd.concat(demographics_df_all)
                     self.output_root = self.output_root + '_combined'
