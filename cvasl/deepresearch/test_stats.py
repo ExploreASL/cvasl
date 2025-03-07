@@ -315,6 +315,8 @@ class BrainAgeAnalyzer:
         df["brain_age_gap"] = df["predicted_age"] - df["actual_age"]
         df["percentage_error"] = (np.abs(df["brain_age_gap"]) / df["actual_age"]) * 100
         output_path = self.output_root
+        #add predictions.csv to the output path
+        output_path = os.path.join(self.output_root, f"predictions.csv")
         df.to_csv(output_path, index=False)
         logging.info(f"Predictions saved to: {output_path}")
 
@@ -1011,10 +1013,14 @@ class BrainAgeAnalyzer:
                     logging.info(f"Loaded model: {model_file}")
                     predictions_df_all = []
                     demographics_df_all = []
-                    self.output_root = os.path.join(self.output_root_base, model_file.split(".")[0])
                     
                     
-                    for val_dataset in self.validation_datasets:
+                    for val_dataset, val_dataset_name in zip(self.validation_datasets, self.validation_dataset_names):
+                        #get validation dataset class name
+                        
+                        self.output_root = os.path.join(self.output_root_base, val_dataset_name, model_file.split('.pth')[0])
+                        os.makedirs(self.output_root, exist_ok=True)
+
                         print(val_dataset)
                         participant_ids, predicted_ages, actual_ages, demographics_list = self.predict_ages(model, val_dataset) # Get demographics
                         if not participant_ids:
@@ -1035,9 +1041,8 @@ class BrainAgeAnalyzer:
                         predictions_df = pd.concat([predictions_df, demographics_df], axis=1) # Concatenate demographics
                         logging.info(f"Demographics added to predictions_df for model: {model_file}")
 
-                    predictions_df_all.append(predictions_df)
-                    demographics_df_all.append(demographics_df)
-                    for demographics_df, predictions_df in zip(demographics_df_all, predictions_df_all):
+                        predictions_df_all.append(predictions_df)
+                        demographics_df_all.append(demographics_df)
                         # Descriptive Statistics
                         logging.info(f"Running descriptive statistics for model: {model_file}")
                         descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
@@ -1077,9 +1082,12 @@ class BrainAgeAnalyzer:
 
                     for _p,_s in zip(predictions_df_all, self.validation_dataset_names):
                         _p['Site'] = _s                        
-                    self.output_root = self.output_root + '_combined'
+                    self.output_root = os.path.join(self.output_root_base, model_file.split('.')[0])
+                    os.makedirs(self.output_root, exist_ok=True)
                     predictions_df = pd.concat(predictions_df_all)
                     demographics_df = pd.concat(demographics_df_all)
+                    
+
                     # Descriptive Statistics
                     logging.info(f"Running descriptive statistics for model: {model_file}")
                     descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
