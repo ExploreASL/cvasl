@@ -96,25 +96,34 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
 def get_target_layers(wrappedmodel):
     """Get the target layers for visualization based on model type."""
     model = wrappedmodel.model
-    model_name = model.__class__.__name__ # Access the wrapped model
+    model_name = model.__class__.__name__  # Access the wrapped model
+
     if model_name == 'Large3DCNN':
         return [model.conv_layers[-1]]  # Last Conv3d layer
     elif model_name == 'DenseNet3D':
-        return [model.trans2[1]] # Transition layer before last avg pool
+        return [model.trans2[1]]  # Transition layer before last avg pool
     elif model_name == 'EfficientNet3D':
-        return [model.conv_head] # Head convolution before avg pool
+        return [model.conv_head]  # Head convolution before avg pool
     elif model_name == 'Improved3DCNN':
         # Access the last layer in the sequential conv_layers
-        if isinstance(model.conv_layers[-1], nn.MaxPool3d): # check if last layer is pool
-            return [model.conv_layers[-5]] # Target the conv layer before pool and relu and SE block
+        if isinstance(model.conv_layers[-1], nn.MaxPool3d):  # check if last layer is pool
+            return [model.conv_layers[-5]]  # Target the conv layer before pool and relu and SE block
         else:
-            return [model.conv_layers[-2]] # Target the conv layer before relu and SE block
+            return [model.conv_layers[-2]]  # Target the conv layer before relu and SE block
     elif model_name == 'ResNet3D':
-        return [model.layer3[-1].conv2] # Last conv layer in last ResNet block of layer3
+        return [model.layer3[-1].conv2]  # Last conv layer in last ResNet block of layer3
     elif model_name == 'ResNeXt3D':
-        return [model.layer3[-1].conv3] # Last conv layer in last ResNeXt block of layer3
+        return [model.layer3[-1].conv3]  # Last conv layer in last ResNeXt block of layer3
+    elif model_name == 'VisionTransformer3D':
+        # Target the final convolutional layer within the HybridEmbed3D module if it's used.
+        if model.use_hybrid_embed:
+            return [model.embed.proj[-1]]  # Last layer of the HybridEmbed3D's projection
+        # If not using hybrid embedding, target the final layer of the last transformer block.
+        else:
+            return [model.blocks[-1].norm2] #select the LayerNorm before the MLP block.
+
     else:
-        return None # Default or unknown model type
+        return None  # Default or unknown model type
 
 def load_atlas(atlas_path):
     """Loads a NIfTI atlas and returns the data and header."""
