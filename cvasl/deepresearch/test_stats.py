@@ -67,7 +67,6 @@ class BrainAgeAnalyzer:
     def load_model_from_name(self, model_path):
         """Loads a model based on its filename using load_model_with_params."""
         model_filename = os.path.basename(model_path)
-        
         match = re.search(r'best__(.+?)_', model_filename)
         if match:
             model_type = match.group(1)
@@ -1034,11 +1033,13 @@ class BrainAgeAnalyzer:
                             "actual_age": actual_ages,
                             "brain_age_gap": np.array(predicted_ages) - np.array(actual_ages)  # Calculate BAG here
                         })
+                        
                         self.create_predictions_csv(participant_ids, predicted_ages, actual_ages, model_file, model_type)
 
                         # Convert demographics list to DataFrame and concatenate
                         demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "LD", "PLD", "Labelling", "Readout"]) # Create demographics DF
                         predictions_df = pd.concat([predictions_df, demographics_df], axis=1) # Concatenate demographics
+                        predictions_df['Site'] = val_dataset_name
                         logging.info(f"Demographics added to predictions_df for model: {model_file}")
 
                         predictions_df_all.append(predictions_df)
@@ -1046,18 +1047,18 @@ class BrainAgeAnalyzer:
                         # Descriptive Statistics
                         logging.info(f"Running descriptive statistics for model: {model_file}")
                         descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
-                        descriptive_stats_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_{model_file}.csv"), index=False)
+                        descriptive_stats_df.to_csv(os.path.join(self.output_root, f"descriptive_stats.csv"), index=False)
                         logging.info(f"Descriptive statistics saved to: {self.output_root}")
                         # Descriptive Statistics by Group
                         if set(self.group_cols).issubset(predictions_df.columns): # Use self.group_cols
                             logging.info(f"Running descriptive statistics by group for model: {model_file}")
                             descriptive_stats_by_group_df = self.calculate_descriptive_stats(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                            descriptive_stats_by_group_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_by_group_{model_file}.csv"), index=False)
+                            descriptive_stats_by_group_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_by_group.csv"), index=False)
                             logging.info(f"Descriptive statistics by group saved to: {self.output_root}")
                             # Calculate effect sizes between groups
                             logging.info(f"Calculating effect sizes for model: {model_file}")
                             effect_sizes_df = self.calculate_effect_sizes(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                            effect_sizes_df.to_csv(os.path.join(self.output_root, f"effect_sizes_{model_file}.csv"), index=False)
+                            effect_sizes_df.to_csv(os.path.join(self.output_root, f"effect_sizes.csv"), index=False)
                             logging.info(f"Effect sizes saved to: {self.output_root}")
                         else:
                             logging.warning("Skipping descriptive statistics by group and effect size calculation - required columns not found.")
@@ -1091,18 +1092,18 @@ class BrainAgeAnalyzer:
                     # Descriptive Statistics
                     logging.info(f"Running descriptive statistics for model: {model_file}")
                     descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
-                    descriptive_stats_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_{model_file}.csv"), index=False)
+                    descriptive_stats_df.to_csv(os.path.join(self.output_root, f"descriptive_stats.csv"), index=False)
                     logging.info(f"Descriptive statistics saved to: {self.output_root}")
                     # Descriptive Statistics by Group
                     if set(self.group_cols).issubset(predictions_df.columns): # Use self.group_cols
                         logging.info(f"Running descriptive statistics by group for model: {model_file}")
                         descriptive_stats_by_group_df = self.calculate_descriptive_stats(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                        descriptive_stats_by_group_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_by_group_{model_file}.csv"), index=False)
+                        descriptive_stats_by_group_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_by_group.csv"), index=False)
                         logging.info(f"Descriptive statistics by group saved to: {self.output_root}")
                         # Calculate effect sizes between groups
                         logging.info(f"Calculating effect sizes for model: {model_file}")
                         effect_sizes_df = self.calculate_effect_sizes(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                        effect_sizes_df.to_csv(os.path.join(self.output_root, f"effect_sizes_{model_file}.csv"), index=False)
+                        effect_sizes_df.to_csv(os.path.join(self.output_root, f"effect_sizes.csv"), index=False)
                         logging.info(f"Effect sizes saved to: {self.output_root}")
                     else:
                         logging.warning("Skipping descriptive statistics by group and effect size calculation - required columns not found.")
