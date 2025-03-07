@@ -49,6 +49,7 @@ class BrainAgeAnalyzer:
         self.validation_csv = validation_csv
         self.validation_img_dir = validation_img_dir
         self.model_dir = model_dir
+        self.output_root_base = output_root
         self.output_root = output_root
         self.group_cols = group_columns
         self.use_cuda = use_cuda
@@ -1010,6 +1011,8 @@ class BrainAgeAnalyzer:
                     logging.info(f"Loaded model: {model_file}")
                     predictions_df_all = []
                     demographics_df_all = []
+                    self.output_root = os.path.join(self.output_root_base, model_file.split(".")[0])
+                    
                     
                     for val_dataset in self.validation_datasets:
                         print(val_dataset)
@@ -1025,24 +1028,15 @@ class BrainAgeAnalyzer:
                             "actual_age": actual_ages,
                             "brain_age_gap": np.array(predicted_ages) - np.array(actual_ages)  # Calculate BAG here
                         })
+                        self.create_predictions_csv(participant_ids, predicted_ages, actual_ages, model_file, model_type)
 
                         # Convert demographics list to DataFrame and concatenate
                         demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "LD", "PLD", "Labelling", "Readout"]) # Create demographics DF
                         predictions_df = pd.concat([predictions_df, demographics_df], axis=1) # Concatenate demographics
                         logging.info(f"Demographics added to predictions_df for model: {model_file}")
 
-                        
-                        predictions_df_all.append(predictions_df)
-                        demographics_df_all.append(demographics_df)
-
-                    # validation_participant_ids, validation_predicted_ages, validation_actual_ages, validation_demographics_list = self.predict_ages(model, val_dataset)
-                    # logging.info(f"Predictions made for training data for model: {model_file}")
-                    # validation_predictions_df = pd.DataFrame({
-                    #     "participant_id": validation_participant_ids,
-                    #     "predicted_age": validation_predicted_ages,
-                    #     "actual_age": validation_actual_ages,
-                    #     "brain_age_gap": np.array(validation_predicted_ages) - np.array(validation_actual_ages) # Calculate BAG for training data
-                    # })                    
+                    predictions_df_all.append(predictions_df)
+                    demographics_df_all.append(demographics_df)
                     for demographics_df, predictions_df in zip(demographics_df_all, predictions_df_all):
                         # Descriptive Statistics
                         logging.info(f"Running descriptive statistics for model: {model_file}")
@@ -1082,10 +1076,10 @@ class BrainAgeAnalyzer:
                         # Metrics vs Age Plots (Example: MAE vs Age)
 
                     for _p,_s in zip(predictions_df_all, self.validation_dataset_names):
-                        _p['Site'] = _s
+                        _p['Site'] = _s                        
+                    self.output_root = self.output_root + '_combined'
                     predictions_df = pd.concat(predictions_df_all)
                     demographics_df = pd.concat(demographics_df_all)
-                    self.output_root = self.output_root + '_combined'
                     # Descriptive Statistics
                     logging.info(f"Running descriptive statistics for model: {model_file}")
                     descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
