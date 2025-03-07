@@ -1082,8 +1082,9 @@ class BrainAgeAnalyzer:
                         # Metrics vs Age Plots (Example: MAE vs Age)
 
                     for _p,_s in zip(predictions_df_all, self.validation_dataset_names):
-                        _p['Site'] = _s                        
-                    self.output_root = os.path.join(self.output_root_base, model_file.split('.')[0])
+                        _p['Site'] = _s            
+                    logging.info(f"----------------------->>>>>>>>>>>>>>>>>>>labeling: {val_dataset_name}")            
+                    self.output_root = os.path.join(self.output_root_base, model_file.split('.p')[0])
                     os.makedirs(self.output_root, exist_ok=True)
                     predictions_df = pd.concat(predictions_df_all)
                     demographics_df = pd.concat(demographics_df_all)
