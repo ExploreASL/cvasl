@@ -1001,7 +1001,7 @@ class BrainAgeAnalyzer:
 
     def run_all_analyses(self):
         """Loads models, predicts ages, and performs all analyses."""
-
+        
         for model_file in os.listdir(self.model_dir):
             logging.info(f"Number of datasets: {len(self.validation_datasets)}")            
             
@@ -1017,7 +1017,7 @@ class BrainAgeAnalyzer:
                     for val_dataset, val_dataset_name in zip(self.validation_datasets, self.validation_dataset_names):
                         #get validation dataset class name
                         
-                        self.output_root = os.path.join(self.output_root_base, val_dataset_name, model_file.split('.pth')[0])
+                        self.output_root = os.path.join(self.output_root_base, model_file.split('.pth')[0], val_dataset_name)
                         os.makedirs(self.output_root, exist_ok=True)
 
                         print(val_dataset)
@@ -1039,7 +1039,7 @@ class BrainAgeAnalyzer:
                         # Convert demographics list to DataFrame and concatenate
                         demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "LD", "PLD", "Labelling", "Readout"]) # Create demographics DF
                         predictions_df = pd.concat([predictions_df, demographics_df], axis=1) # Concatenate demographics
-                        predictions_df['Site'] = val_dataset_name
+                        
                         logging.info(f"Demographics added to predictions_df for model: {model_file}")
 
                         predictions_df_all.append(predictions_df)
@@ -1083,7 +1083,7 @@ class BrainAgeAnalyzer:
 
                     for _p,_s in zip(predictions_df_all, self.validation_dataset_names):
                         _p['Site'] = _s            
-                    logging.info(f"----------------------->>>>>>>>>>>>>>>>>>>labeling: {val_dataset_name}")            
+                    
                     self.output_root = os.path.join(self.output_root_base, model_file.split('.p')[0])
                     os.makedirs(self.output_root, exist_ok=True)
                     predictions_df = pd.concat(predictions_df_all)
@@ -1092,41 +1092,79 @@ class BrainAgeAnalyzer:
 
                     # Descriptive Statistics
                     logging.info(f"Running descriptive statistics for model: {model_file}")
-                    descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
-                    descriptive_stats_df.to_csv(os.path.join(self.output_root, f"descriptive_stats.csv"), index=False)
-                    logging.info(f"Descriptive statistics saved to: {self.output_root}")
+                    try:
+                        descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
+                        descriptive_stats_df.to_csv(os.path.join(self.output_root, f"descriptive_stats.csv"), index=False)
+                        logging.info(f"Descriptive statistics saved to: {self.output_root}")
+                    except Exception as e:
+                        logging.error(f"Error calculating descriptive statistics for model {model_file}:", exc_info=True)
+                        tb_str = traceback.format_exc()
+                        logging.error(f"{e}\nTraceback:\n{tb_str}")
                     # Descriptive Statistics by Group
                     if set(self.group_cols).issubset(predictions_df.columns): # Use self.group_cols
-                        logging.info(f"Running descriptive statistics by group for model: {model_file}")
-                        descriptive_stats_by_group_df = self.calculate_descriptive_stats(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                        descriptive_stats_by_group_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_by_group.csv"), index=False)
-                        logging.info(f"Descriptive statistics by group saved to: {self.output_root}")
+                        try:
+                            logging.info(f"Running descriptive statistics by group for model: {model_file}")
+                            descriptive_stats_by_group_df = self.calculate_descriptive_stats(predictions_df, group_cols=self.group_cols) # Use self.group_cols
+                            descriptive_stats_by_group_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_by_group.csv"), index=False)
+                            logging.info(f"Descriptive statistics by group saved to: {self.output_root}")
+                        except Exception as e:
+                            logging.error(f"Error calculating descriptive statistics by group for model {model_file}:", exc_info=True)
+                            tb_str = traceback.format_exc()
+                            logging.error(f"{e}\nTraceback:\n{tb_str}")
+                        
+                        try:
                         # Calculate effect sizes between groups
-                        logging.info(f"Calculating effect sizes for model: {model_file}")
-                        effect_sizes_df = self.calculate_effect_sizes(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                        effect_sizes_df.to_csv(os.path.join(self.output_root, f"effect_sizes.csv"), index=False)
-                        logging.info(f"Effect sizes saved to: {self.output_root}")
+                            logging.info(f"Calculating effect sizes for model: {model_file}")
+                            effect_sizes_df = self.calculate_effect_sizes(predictions_df, group_cols=self.group_cols) # Use self.group_cols
+                            effect_sizes_df.to_csv(os.path.join(self.output_root, f"effect_sizes.csv"), index=False)
+                            logging.info(f"Effect sizes saved to: {self.output_root}")
+                        except Exception as e:
+                            logging.error(f"Error calculating effect sizes for model {model_file}:", exc_info=True)
+                            tb_str = traceback.format_exc()
+                            logging.error(f"{e}\nTraceback:\n{tb_str}")
                     else:
                         logging.warning("Skipping descriptive statistics by group and effect size calculation - required columns not found.")
 
                     # Age Bin Analysis for BAG
-                    logging.info(f"Running BAG analysis by age bin for model: {model_file}")
-                    bag_by_age_bin_df = self.analyze_bag_by_age_bins(predictions_df, model_file, model_type) # Call new function
-                    # Q-Q Plots
-                    logging.info(f"Creating Q-Q plots for model: {model_file}")
-                    self.plot_qq_plots(predictions_df, model_file, model_type)
-                    # ICC Analysis # Add this section here, after QQ plots for example
-                    logging.info(f"Running CCC analysis for model: {model_file}")
-                    ccc_value = self.calculate_ccc(predictions_df, model_file, model_type)
-                    logging.info(f"CCC Value for {model_file}: {ccc_value:.4f}")
-                    # Heteroscedasticity Analysis # Add this section after CCC analysis
-                    logging.info(f"Running heteroscedasticity analysis for model: {model_file}")
-                    levene_stat, levene_p_value = self.analyze_heteroscedasticity(predictions_df, model_file, model_type)
-                    # Bias and Variance vs Age Analysis
-                    logging.info(f"Running bias and variance vs age analysis for model: {model_file}")
-                    bias_variance_df = self.analyze_bias_variance_vs_age(predictions_df, model_file, model_type) # Call new fF_oriunction
-                    # Metrics vs Age Plots (Example: MAE vs Age)
+                    try:
+                        logging.info(f"Running BAG analysis by age bin for model: {model_file}")
+                        bag_by_age_bin_df = self.analyze_bag_by_age_bins(predictions_df, model_file, model_type) # Call new function
+                    except Exception as e:
+                        logging.error(f"Error running BAG analysis by age bin for model {model_file}:", exc_info=True)
+                        tb_str = traceback.format_exc()
+                        logging.error(f"{e}\nTraceback:\n{tb_str}")
+                    try:
+                        # Q-Q Plots
+                        logging.info(f"Creating Q-Q plots for model: {model_file}")
+                        self.plot_qq_plots(predictions_df, model_file, model_type)
+                    except Exception as e:
+                        logging.error(f"Error creating Q-Q plots for model {model_file}:", exc_info=True)
+                        tb_str = traceback.format_exc()
+                        logging.error(f"{e}\nTraceback:\n{tb_str}")
+                    try:
+                        # ICC Analysis # Add this section here, after QQ plots for example
+                        logging.info(f"Running CCC analysis for model: {model_file}")
+                        ccc_value = self.calculate_ccc(predictions_df, model_file, model_type)
+                    except Exception as e:
+                        logging.error(f"Error running CCC analysis for model {model_file}:", exc_info=True)
+                        tb_str = traceback.format_exc()
+                        logging.error(f"{e}\nTraceback:\n{tb_str}")
                     
+                    try:
+                        logging.info(f"Running heteroscedasticity analysis for model: {model_file}")
+                        levene_stat, levene_p_value = self.analyze_heteroscedasticity(predictions_df, model_file, model_type)
+                    except Exception as e:
+                        logging.error(f"Error running heteroscedasticity analysis for model {model_file}:", exc_info=True)
+                        tb_str = traceback.format_exc()
+                        logging.error(f"{e}\nTraceback:\n{tb_str}")
+                    try:
+                        # Bias and Variance vs Age Analysis
+                        logging.info(f"Running bias and variance vs age analysis for model: {model_file}")
+                        bias_variance_df = self.analyze_bias_variance_vs_age(predictions_df, model_file, model_type) # Call new fF_oriunction
+                    except Exception as e:
+                        logging.error(f"Error running bias and variance vs age analysis for model {model_file}:", exc_info=True)
+                        tb_str = traceback.format_exc()
+                        logging.error(f"{e}\nTraceback:\n{tb_str}")                    
                 except Exception as e:
                     logging.error(f"Error processing model {model_file}:", exc_info=True)
                     tb_str = traceback.format_exc()
