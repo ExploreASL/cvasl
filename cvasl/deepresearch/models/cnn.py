@@ -32,7 +32,8 @@ class Large3DCNN(nn.Module):
             if in_channels <= 0:
                 in_channels = 1
 
-            self.conv_layers.append(nn.Conv3d(in_channels, filters, kernel_size=3, padding=1))
+            conv_layer = nn.Conv3d(in_channels, filters, kernel_size=3, padding=1)
+            self.conv_layers.append(conv_layer)
             if use_bn:
                 self.bn_layers.append(nn.BatchNorm3d(filters))
             self.relu_layers.append(nn.ReLU())
@@ -41,6 +42,7 @@ class Large3DCNN(nn.Module):
                 self.se_blocks.append(SEBlock3D(filters))
             in_channels = filters
             filters = int(filters * filters_multiplier)
+            self.gradcam_target_layer = conv_layer 
 
         self.flatten = nn.Flatten()
 
@@ -56,7 +58,11 @@ class Large3DCNN(nn.Module):
         self.fc2 = nn.Linear(fc2_input_size, 1)
         self.dropout = nn.Dropout(dropout_rate) if use_dropout else nn.Identity()
 
-
+    @property
+    def gradcam_layer(self):
+        """Return the most suitable layer for Grad-CAM."""
+        return self.conv_layers[-1] if isinstance(self.conv_layers, nn.ModuleList) and len(self.conv_layers) > 0 else None
+    
     def forward(self, x, demographics):
         """Forward pass."""
         for i in range(len(self.conv_layers)):
