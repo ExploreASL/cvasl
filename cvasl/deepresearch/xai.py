@@ -60,8 +60,7 @@ region_names = {
     2: 'Left Cerebral Cortex',
     3: 'Left Lateral Ventricle',
     4: 'Left Thalamus',
-    # Add all regions up to 91 as per the HarvardOxford subcortical atlas
-    # Refer to FSL's atlas documentation for the full list
+ 
 }
 
 
@@ -93,35 +92,91 @@ def create_visualization_dirs(base_output_dir, methods_to_run):
 
     return all_methods
 
+def get_last_conv_layer(model):
+    """
+    Recursively finds the last convolutional layer before a pooling or flattening operation.
+
+    Args:
+        model (nn.Module): The PyTorch model.
+
+    Returns:
+        nn.Module: The last convolutional layer, or None if no convolutional layers are found.
+    """
+    last_conv_layer = None
+
+    def recursive_search(module):
+        nonlocal last_conv_layer
+        
+        #check if we have a container
+        if isinstance(module, (nn.Sequential, nn.ModuleList, nn.ModuleDict)):
+            modules = module.children()
+        else:
+            modules = [module]
+
+        for submodule in modules:
+
+            if isinstance(submodule, (nn.Conv2d, nn.Conv3d)):
+                last_conv_layer = submodule
+            elif isinstance(submodule, (nn.MaxPool2d, nn.MaxPool3d, nn.AvgPool2d, nn.AvgPool3d,
+                                       nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool3d, nn.Flatten)):
+                return  # Stop searching after pooling or flattening
+            elif isinstance(submodule, nn.Linear):
+                return # Stop searching: Linear layer after conv layers usually indicates flattening
+
+            recursive_search(submodule)
+
+
+    recursive_search(model)
+
+
+    return last_conv_layer
+
+def get_transformer_layer(model):
+    """
+    Gets a suitable layer within the last Transformer block for Grad-CAM.
+
+    Args:
+        model (nn.Module): The PyTorch model (assumed to be a VisionTransformer3D).
+
+    Returns:
+        nn.Module: The LayerNorm layer (norm2) within the last Transformer block.
+                   Returns None if no Transformer blocks are found.
+    """
+    if hasattr(model, 'blocks') and len(model.blocks) > 0:
+        last_block = model.blocks[-1]
+        if hasattr(last_block, 'norm2') and isinstance(last_block.norm2, nn.LayerNorm):
+            return last_block.norm2
+        else: return None #Error, last block does not contains the norm2 LayerNorm
+    
 def get_target_layers(wrappedmodel):
     """Get the target layers for visualization based on model type."""
     model = wrappedmodel.model
     model_name = model.__class__.__name__  # Access the wrapped model
 
     if model_name == 'Large3DCNN':
-        return [model.conv_layers[-1]]  # Last Conv3d layer
+        return get_last_conv_layer(model)  # Last Conv3d layer
     elif model_name == 'DenseNet3D':
-        return [model.trans2[1]]  # Transition layer before last avg pool
+        return get_last_conv_layer(model) # Transition layer before last avg pool
     elif model_name == 'EfficientNet3D':
-        return [model.conv_head]  # Head convolution before avg pool
+        return get_last_conv_layer(model)  # Head convolution before avg pool
     elif model_name == 'Improved3DCNN':
         # Access the last layer in the sequential conv_layers
-        if isinstance(model.conv_layers[-1], nn.MaxPool3d):  # check if last layer is pool
-            return [model.conv_layers[-5]]  # Target the conv layer before pool and relu and SE block
-        else:
-            return [model.conv_layers[-2]]  # Target the conv layer before relu and SE block
+        return get_last_conv_layer(model)
     elif model_name == 'ResNet3D':
-        return [model.layer3[-1].conv2]  # Last conv layer in last ResNet block of layer3
+        get_last_conv_layer(model)  # Last conv layer in last ResNet block of layer3
     elif model_name == 'ResNeXt3D':
-        return [model.layer3[-1].conv3]  # Last conv layer in last ResNeXt block of layer3
+        return get_last_conv_layer(model)  # Last conv layer in last ResNeXt block of layer3
     elif model_name == 'VisionTransformer3D':
         # Target the final convolutional layer within the HybridEmbed3D module if it's used.
         if model.use_hybrid_embed:
-            return [model.embed.proj[-1]]  # Last layer of the HybridEmbed3D's projection
-        # If not using hybrid embedding, target the final layer of the last transformer block.
+            target_layer = get_last_conv_layer(model)
+            if target_layer is not None:
+                return [target_layer]
+            else:
+                return None # Handle the (unlikely) case where hybrid embed has no conv layers
         else:
-            return [model.blocks[-1].norm2] #select the LayerNorm before the MLP block.
-
+            target_layer = get_transformer_layer(model)
+            return [target_layer] if target_layer else None
     else:
         return None  # Default or unknown model type
 
