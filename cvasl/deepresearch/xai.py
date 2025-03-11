@@ -106,25 +106,20 @@ def get_last_conv_layer(model):
 
     def recursive_search(module):
         nonlocal last_conv_layer
-        
-        #check if we have a container
+
+        # Check if we have a container
         if isinstance(module, (nn.Sequential, nn.ModuleList, nn.ModuleDict)):
             modules = module.children()
-        else:
-            modules = [module]
 
-        for submodule in modules:
-
-            if isinstance(submodule, (nn.Conv2d, nn.Conv3d)):
-                last_conv_layer = submodule
-            elif isinstance(submodule, (nn.MaxPool2d, nn.MaxPool3d, nn.AvgPool2d, nn.AvgPool3d,
-                                       nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool3d, nn.Flatten)):
-                return  # Stop searching after pooling or flattening
-            elif isinstance(submodule, nn.Linear):
-                return # Stop searching: Linear layer after conv layers usually indicates flattening
-
-            recursive_search(submodule)
-
+            for submodule in modules:
+                if isinstance(submodule, (nn.Conv2d, nn.Conv3d)):
+                    last_conv_layer = submodule
+                elif isinstance(submodule, (nn.MaxPool2d, nn.MaxPool3d, nn.AvgPool2d, nn.AvgPool3d,
+                                           nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool3d, nn.Flatten)):
+                    return  # Stop searching after pooling or flattening
+                elif isinstance(submodule, nn.Linear):
+                    return # Stop searching: Linear layer after conv layers usually indicates flattening
+                recursive_search(submodule)
 
     recursive_search(model)
 
