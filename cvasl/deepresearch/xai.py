@@ -100,13 +100,13 @@ def get_target_layers(wrappedmodel):
     model_name = model.__class__.__name__  # Access the wrapped model
 
     if model_name == 'Large3DCNN':
-        return model.gradcam_target_layer
+        return [model.gradcam_target_layer]
     elif model_name == 'DenseNet3D':
         return [model.trans2[1]]  # Transition layer before last avg pool
     elif model_name == 'EfficientNet3D':
         return [model.conv_head]  # Head convolution before avg pool
     elif model_name == 'Improved3DCNN':
-        model.gradcam_target_layer
+        return [model.gradcam_target_layer]
     elif model_name == 'ResNet3D':
         return [model.layer3[-1].conv2]  # Last conv layer in last ResNet block of layer3
     elif model_name == 'ResNeXt3D':
