@@ -419,7 +419,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
     """Main visualization function.  Normalization done *after* averaging."""
     methods = create_visualization_dirs(output_dir, methods_to_run)
     model.eval()
-    loader = DataLoader(dataset, batch_size=1, num_workers=1, shuffle=False)
+    loader = DataLoader(dataset, batch_size=1, shuffle=False)
     
 
     view_axes = {'sagittal': 0, 'coronal': 1, 'axial': 2}
@@ -629,7 +629,8 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
 
             plt.savefig(os.path.join(method_output_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600)  # Save
             plt.close(fig3)
-                
+    print(target_layers)
+    print(wrapped_model.model)
 def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device,methods_to_run=['all'], atlas_path=None):
     """Process a single model for XAI visualization"""
     """Loads a model based on its filename using load_model_with_params."""
