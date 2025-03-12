@@ -20,7 +20,7 @@ import torch.nn.functional as F
 import platform
 
 class BrainAgeDataset(Dataset):
-    def __init__(self, csv_file, image_dir, cat_cols=["Sex", "Site", "Labelling", "Readout"], num_cols=["LD", "PLD"], target_col='Age', patient_id_col='participant_id', transform=None):
+    def __init__(self, csv_file, image_dir, cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD"], num_cols=[], target_col='Age', patient_id_col='participant_id', transform=None):
         """
         Initializes BrainAgeDataset.
 
@@ -243,22 +243,12 @@ class BrainAgeDataset(Dataset):
         logging.debug(f"Image data squeezed to shape: {data.shape}")
         mask = np.isnan(data)
 
-        invalid_values_mask = np.isnan(data) | np.isinf(data)
-        invalid_percentage = np.sum(invalid_values_mask) / data.size * 100
-        logging.info(f"Percentage of NaN/Inf values before NaN replacement: {invalid_percentage:.4f}% for image: {image_path}")
-
         if self.voxel_averages is not None:
             data = np.where(mask, self.voxel_averages, data)
         else:
             mean_val = np.nanmean(data) if np.any(mask) else 0
             logging.debug(f"Replacing NaNs with in-image mean value: {mean_val}")
             data[mask] = mean_val
-
-
-        invalid_values_mask = np.isnan(data) | np.isinf(data)
-        invalid_percentage = np.sum(invalid_values_mask) / data.size * 100
-        logging.info(f"Percentage of NaN/Inf values after NaN replacement: {invalid_percentage:.4f}% for image: {image_path}")
-
 
         mean = np.mean(data)
         std = np.std(data)
