@@ -10,7 +10,7 @@ from pytorch_grad_cam import GradCAM, HiResCAM, GradCAMPlusPlus, XGradCAM, Ablat
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 import matplotlib
 matplotlib.use('Agg')
-
+import gc
 import matplotlib.pyplot as plt
 import logging
 import csv
@@ -187,6 +187,7 @@ def generate_xai_visualizations_binned(model, dataset, output_dir, device='cuda'
 
 
     for method_name, cam_class in methods.items():
+        gc.collect()
         method_output_dir = os.path.join(output_dir, method_name)
 
         for bin_idx in range(len(bin_edges) - 1):
@@ -426,6 +427,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
     view_names = ['sagittal', 'coronal', 'axial']
 
     for method_name, cam_class in methods.items():
+        gc.collect()
         method_output_dir = os.path.join(output_dir, method_name)
 
         # Use lists, and accumulate *unnormalized* heatmaps.
@@ -703,6 +705,8 @@ def main():
 
             )
             logging.info(f"Successfully processed model {model_file}. Results saved in {output_dir}")
+            gc.collect()
+            torch.cuda.empty_cache()
         except Exception as e:
             tb_str = traceback.format_exc()
             logging.error(f"Error processing model {model_file}: {str(e)}\nTraceback:\n{tb_str}")
