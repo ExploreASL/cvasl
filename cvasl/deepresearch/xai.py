@@ -188,6 +188,8 @@ def generate_xai_visualizations_binned(model, dataset, output_dir, device='cuda'
 
     for method_name, cam_class in methods.items():
         gc.collect()
+        torch.cuda.empty_cache()
+
         method_output_dir = os.path.join(output_dir, method_name)
 
         for bin_idx in range(len(bin_edges) - 1):
@@ -428,6 +430,8 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
 
     for method_name, cam_class in methods.items():
         gc.collect()
+        torch.cuda.empty_cache()
+
         method_output_dir = os.path.join(output_dir, method_name)
 
         # Use lists, and accumulate *unnormalized* heatmaps.
