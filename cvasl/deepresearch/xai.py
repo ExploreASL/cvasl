@@ -661,6 +661,8 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
         param.requires_grad = True
     
     generate_xai_visualizations(model, dataset, model_output_dir, device,methods_to_run, atlas_path)
+    gc.collect()
+    torch.cuda.empty_cache()
     generate_xai_visualizations_binned(model, dataset, model_output_dir, device,methods_to_run, atlas_path, age_bin_width=10)
     
     
