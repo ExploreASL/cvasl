@@ -145,6 +145,7 @@ def train_model(
         train_dataset, test_dataset = torch.utils.data.random_split(
             dataset, [train_size, test_size]
         )
+        
     elif split_strategy == "stratified":
         # Create age bins for stratification
         ages = [sample["age"].item() for sample in dataset]
@@ -203,10 +204,27 @@ def train_model(
         test_dataset = torch.utils.data.Subset(dataset, test_idx)
     else:
         raise ValueError(f"Invalid split strategy: {split_strategy}")
+    #save indices of test dataset
+    
+    csv_file_path = os.path.dirname(csv_file)
+    if os.path.exists(os.path.join(csv_file_path, f"train_indices.npy")) and os.path.exists(os.path.join(csv_file_path, f"test_indices.npy")):
+        train_idx = np.load(os.path.join(csv_file_path, f"train_indices.npy"))
+        test_idx = np.load(os.path.join(csv_file_path, f"test_indices.npy"))
+        train_dataset = torch.utils.data.Subset(dataset, train_idx)
+        test_dataset = torch.utils.data.Subset(dataset, test_idx)
+        logging.info("Train and test indices loaded")
+    else:        
+        np.save(os.path.join(csv_file_path, f"train_indices.npy"), train_idx)
+        np.save(os.path.join(csv_file_path, f"test_indices.npy"), test_idx)
+        logging.info("Train and test indices saved")
+    
+    
+
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, num_workers = 2, pin_memory=True)
     test_loader = DataLoader(
         test_dataset, batch_size=batch_size, shuffle=False, num_workers = 2, pin_memory=True)
+    
     logging.info("Data loaders created")
 
     
