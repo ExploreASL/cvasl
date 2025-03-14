@@ -506,7 +506,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             plt.savefig(os.path.join(method_output_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600)
             plt.close(fig3)
 
-def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device,methods_to_run=['all'], atlas_path=None):
+def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device,methods_to_run=['all'], atlas_path=None, indices_path=None):
     """Process a single model for XAI visualization"""
     """Loads a model based on its filename using load_model_with_params."""
     model_filename = os.path.basename(model_path)
@@ -523,7 +523,7 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
     model_output_dir = os.path.join(base_output_dir, model_name, model_filename.replace('.pth', ''))
     os.makedirs(model_output_dir, exist_ok=True)
 
-    dataset = BrainAgeDataset(csv_path, test_data_dir)
+    dataset = BrainAgeDataset(csv_path, test_data_dir,indices=indices_path)
     dataset = [sample for sample in dataset if sample is not None]
 
     num_demographics = 6
@@ -557,6 +557,7 @@ def main():
                         choices=['cuda', 'cpu'], help="Device to use for computation")
     parser.add_argument('--atlas_path', type=str, default='cvasl/deepresearch/Harvard-Oxford_cortical_and_subcortical_structural_atlases/HarvardOxford-sub-maxprob-thr25-2mm.nii.gz', # <--- ADD ATLAS PATH ARGUMENT
                         help="Path to the brain atlas NIfTI file")
+    parser.add_argument("--indices_path", type=str, default="None", help="Path to files containing indices for test split for each dataset")
     args = parser.parse_args()
 
     # Process methods argument
@@ -576,7 +577,7 @@ def main():
         model_path = os.path.join(args.models_dir, model_file)
         try:
             output_dir = process_single_model(
-                args.test_csv, model_path, args.test_data_dir, args.output_dir, device, methods_to_run, args.atlas_path
+                args.test_csv, model_path, args.test_data_dir, args.output_dir, device, methods_to_run, args.atlas_path, args.indices_path
 
             )
             logging.info(f"Successfully processed model {model_file}. Results saved in {output_dir}")
