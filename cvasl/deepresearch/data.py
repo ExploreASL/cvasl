@@ -20,7 +20,7 @@ import torch.nn.functional as F
 import platform
 
 class BrainAgeDataset(Dataset):
-    def __init__(self, csv_file, image_dir, cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD"], num_cols=[], target_col='Age', patient_id_col='participant_id', indeces = None, transform=None):
+    def __init__(self, csv_file, image_dir, cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD"], num_cols=[], target_col='Age', patient_id_col='participant_id', indices = None, transform=None):
         """
         Initializes BrainAgeDataset.
 
@@ -35,11 +35,13 @@ class BrainAgeDataset(Dataset):
         """
         logging.info("Initializing BrainAgeDataset...")
         self.data_df = pd.read_csv(csv_file)
-        #if indeces are provided, load npy file and use them to filter the data
-        if indeces is not None:
-            indeces = np.load(indeces)
-            self.data_df = self.data_df.iloc[indeces]
-        logging.info(f"CSV file loaded: {csv_file}")
+        self.indices = indices
+        if (self.indices is not None) and os.path.exists(self.indices):
+            #if indices is a valid file path
+            indices = np.load(self.indices)
+            self.data_df = self.data_df.iloc[indices]
+            logging.info(f"Data filtered using indices from: {self.indices}")
+        logging.info(f"CSV file loaded: {csv_file} with shape: {self.data_df.shape}")
         self.image_dir = image_dir
         self.transform = transform
         self.id_to_filename = {}
