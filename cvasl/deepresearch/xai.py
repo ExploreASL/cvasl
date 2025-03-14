@@ -165,7 +165,8 @@ def generate_xai_visualizations_binned(model, dataset, output_dir, device='cuda'
 
     for method_name, cam_class in methods.items():
         method_output_dir = os.path.join(output_dir, method_name)
-
+        gc.collect()
+        torch.cuda.empty_cache()
         for bin_idx in range(len(bin_edges) - 1):
             bin_label = bin_labels[bin_idx]
             bin_lower = bin_edges[bin_idx]
@@ -244,7 +245,8 @@ def generate_xai_visualizations_binned(model, dataset, output_dir, device='cuda'
                     continue
                 del image, grayscale_cam, heatmap, img_np
                 gc.collect()
-
+            gc.collect()
+            torch.cuda.empty_cache()
             # Compute averages
             if count == 0:
                 logging.warning(f"No valid samples in bin {bin_label}")
@@ -336,7 +338,8 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
 
     for method_name, cam_class in methods.items():
         method_output_dir = os.path.join(output_dir, method_name)
-
+        gc.collect()
+        torch.cuda.empty_cache()
         # Initialize sum arrays (use float32 for precision; float16 possible but riskier)
         sum_middle_slices = {
             'sagittal': np.zeros((H, W), dtype=np.float32),
@@ -420,6 +423,8 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             del image, grayscale_cam, heatmap, img_np
             gc.collect()
 
+        gc.collect()
+        torch.cuda.empty_cache()
         # Compute averages
         if count == 0:
             logging.warning(f"No valid samples processed for {method_name}")

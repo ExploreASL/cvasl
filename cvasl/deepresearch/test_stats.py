@@ -103,7 +103,7 @@ class BrainAgeAnalyzer:
             data (pd.DataFrame): DataFrame with 'actual_age', 'predicted_age', and 'brain_age_gap'.
             model_name (str): Name of the model.
             model_type (str): Type of the model.
-            age_bins (np.ndarray, optional): Age bin edges. Defaults to np.linspace(20, 90, 8).
+            age_bins (np.ndarray, optional): Age bin edges. Defaults to np.linspace(0, 110, 12).
             alpha (float): Significance level for hypothesis tests. Defaults to 0.05.
 
         Returns:
@@ -115,7 +115,11 @@ class BrainAgeAnalyzer:
             return {"results": None, "binned_data": None}
 
         if age_bins is None:
-            age_bins = np.linspace(20, 90, 8)
+            age_bins = np.linspace(0, 110, 12)
+            labels = [f"{int(age_bins[i])}-{int(age_bins[i+1])}" for i in range(len(age_bins)-1)]
+
+            
+            
 
         output_dir = self.output_root
         
@@ -205,10 +209,6 @@ class BrainAgeAnalyzer:
         summary.append(overall_conclusion)
         summary.append("Implications: If heteroscedasticity is present, consider transforming the data (e.g., log transform) or using weighted least squares regression.")
 
-        summary_str = "\n".join(summary)
-        logging.info(summary_str)
-        with open(os.path.join(output_dir, f"heteroscedasticity_summary.txt"), 'w') as f:
-            f.write(summary_str)
 
         return {"results": results, "binned_data": binned_data}
 
@@ -250,10 +250,6 @@ class BrainAgeAnalyzer:
         icc_result = pg.intraclass_corr(data=long_data, targets='subject', raters='rater', ratings='age')
 
         ccc_value = icc_result[icc_result['Type'] == 'ICC3k']['ICC'].iloc[0]
-
-        output_path_pingouin = os.path.join(output_dir, f"icc_details.csv")
-        icc_result.to_csv(output_path_pingouin)
-        logging.info(f"Detailed ICC results (from pingouin) saved to: {output_path_pingouin}")
 
         mae = np.mean(np.abs(data['predicted_age'] - data['actual_age']))
         rmse = np.sqrt(np.mean((data['predicted_age'] - data['actual_age'])**2))
@@ -429,7 +425,7 @@ class BrainAgeAnalyzer:
 
 
 
-    def analyze_bag_by_age_bins(self, data, model_name, model_type, age_bins=np.linspace(20, 90, 8)):
+    def analyze_bag_by_age_bins(self, data, model_name, model_type, age_bins=np.linspace(0, 110, 12)):
         """Analyzes Brain Age Gap (BAG) within different age bins.
 
         Args:
@@ -447,9 +443,12 @@ class BrainAgeAnalyzer:
         os.makedirs(output_dir, exist_ok=True)
 
         binned_data = data.copy()
+        #age_labels = [f'{age_bins[i]}-{age_bins[i+1]}' for i in range(len(age_bins)-1)]
         binned_data['age_bin'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=False, include_lowest=True, right=True)
 
         bin_stats = []
+        labels = [f"{int(age_bins[i])}-{int(age_bins[i+1])}" for i in range(len(age_bins)-1)]
+
         for bin_label, bin_group in binned_data.groupby('age_bin'):
             bag_values = bin_group['brain_age_gap']
             actual_ages_bin = bin_group['actual_age']
@@ -476,9 +475,6 @@ class BrainAgeAnalyzer:
             bin_stats.append(bin_stat)
 
         bin_stats_df = pd.DataFrame(bin_stats)
-        output_path = os.path.join(output_dir, f"bag_by_age_bin_stats.csv")
-        bin_stats_df.to_csv(output_path, index=False)
-        logging.info(f"BAG statistics by age bin saved to: {output_path}")
         self.visualize_bag_analysis(bin_stats_df, binned_data, model_name)
         return bin_stats_df, binned_data
 
@@ -606,7 +602,7 @@ class BrainAgeAnalyzer:
         plt.close()
         logging.info(f"Predicted vs. Actual Age per Bin plot saved to: {pred_vs_actual_per_bin_path}")
         
-    def analyze_bias_variance_vs_age(self, data, model_name, model_type, age_bins=np.linspace(20, 90, 8)): # Added age_bins parameter
+    def analyze_bias_variance_vs_age(self, data, model_name, model_type, age_bins=np.linspace(0, 110, 12)): # Added age_bins parameter
         """Analyzes bias and variance of predicted age across actual age distribution.
 
         Args:
@@ -632,9 +628,10 @@ class BrainAgeAnalyzer:
         """
         output_dir = self.output_root
         os.makedirs(output_dir, exist_ok=True)
+        labels = [f"{int(age_bins[i])}-{int(age_bins[i+1])}" for i in range(len(age_bins)-1)]
 
         binned_data = data.copy()
-        binned_data['age_bin'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=False, include_lowest=True, right=True)
+        binned_data['age_bin'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=labels, include_lowest=True, right=True)
 
 
         bias_variance_stats = []
@@ -661,9 +658,6 @@ class BrainAgeAnalyzer:
             }
             bias_variance_stats.append(bin_stat)
         bias_variance_df = pd.DataFrame(bias_variance_stats)
-        output_path = os.path.join(output_dir, f"bias_variance_vs_age_stats.csv")
-        bias_variance_df.to_csv(output_path, index=False)
-        logging.info(f"Bias and variance vs age statistics saved to: {output_path}")
         self.visualize_bias_variance(bias_variance_df, data)
         return bias_variance_df
 
@@ -745,9 +739,6 @@ class BrainAgeAnalyzer:
         else:
             correlation_df = pd.DataFrame()
 
-        output_path = os.path.join(output_dir, f"bag_demographic_correlation.csv")
-        correlation_df.to_csv(output_path, index=False)
-        logging.info(f"BAG demographic correlation analysis saved to: {output_path}")
         self.visualize_bag_correlations(correlation_df, data, demographic_cols)
         return correlation_df
 
@@ -766,10 +757,6 @@ class BrainAgeAnalyzer:
         
         desc_stats = data['brain_age_gap'].describe()
         desc_stats_df = pd.DataFrame(desc_stats)
-        desc_stats_path = os.path.join(output_dir, "brain_age_gap_descriptive_statistics.csv")
-        desc_stats_df.to_csv(desc_stats_path)
-        logging.info(f"Descriptive statistics for brain_age_gap saved to: {desc_stats_path}")
-
         
         encoded_data = data.copy()
         for col in demographic_cols:
@@ -952,11 +939,12 @@ class BrainAgeAnalyzer:
                 sns.histplot(
                     group_data,
                     kde=True,
-                    label=str(group_keys),
+                    label=str(group_keys[1]),
                     stat="density",
                     element="step",
                     bins=30,
                 )  # Use density for better comparison
+                
 
             title_text = (
                 f"Distribution of {metric} Across Groups\n"
@@ -1047,18 +1035,18 @@ class BrainAgeAnalyzer:
                         # Descriptive Statistics
                         logging.info(f"Running descriptive statistics for model: {model_file}")
                         descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
-                        descriptive_stats_df.to_csv(os.path.join(self.output_root, f"descriptive_stats.csv"), index=False)
+                        
                         logging.info(f"Descriptive statistics saved to: {self.output_root}")
                         # Descriptive Statistics by Group
                         if set(self.group_cols).issubset(predictions_df.columns): # Use self.group_cols
                             logging.info(f"Running descriptive statistics by group for model: {model_file}")
                             descriptive_stats_by_group_df = self.calculate_descriptive_stats(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                            descriptive_stats_by_group_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_by_group.csv"), index=False)
+                            
                             logging.info(f"Descriptive statistics by group saved to: {self.output_root}")
                             # Calculate effect sizes between groups
                             logging.info(f"Calculating effect sizes for model: {model_file}")
                             effect_sizes_df = self.calculate_effect_sizes(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                            effect_sizes_df.to_csv(os.path.join(self.output_root, f"effect_sizes.csv"), index=False)
+                            
                             logging.info(f"Effect sizes saved to: {self.output_root}")
                         else:
                             logging.warning("Skipping descriptive statistics by group and effect size calculation - required columns not found.")
@@ -1094,7 +1082,7 @@ class BrainAgeAnalyzer:
                     logging.info(f"Running descriptive statistics for model: {model_file}")
                     try:
                         descriptive_stats_df = self.calculate_descriptive_stats(predictions_df)
-                        descriptive_stats_df.to_csv(os.path.join(self.output_root, f"descriptive_stats.csv"), index=False)
+                        
                         logging.info(f"Descriptive statistics saved to: {self.output_root}")
                     except Exception as e:
                         logging.error(f"Error calculating descriptive statistics for model {model_file}:", exc_info=True)
@@ -1105,7 +1093,7 @@ class BrainAgeAnalyzer:
                         try:
                             logging.info(f"Running descriptive statistics by group for model: {model_file}")
                             descriptive_stats_by_group_df = self.calculate_descriptive_stats(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                            descriptive_stats_by_group_df.to_csv(os.path.join(self.output_root, f"descriptive_stats_by_group.csv"), index=False)
+                            
                             logging.info(f"Descriptive statistics by group saved to: {self.output_root}")
                         except Exception as e:
                             logging.error(f"Error calculating descriptive statistics by group for model {model_file}:", exc_info=True)
@@ -1116,7 +1104,7 @@ class BrainAgeAnalyzer:
                         # Calculate effect sizes between groups
                             logging.info(f"Calculating effect sizes for model: {model_file}")
                             effect_sizes_df = self.calculate_effect_sizes(predictions_df, group_cols=self.group_cols) # Use self.group_cols
-                            effect_sizes_df.to_csv(os.path.join(self.output_root, f"effect_sizes.csv"), index=False)
+                            
                             logging.info(f"Effect sizes saved to: {self.output_root}")
                         except Exception as e:
                             logging.error(f"Error calculating effect sizes for model {model_file}:", exc_info=True)
@@ -1180,7 +1168,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_dir", type=str, default="./saved_models", help="Path to the directory containing saved models")
     parser.add_argument("--output_root", type=str, default="analysis_results", help="Root directory for analysis outputs")
     parser.add_argument("--use_cuda", action="store_true", default=False, help="Enable CUDA (GPU) if available")
-    parser.add_argument("--group_cols", type=str, default="Sex,Site,Labelling", help="Comma-separated list of columns for group-wise analysis") # Added group_cols argument
+    parser.add_argument("--group_cols", type=str, default="Sex,Site", help="Comma-separated list of columns for group-wise analysis") # Added group_cols argument
 
     args = parser.parse_args()
 

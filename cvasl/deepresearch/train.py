@@ -21,7 +21,8 @@ from models.efficientnet3d import EfficientNet3D
 from models.improvedcnn3d import Improved3DCNN
 from models.resnet3d import ResNet3D
 from models.resnext3d import ResNeXt3D
-from models.vit3d import VisionTransformer3D, BrainAgeLoss
+from models.vit3d import VisionTransformer3D
+from models.loss import BrainAgeLoss
 
 import datetime
 torch.backends.cudnn.benchmark = True
@@ -52,6 +53,13 @@ def train_model(
     bins=10,
     output_dir="./saved_models",
     wandb_prefix="",
+    brainage_alpha=0.0,
+    brainage_beta=0.0,
+    brainage_gamma=0.0,
+    brainage_eps=1e-8,
+    brainage_smoothing=0.0,
+    brainage_use_huber=False,
+    brainage_delta=0.0,
     weight_decay=0.05,
     store_model=True,
 ):
@@ -66,8 +74,8 @@ def train_model(
 
     lr_str = f"{learning_rate:.1e}".replace("+", "").replace("-", "_")
     param_str = (
-        f"{wandb_prefix}_{model_name}_lr{lr_str}_epochs{num_epochs}_" 
-        f"bs{batch_size}_split-{split_strategy}_test{test_size}_bins-{bins}"
+        f"{wandb_prefix}_{model_name}_{lr_str}_{num_epochs}_" 
+        f"{batch_size}_{brainage_alpha}_{brainage_beta}_{brainage_gamma}_{brainage_eps}_{brainage_smoothing}_{brainage_use_huber}_{brainage_delta}"
     )
 
     if use_wandb:
@@ -80,6 +88,16 @@ def train_model(
             "split_strategy": split_strategy,
             "test_size": test_size,
             "bins": bins,
+            "weight_decay": weight_decay,
+            "brainage_alpha": brainage_alpha,
+            "brainage_beta": brainage_beta,
+            "brainage_gamma": brainage_gamma,
+            "brainage_eps": brainage_eps,
+            "brainage_smoothing": brainage_smoothing,
+            "brainage_use_huber": brainage_use_huber,
+            "brainage_delta": brainage_delta,
+            "params": param_str,
+            
         }
         try:
             model_params = model.get_params()
@@ -196,7 +214,18 @@ def train_model(
     cmodel = torch.compile(model)
     logging.info(f"Model created: {cmodel.get_name() if hasattr(cmodel, 'get_name') else model_type}")
 
-    criterion = nn.L1Loss()
+    #criterion = nn.L1Loss()
+    criterion = BrainAgeLoss(
+        alpha=brainage_alpha,
+        beta=brainage_beta,
+        gamma=brainage_gamma,
+        eps=brainage_eps,
+        smoothing=brainage_smoothing,
+        use_huber=brainage_use_huber,
+        delta=brainage_delta
+    )
+    logging.info(f"Loss function: {criterion.get_name()}")
+
     #optimizer = optim.Adam(cmodel.parameters(), lr=learning_rate, weight_decay=weight_decay)
     # scheduler = optim.lr_scheduler.CosineAnnealingLR.ReduceLROnPlateau(
     #     optimizer,
@@ -226,7 +255,7 @@ def train_model(
     )
     logging.info(f"Loss function and optimizer set up.")
     #get current date time
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    current_time = datetime.datetime.now().strftime("%y-%m-%d_%H-%M")
     best_model_path = os.path.join(output_dir, f"{param_str}_{current_time}.pth")
     if not pretrained_model_path:
         best_test_mae = float("inf")
@@ -244,7 +273,8 @@ def train_model(
                 demographics = batch["demographics"].to(device)
                 optimizer.zero_grad()
                 outputs = cmodel(images, demographics)
-                loss = criterion(outputs, ages)
+                #loss = criterion(outputs, ages)
+                loss, metrics = criterion(outputs, ages, demographics)
                 loss.backward()
                 optimizer.step()
                 train_loss += loss.item()
@@ -268,6 +298,13 @@ def train_model(
                         "test_rmse": test_rmse,
                         "test_r2": test_r2,
                         "test_pearson": test_pearson,
+                        "metrics_mae": metrics["mae"],
+                        "metrics_corr_loss": metrics["corr_loss"],
+                        "metrics_std_ratio_loss": metrics["std_ratio_loss"],
+                        "metrics_correlation": metrics["correlation"],
+                        "metrics_pred_std": metrics["pred_std"],
+                        "metrics_target_std": metrics["target_std"],
+                        
                     }
                 )
             #scheduler.step(test_mae)
@@ -517,6 +554,17 @@ def main():
     vit3d_group.add_argument("--vit3d_use_cls_token", action="store_true", help="Use CLS token in ViT3D")
     vit3d_group.add_argument("--vit3d_use_hybrid_embed", action="store_true", help="Use hybrid embedding in ViT3D")
     vit3d_group.add_argument("--vit3d_hybrid_kernel_size", type=int, default=3, help="Hybrid embedding kernel size for ViT3D")
+    
+    # BrainAgeLoss Parameters
+    brainage_loss_group = parser.add_argument_group("BrainAgeLoss arguments")
+    brainage_loss_group.add_argument("--brainage_alpha", type=float, default=1.0, help="Weight for correlation loss in BrainAgeLoss")
+    brainage_loss_group.add_argument("--brainage_beta", type=float, default=0.3, help="Weight for bias regularization in BrainAgeLoss")
+    brainage_loss_group.add_argument("--brainage_gamma", type=float, default=0.2, help="Weight for age-specific weighting in BrainAgeLoss")
+    brainage_loss_group.add_argument("--brainage_eps", type=float, default=1e-8, help="Epsilon for numerical stability in BrainAgeLoss")
+    brainage_loss_group.add_argument("--brainage_smoothing", type=float, default=0.1, help="Label smoothing factor in BrainAgeLoss")
+    brainage_loss_group.add_argument("--brainage_use_huber", action="store_true", default=True, help="Use Huber loss in BrainAgeLoss")
+    brainage_loss_group.add_argument("--brainage_delta", type=float, default=1.0, help="Delta parameter for Huber loss in BrainAgeLoss")
+    
 
     args = parser.parse_args()
 

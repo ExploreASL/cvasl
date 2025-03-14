@@ -78,7 +78,7 @@ class Improved3DCNN(nn.Module):
             conv_layers.append(SEBlock3D(out_channels) if use_se else nn.Identity())
             conv_layers.append(nn.ReLU(inplace=True))
             conv_layers.append(nn.MaxPool3d(2))
-            self.gradcam_target_layer = conv_layer
+            
 
         self.conv_layers = nn.Sequential(*conv_layers)
 
@@ -95,16 +95,6 @@ class Improved3DCNN(nn.Module):
         fc2_input_size = 128 + num_demographics if self.use_demographics else 128
         self.fc2 = nn.Linear(fc2_input_size, 1)
 
-    @property
-    def gradcam_layer(self):
-        """Return the most suitable layer for Grad-CAM using refined logic."""
-        if isinstance(self.conv_layers, nn.Sequential) and len(self.conv_layers) > 0:
-            if isinstance(self.conv_layers[-1], nn.MaxPool3d):  # check if last layer is pool
-                return self.conv_layers[-5]  # Target the conv layer before pool
-            else:
-                return self.conv_layers[-2]  # Target the layer before last non-pool layer (fallback)
-        else:
-            return self.conv1 # Fallback to the first conv layer if conv_layers is not as expected
             
     def forward(self, x, demographics):
         x = self.pool1(self.relu(self.bn1(self.conv1(x))))
