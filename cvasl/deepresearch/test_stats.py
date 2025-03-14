@@ -45,7 +45,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class BrainAgeAnalyzer:
-    def __init__(self, validation_csv, validation_img_dir, model_dir, output_root, use_cuda=False, group_columns=["Sex", "Site", "Labelling"]): # Added group_columns as parameter
+    def __init__(self, validation_csv, validation_img_dir, model_dir, output_root, use_cuda=False, group_columns=["Sex", "Site", "Labelling"], indices_path = None): # Added group_columns as parameter
         self.validation_csv = validation_csv
         self.validation_img_dir = validation_img_dir
         self.model_dir = model_dir
@@ -53,6 +53,7 @@ class BrainAgeAnalyzer:
         self.output_root = output_root
         self.group_cols = group_columns
         self.use_cuda = use_cuda
+        self.indices_path = indices_path
         os.makedirs(self.output_root, exist_ok=True)
         self.device = torch.device("cuda" if torch.cuda.is_available() and self.use_cuda else "cpu")
         logging.info(f"Using device: {self.device}")
@@ -60,9 +61,9 @@ class BrainAgeAnalyzer:
             self.validation_csv = [self.validation_csv]
         if type(self.validation_img_dir) == str:
             self.validation_img_dir = [self.validation_img_dir]
-        self.validation_datasets = [BrainAgeDataset(_c,_v) for _c,_v in zip(self.validation_csv, self.validation_img_dir)]
+        self.validation_datasets = [BrainAgeDataset(_c,_v, indices=_i) for _c,_v,_i in zip(self.validation_csv, self.validation_img_dir,self.indices_path)]
         self.validation_dataset_names = [os.path.basename(_c).split(".")[0] for _c in self.validation_csv]
-        logging.info(f"Loaded {len(self.validation_datasets)} validation datasets.")
+        logging.info(f"Loaded {len(self.validation_datasets)} validation datasets with shapes {[len(d) for d in self.validation_datasets]}")
 
     def load_model_from_name(self, model_path):
         """Loads a model based on its filename using load_model_with_params."""
@@ -449,6 +450,9 @@ class BrainAgeAnalyzer:
         bin_stats = []
         labels = [f"{int(age_bins[i])}-{int(age_bins[i+1])}" for i in range(len(age_bins)-1)]
 
+        binned_data['age_bin'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=False, include_lowest=True, right=True)
+        binned_data['age_bin_label'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=labels, include_lowest=True, right=True)
+
         for bin_label, bin_group in binned_data.groupby('age_bin'):
             bag_values = bin_group['brain_age_gap']
             actual_ages_bin = bin_group['actual_age']
@@ -496,14 +500,14 @@ class BrainAgeAnalyzer:
 
         plt.figure(figsize=(12, 6))
         plt.subplot(1, 2, 1)
-        sns.boxplot(x='age_bin', y='brain_age_gap', data=binned_data, showmeans=True,
+        sns.boxplot(x='age_bin_label', y='brain_age_gap', data=binned_data, showmeans=True,
                     meanprops={"markerfacecolor": "red", "markeredgecolor": "black"})
         plt.title(wrap_title("Boxplot of Brain Age Gap (BAG) by Age Bin\nShows the distribution of BAG within each age group.  The box represents the interquartile range (IQR), the line is the median, and whiskers extend to 1.5*IQR.  Outliers are shown as individual points. The red triangle represents mean."),fontsize=9)
         plt.xlabel("Age Bin")
         plt.ylabel("Brain Age Gap (Years)")
 
         plt.subplot(1, 2, 2)
-        sns.violinplot(x='age_bin', y='brain_age_gap', data=binned_data, inner="quartile")
+        sns.violinplot(x='age_bin_label', y='brain_age_gap', data=binned_data, inner="quartile")
         plt.title(wrap_title("Violin Plot of Brain Age Gap (BAG) by Age Bin\nDisplays the distribution of BAG, showing the density of data points at different BAG values.  Wider sections indicate higher density. Lines represent the quartiles (25th, 50th, 75th percentiles) of the data within each bin."), fontsize=9)
         plt.xlabel("Age Bin")
         plt.ylabel("Brain Age Gap (Years)")
@@ -631,7 +635,8 @@ class BrainAgeAnalyzer:
         labels = [f"{int(age_bins[i])}-{int(age_bins[i+1])}" for i in range(len(age_bins)-1)]
 
         binned_data = data.copy()
-        binned_data['age_bin'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=labels, include_lowest=True, right=True)
+        binned_data['age_bin'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=False, include_lowest=True, right=True)
+        binned_data['age_bin_label'] = pd.cut(binned_data['actual_age'], bins=age_bins, labels=labels, include_lowest=True, right=True)
 
 
         bias_variance_stats = []
@@ -1167,6 +1172,7 @@ if __name__ == "__main__":
     parser.add_argument("--validation_img_dir", type=str, nargs='+', default="/home/radv/samiri/my-scratch/trainingdata/masked/topmri/", help="Path to the training image directory")
     parser.add_argument("--model_dir", type=str, default="./saved_models", help="Path to the directory containing saved models")
     parser.add_argument("--output_root", type=str, default="analysis_results", help="Root directory for analysis outputs")
+    parser.add_argument("--indices_path", type=str, nargs='+', default="None", help="Path to files containing indices for test split for each dataset")
     parser.add_argument("--use_cuda", action="store_true", default=False, help="Enable CUDA (GPU) if available")
     parser.add_argument("--group_cols", type=str, default="Sex,Site", help="Comma-separated list of columns for group-wise analysis") # Added group_cols argument
 
@@ -1180,6 +1186,8 @@ if __name__ == "__main__":
         model_dir=args.model_dir,
         output_root=args.output_root,
         use_cuda=args.use_cuda,
-        group_columns=group_cols # Pass group_cols to analyzer
+        group_columns=group_cols, # Pass group_cols to analyzer
+        indices_path=args.indices_path
     )
+    logging.info("Starting Brain Age Analysis...")
     analyzer.run_all_analyses()
