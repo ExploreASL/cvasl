@@ -33,7 +33,6 @@ class BrainAgeDataset(Dataset):
             patient_id_col (str, optional): Name of the patient ID column. Defaults to 'participant_id'.
             transform (callable, optional): Optional transform to be applied on a sample.
         """
-        logging.info("Initializing BrainAgeDataset...")
         self.data_df = pd.read_csv(csv_file)
         self.indices = indices
         if (self.indices is not None) and os.path.exists(self.indices):
@@ -117,13 +116,10 @@ class BrainAgeDataset(Dataset):
         logging.info(
             f"Number of participant IDs with filenames mapped: {len(self.id_to_filename)}"
         )
-        logging.info(f"Found {len(self.id_to_filename)} matching image files.")
-
 
         self.data_df = self.data_df[self.data_df[self.patient_id_col].isin(valid_participant_ids)].copy()
 
         self.data_df = self.preprocess_data(self.data_df)
-        logging.info("Preprocessing of the dataframe done")
 
         if sample_image_shape is not None:
             self.voxel_averages = self.calculate_voxel_averages(valid_image_paths, sample_image_shape)
@@ -145,7 +141,6 @@ class BrainAgeDataset(Dataset):
         Calculates the average value for each voxel across the dataset,
         ignoring NaN values.
         """
-        logging.info("Calculating voxel-wise averages across the dataset...")
         voxel_sum = np.zeros(sample_image_shape, dtype=np.float64)
         voxel_count = np.zeros(sample_image_shape, dtype=np.int32)
 
@@ -168,7 +163,6 @@ class BrainAgeDataset(Dataset):
 
 
     def preprocess_data(self, df):
-        logging.info("Selecting and preprocessing relevant columns")
         cols_to_select = [self.patient_id_col, self.target_col] + self.cat_cols + self.num_cols
         available_cols = df.columns.tolist()
         final_cols_to_select = [col for col in cols_to_select if col in available_cols]
@@ -176,7 +170,6 @@ class BrainAgeDataset(Dataset):
 
         for col in self.cat_cols:
             if col in df.columns:
-                logging.info(f"Encoding categorical column: {col}")
                 le = LabelEncoder()
                 df[col] = le.fit_transform(df[col])
             else:
@@ -184,7 +177,6 @@ class BrainAgeDataset(Dataset):
 
         for col in self.num_cols:
             if col in df.columns:
-                logging.info(f"Converting column to float: {col}")
                 df[col] = df[col].astype(float)
             else:
                 logging.warning(f"Numerical column '{col}' not found in DataFrame, skipping conversion to float.")
