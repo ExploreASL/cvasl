@@ -242,7 +242,7 @@ def train_model(
         use_huber=brainage_use_huber,
         delta=brainage_delta
     )
-    logging.info(f"Loss function: {criterion.get_name()}")
+    logging.info(f"Loss function: {criterion.get_name()} with parameters: alpha={brainage_alpha}, beta={brainage_beta}, gamma={brainage_gamma}, eps={brainage_eps}, smoothing={brainage_smoothing}, use_huber={brainage_use_huber}, delta={brainage_delta}")
 
     #optimizer = optim.Adam(cmodel.parameters(), lr=learning_rate, weight_decay=weight_decay)
     # scheduler = optim.lr_scheduler.CosineAnnealingLR.ReduceLROnPlateau(
@@ -253,7 +253,7 @@ def train_model(
     #     verbose=True,
     # )
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    warmup_epochs = 10
+    warmup_epochs = 20
     eta_min = 1e-6
     warmup_scheduler = optim.lr_scheduler.LinearLR(
     optimizer,
