@@ -123,7 +123,7 @@ class BrainAgeDataset(Dataset):
 
         if sample_image_shape is not None:
             self.voxel_averages = self.calculate_voxel_averages(valid_image_paths, sample_image_shape)
-            logging.info("Voxel-wise averages calculated.")
+            
         else:
             self.voxel_averages = None
             logging.warning("No valid images found to calculate voxel averages. NaN replacement will use in-image mean.")
