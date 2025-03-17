@@ -692,6 +692,14 @@ def main():
         wandb_prefix=args.wandb_prefix,
         weight_decay=args.weight_decay,
         store_model=args.store_model,
+        brainage_alpha=args.brainage_alpha,
+        brainage_beta=args.brainage_beta,
+        brainage_gamma=args.brainage_gamma,
+        brainage_eps=args.brainage_eps,
+        brainage_smoothing=args.brainage_smoothing,
+        brainage_use_huber=args.brainage_use_huber,
+        brainage_delta=args.brainage_delta,
+        
     )
 
 if __name__ == "__main__":
