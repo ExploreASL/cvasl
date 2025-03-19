@@ -338,35 +338,76 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
 
     for method_name, cam_class in methods.items():
         method_output_dir = os.path.join(output_dir, method_name)
+        
+        # Create subdirectories for the two approaches
+        raw_dir = os.path.join(method_output_dir, "raw_accumulation")
+        norm_dir = os.path.join(method_output_dir, "normalized_accumulation")
+        os.makedirs(raw_dir, exist_ok=True)
+        os.makedirs(norm_dir, exist_ok=True)
+        
         gc.collect()
         torch.cuda.empty_cache()
-        # Initialize sum arrays (use float32 for precision; float16 possible but riskier)
-        sum_middle_slices = {
+        
+        # Initialize arrays for BOTH approaches
+        # 1. Raw accumulation (original approach)
+        sum_middle_slices_raw = {
             'sagittal': np.zeros((H, W), dtype=np.float32),
             'coronal': np.zeros((D, W), dtype=np.float32),
             'axial': np.zeros((D, H), dtype=np.float32)
         }
-        sum_middle_heatmaps = {
+        sum_middle_heatmaps_raw = {
             'sagittal': np.zeros((H, W), dtype=np.float32),
             'coronal': np.zeros((D, W), dtype=np.float32),
             'axial': np.zeros((D, H), dtype=np.float32)
         }
-        sum_all_slices_view = {
+        sum_all_slices_view_raw = {
             'sagittal': np.zeros((H, W), dtype=np.float32),
             'coronal': np.zeros((D, W), dtype=np.float32),
             'axial': np.zeros((D, H), dtype=np.float32)
         }
-        sum_all_heatmaps_view = {
+        sum_all_heatmaps_view_raw = {
             'sagittal': np.zeros((H, W), dtype=np.float32),
             'coronal': np.zeros((D, W), dtype=np.float32),
             'axial': np.zeros((D, H), dtype=np.float32)
         }
-        sum_slices_per_view = {
+        sum_slices_per_view_raw = {
             'sagittal': np.zeros((D, H, W), dtype=np.float32),
             'coronal': np.zeros((H, D, W), dtype=np.float32),
             'axial': np.zeros((W, D, H), dtype=np.float32)
         }
-        sum_heatmaps_per_view = {
+        sum_heatmaps_per_view_raw = {
+            'sagittal': np.zeros((D, H, W), dtype=np.float32),
+            'coronal': np.zeros((H, D, W), dtype=np.float32),
+            'axial': np.zeros((W, D, H), dtype=np.float32)
+        }
+        
+        # 2. Normalized accumulation (new approach)
+        sum_middle_slices_norm = {
+            'sagittal': np.zeros((H, W), dtype=np.float32),
+            'coronal': np.zeros((D, W), dtype=np.float32),
+            'axial': np.zeros((D, H), dtype=np.float32)
+        }
+        sum_middle_heatmaps_norm = {
+            'sagittal': np.zeros((H, W), dtype=np.float32),
+            'coronal': np.zeros((D, W), dtype=np.float32),
+            'axial': np.zeros((D, H), dtype=np.float32)
+        }
+        sum_all_slices_view_norm = {
+            'sagittal': np.zeros((H, W), dtype=np.float32),
+            'coronal': np.zeros((D, W), dtype=np.float32),
+            'axial': np.zeros((D, H), dtype=np.float32)
+        }
+        sum_all_heatmaps_view_norm = {
+            'sagittal': np.zeros((H, W), dtype=np.float32),
+            'coronal': np.zeros((D, W), dtype=np.float32),
+            'axial': np.zeros((D, H), dtype=np.float32)
+        }
+        sum_slices_per_view_norm = {
+            'sagittal': np.zeros((D, H, W), dtype=np.float32),
+            'coronal': np.zeros((H, D, W), dtype=np.float32),
+            'axial': np.zeros((W, D, H), dtype=np.float32)
+        }
+        sum_heatmaps_per_view_norm = {
             'sagittal': np.zeros((D, H, W), dtype=np.float32),
             'coronal': np.zeros((H, D, W), dtype=np.float32),
             'axial': np.zeros((W, D, H), dtype=np.float32)
@@ -387,62 +428,104 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
 
             cam = cam_class(model=wrapped_model, target_layers=target_layers)
             try:
+                # Get raw GradCAM heatmap
                 grayscale_cam = cam(input_tensor=image.unsqueeze(0))[0, :]
-                heatmap = grayscale_cam
+                raw_heatmap = grayscale_cam
+                
+                # Get normalized GradCAM heatmap (for equal contribution)
+                # First normalize the entire 3D heatmap
+                normalized_heatmap = normalize_cam(grayscale_cam)
+                
                 img_np = image.cpu().numpy().squeeze()
 
                 for view_name in view_names:
                     view_axis = view_axes[view_name]
                     slice_index = img_np.shape[view_axis] // 2
+                    
+                    # Get original image slice and both types of heatmap slices
                     original_slice = np.take(img_np, indices=slice_index, axis=view_axis)
-                    heatmap_slice = np.take(heatmap, indices=slice_index, axis=view_axis)
-                    sum_middle_slices[view_name] += original_slice
-                    sum_middle_heatmaps[view_name] += heatmap_slice
-
+                    raw_heatmap_slice = np.take(raw_heatmap, indices=slice_index, axis=view_axis)
+                    norm_heatmap_slice = np.take(normalized_heatmap, indices=slice_index, axis=view_axis)
+                    
+                    # APPROACH 1: Raw accumulation
+                    sum_middle_slices_raw[view_name] += original_slice
+                    sum_middle_heatmaps_raw[view_name] += raw_heatmap_slice
+                    
+                    # APPROACH 2: Normalized accumulation
+                    sum_middle_slices_norm[view_name] += original_slice  # Same original slices
+                    sum_middle_heatmaps_norm[view_name] += norm_heatmap_slice  # But normalized heatmaps
+                    
+                    # All slices view - raw accumulation
                     all_slices_view = np.sum(img_np, axis=view_axis)
-                    all_heatmaps_view = np.sum(heatmap, axis=view_axis)
-                    sum_all_slices_view[view_name] += all_slices_view
-                    sum_all_heatmaps_view[view_name] += all_heatmaps_view
-
+                    all_raw_heatmaps_view = np.sum(raw_heatmap, axis=view_axis)
+                    sum_all_slices_view_raw[view_name] += all_slices_view
+                    sum_all_heatmaps_view_raw[view_name] += all_raw_heatmaps_view
+                    
+                    # All slices view - normalized accumulation
+                    all_norm_heatmaps_view = np.sum(normalized_heatmap, axis=view_axis)
+                    sum_all_slices_view_norm[view_name] += all_slices_view
+                    sum_all_heatmaps_view_norm[view_name] += all_norm_heatmaps_view
+                    
+                    # Process each slice - for both approaches
                     for slice_idx in range(img_np.shape[view_axis]):
                         slice_data = np.take(img_np, indices=slice_idx, axis=view_axis)
-                        heatmap_slice_data = np.take(heatmap, indices=slice_idx, axis=view_axis)
+                        raw_heatmap_slice_data = np.take(raw_heatmap, indices=slice_idx, axis=view_axis)
+                        norm_heatmap_slice_data = np.take(normalized_heatmap, indices=slice_idx, axis=view_axis)
+                        
                         if view_name == 'sagittal':
-                            sum_slices_per_view['sagittal'][slice_idx] += slice_data
-                            sum_heatmaps_per_view['sagittal'][slice_idx] += heatmap_slice_data
+                            sum_slices_per_view_raw['sagittal'][slice_idx] += slice_data
+                            sum_heatmaps_per_view_raw['sagittal'][slice_idx] += raw_heatmap_slice_data
+                            sum_slices_per_view_norm['sagittal'][slice_idx] += slice_data
+                            sum_heatmaps_per_view_norm['sagittal'][slice_idx] += norm_heatmap_slice_data
                         elif view_name == 'coronal':
-                            sum_slices_per_view['coronal'][slice_idx] += slice_data
-                            sum_heatmaps_per_view['coronal'][slice_idx] += heatmap_slice_data
+                            sum_slices_per_view_raw['coronal'][slice_idx] += slice_data
+                            sum_heatmaps_per_view_raw['coronal'][slice_idx] += raw_heatmap_slice_data
+                            sum_slices_per_view_norm['coronal'][slice_idx] += slice_data
+                            sum_heatmaps_per_view_norm['coronal'][slice_idx] += norm_heatmap_slice_data
                         elif view_name == 'axial':
-                            sum_slices_per_view['axial'][slice_idx] += slice_data
-                            sum_heatmaps_per_view['axial'][slice_idx] += heatmap_slice_data
+                            sum_slices_per_view_raw['axial'][slice_idx] += slice_data
+                            sum_heatmaps_per_view_raw['axial'][slice_idx] += raw_heatmap_slice_data
+                            sum_slices_per_view_norm['axial'][slice_idx] += slice_data
+                            sum_heatmaps_per_view_norm['axial'][slice_idx] += norm_heatmap_slice_data
                 count += 1
             except Exception as e:
                 logging.error(f"Error processing image with {method_name}: {e}")
                 continue
-            del image, grayscale_cam, heatmap, img_np
+            del image, grayscale_cam, raw_heatmap, normalized_heatmap, img_np
             gc.collect()
 
         gc.collect()
         torch.cuda.empty_cache()
+        
         # Compute averages
         if count == 0:
             logging.warning(f"No valid samples processed for {method_name}")
             continue
-        avg_middle_slices = {view: sum_middle_slices[view] / count for view in view_names}
-        avg_middle_heatmaps = {view: sum_middle_heatmaps[view] / count for view in view_names}
-        avg_all_slices_view = {view: sum_all_slices_view[view] / count for view in view_names}
-        avg_all_heatmaps_view = {view: sum_all_heatmaps_view[view] / count for view in view_names}
-        avg_slices_per_view = {view: sum_slices_per_view[view] / count for view in view_names}
-        avg_heatmaps_per_view = {view: sum_heatmaps_per_view[view] / count for view in view_names}
+            
+        # Compute averages for both approaches
+        # 1. Raw accumulation approach
+        avg_middle_slices_raw = {view: sum_middle_slices_raw[view] / count for view in view_names}
+        avg_middle_heatmaps_raw = {view: sum_middle_heatmaps_raw[view] / count for view in view_names}
+        avg_all_slices_view_raw = {view: sum_all_slices_view_raw[view] / count for view in view_names}
+        avg_all_heatmaps_view_raw = {view: sum_all_heatmaps_view_raw[view] / count for view in view_names}
+        avg_slices_per_view_raw = {view: sum_slices_per_view_raw[view] / count for view in view_names}
+        avg_heatmaps_per_view_raw = {view: sum_heatmaps_per_view_raw[view] / count for view in view_names}
+        
+        # 2. Normalized accumulation approach
+        avg_middle_slices_norm = {view: sum_middle_slices_norm[view] / count for view in view_names}
+        avg_middle_heatmaps_norm = {view: sum_middle_heatmaps_norm[view] / count for view in view_names}
+        avg_all_slices_view_norm = {view: sum_all_slices_view_norm[view] / count for view in view_names}
+        avg_all_heatmaps_view_norm = {view: sum_all_heatmaps_view_norm[view] / count for view in view_names}
+        avg_slices_per_view_norm = {view: sum_slices_per_view_norm[view] / count for view in view_names}
+        avg_heatmaps_per_view_norm = {view: sum_heatmaps_per_view_norm[view] / count for view in view_names}
 
-        # Plotting (unchanged except using averages directly)
-        # Figure 1: Average middle slice
+        # Plot for the RAW ACCUMULATION approach
+        # Figure 1: Average middle slice - Raw accumulation
         fig1, axes1 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
-        fig1.suptitle(f"Average Middle Slice Heatmaps - {method_name.capitalize()}")
+        fig1.suptitle(f"Average Middle Slice Heatmaps (Raw Accumulation) - {method_name.capitalize()}")
         for i, view_name in enumerate(view_names):
-            avg_slice = avg_middle_slices[view_name]
-            avg_heatmap = normalize_cam(avg_middle_heatmaps[view_name], avg_slice.shape)
+            avg_slice = avg_middle_slices_raw[view_name]
+            avg_heatmap = normalize_cam(avg_middle_heatmaps_raw[view_name], avg_slice.shape)
             axes1[0, i].imshow(avg_slice, cmap='gray')
             axes1[0, i].set_title(f"{view_name.capitalize()} - Avg Slice")
             axes1[0, i].axis('off')
@@ -451,15 +534,15 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             axes1[1, i].set_title(f"{view_name.capitalize()} - Avg Heatmap")
             axes1[1, i].axis('off')
         fig1.colorbar(mappable=heatmap_im, ax=axes1[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
-        plt.savefig(os.path.join(method_output_dir, "avg_middle_slice_heatmaps.png"))
+        plt.savefig(os.path.join(raw_dir, "avg_middle_slice_heatmaps.png"))
         plt.close(fig1)
 
-        # Figure 2: Average all slices combined
+        # Figure 2: Average all slices combined - Raw accumulation
         fig2, axes2 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
-        fig2.suptitle(f"Average All Slices Combined Heatmaps - {method_name.capitalize()}")
+        fig2.suptitle(f"Average All Slices Combined Heatmaps (Raw Accumulation) - {method_name.capitalize()}")
         for i, view_name in enumerate(view_names):
-            avg_slice_view = avg_all_slices_view[view_name]
-            avg_heatmap_view = normalize_cam(avg_all_heatmaps_view[view_name], avg_slice_view.shape)
+            avg_slice_view = avg_all_slices_view_raw[view_name]
+            avg_heatmap_view = normalize_cam(avg_all_heatmaps_view_raw[view_name], avg_slice_view.shape)
             axes2[0, i].imshow(avg_slice_view, cmap='gray')
             axes2[0, i].set_title(f"{view_name.capitalize()} - Avg Combined Slices")
             axes2[0, i].axis('off')
@@ -468,10 +551,10 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             axes2[1, i].set_title(f"{view_name.capitalize()} - Avg Combined Heatmaps")
             axes2[1, i].axis('off')
         fig2.colorbar(mappable=axes2[1, 2].images[1], ax=axes2[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
-        plt.savefig(os.path.join(method_output_dir, "avg_all_slices_heatmaps.png"))
+        plt.savefig(os.path.join(raw_dir, "avg_all_slices_heatmaps.png"))
         plt.close(fig2)
 
-        # Figure 3: All slices
+        # Figure 3: All slices - Raw accumulation
         for view_name in view_names:
             if view_name == 'sagittal':
                 n_slices = D
@@ -482,7 +565,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             n_cols = 12
             n_rows = ceil(n_slices / n_cols)
             fig3, axes3 = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), dpi=900)
-            fig3.suptitle(f"All Slice Heatmaps - {method_name.capitalize()} - {view_name.capitalize()}")
+            fig3.suptitle(f"All Slice Heatmaps (Raw Accumulation) - {method_name.capitalize()} - {view_name.capitalize()}")
             if n_rows == 1:
                 axes3 = axes3[np.newaxis, :]
 
@@ -490,8 +573,8 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                 row_idx = slice_idx // n_cols
                 col_idx = slice_idx % n_cols
                 ax = axes3[row_idx, col_idx]
-                avg_slice = avg_slices_per_view[view_name][slice_idx]
-                avg_heatmap = normalize_cam(avg_heatmaps_per_view[view_name][slice_idx], avg_slice.shape)
+                avg_slice = avg_slices_per_view_raw[view_name][slice_idx]
+                avg_heatmap = normalize_cam(avg_heatmaps_per_view_raw[view_name][slice_idx], avg_slice.shape)
                 ax.imshow(avg_slice, cmap='gray')
                 im = ax.imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
                 ax.set_title(f"Slice {slice_idx}")
@@ -503,7 +586,78 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02])
             fig3.colorbar(mappable=im, cax=cbar_ax, orientation='horizontal', label='Normalized CAM', shrink=0.6)
             plt.tight_layout()
-            plt.savefig(os.path.join(method_output_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600)
+            plt.savefig(os.path.join(raw_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600)
+            plt.close(fig3)
+            
+        # Now plot for the NORMALIZED ACCUMULATION approach
+        # Figure 1: Average middle slice - Normalized accumulation
+        fig1, axes1 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
+        fig1.suptitle(f"Average Middle Slice Heatmaps (Normalized Accumulation) - {method_name.capitalize()}")
+        for i, view_name in enumerate(view_names):
+            avg_slice = avg_middle_slices_norm[view_name]
+            # Note: The heatmaps are already normalized before accumulation, but we re-normalize for visualization
+            avg_heatmap = normalize_cam(avg_middle_heatmaps_norm[view_name], avg_slice.shape)
+            axes1[0, i].imshow(avg_slice, cmap='gray')
+            axes1[0, i].set_title(f"{view_name.capitalize()} - Avg Slice")
+            axes1[0, i].axis('off')
+            axes1[1, i].imshow(avg_slice, cmap='gray')
+            heatmap_im = axes1[1, i].imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
+            axes1[1, i].set_title(f"{view_name.capitalize()} - Avg Heatmap")
+            axes1[1, i].axis('off')
+        fig1.colorbar(mappable=heatmap_im, ax=axes1[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
+        plt.savefig(os.path.join(norm_dir, "avg_middle_slice_heatmaps.png"))
+        plt.close(fig1)
+
+        # Figure 2: Average all slices combined - Normalized accumulation
+        fig2, axes2 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
+        fig2.suptitle(f"Average All Slices Combined Heatmaps (Normalized Accumulation) - {method_name.capitalize()}")
+        for i, view_name in enumerate(view_names):
+            avg_slice_view = avg_all_slices_view_norm[view_name]
+            avg_heatmap_view = normalize_cam(avg_all_heatmaps_view_norm[view_name], avg_slice_view.shape)
+            axes2[0, i].imshow(avg_slice_view, cmap='gray')
+            axes2[0, i].set_title(f"{view_name.capitalize()} - Avg Combined Slices")
+            axes2[0, i].axis('off')
+            axes2[1, i].imshow(avg_slice_view, cmap='gray')
+            axes2[1, i].imshow(avg_heatmap_view, cmap='jet', alpha=0.5, interpolation='none')
+            axes2[1, i].set_title(f"{view_name.capitalize()} - Avg Combined Heatmaps")
+            axes2[1, i].axis('off')
+        fig2.colorbar(mappable=axes2[1, 2].images[1], ax=axes2[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
+        plt.savefig(os.path.join(norm_dir, "avg_all_slices_heatmaps.png"))
+        plt.close(fig2)
+
+        # Figure 3: All slices - Normalized accumulation
+        for view_name in view_names:
+            if view_name == 'sagittal':
+                n_slices = D
+            elif view_name == 'coronal':
+                n_slices = H
+            elif view_name == 'axial':
+                n_slices = W
+            n_cols = 12
+            n_rows = ceil(n_slices / n_cols)
+            fig3, axes3 = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), dpi=900)
+            fig3.suptitle(f"All Slice Heatmaps (Normalized Accumulation) - {method_name.capitalize()} - {view_name.capitalize()}")
+            if n_rows == 1:
+                axes3 = axes3[np.newaxis, :]
+
+            for slice_idx in range(n_slices):
+                row_idx = slice_idx // n_cols
+                col_idx = slice_idx % n_cols
+                ax = axes3[row_idx, col_idx]
+                avg_slice = avg_slices_per_view_norm[view_name][slice_idx]
+                avg_heatmap = normalize_cam(avg_heatmaps_per_view_norm[view_name][slice_idx], avg_slice.shape)
+                ax.imshow(avg_slice, cmap='gray')
+                im = ax.imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
+                ax.set_title(f"Slice {slice_idx}")
+                ax.axis('off')
+
+            if n_slices % n_cols != 0:
+                for j in range(n_slices % n_cols, n_cols):
+                    axes3[n_rows - 1, j].axis('off')
+            cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02])
+            fig3.colorbar(mappable=im, cax=cbar_ax, orientation='horizontal', label='Normalized CAM', shrink=0.6)
+            plt.tight_layout()
+            plt.savefig(os.path.join(norm_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600)
             plt.close(fig3)
 
 def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device,methods_to_run=['all'], atlas_path=None, indices_path=None):
