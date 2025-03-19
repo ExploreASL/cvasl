@@ -79,6 +79,35 @@ class BrainAgeWrapper(torch.nn.Module):
     def forward(self, x):
         return self.model(x, self.demographics)
 
+class AgeFilteredDataset:
+    """Dataset wrapper that filters samples based on age range."""
+    
+    def __init__(self, base_dataset, min_age, max_age):
+        """
+        Args:
+            base_dataset: Original dataset
+            min_age: Minimum age (inclusive)
+            max_age: Maximum age (inclusive)
+        """
+        self.base_dataset = base_dataset
+        self.min_age = min_age
+        self.max_age = max_age
+        
+        # Create indices of samples within the age range
+        self.valid_indices = []
+        for i in range(len(base_dataset)):
+            sample = base_dataset[i]
+            if sample is not None and min_age <= sample['age'].item() <= max_age:
+                self.valid_indices.append(i)
+    
+    def __len__(self):
+        return len(self.valid_indices)
+    
+    def __getitem__(self, idx):
+        if idx >= len(self):
+            raise IndexError("Index out of range")
+        return self.base_dataset[self.valid_indices[idx]]
+
 def create_visualization_dirs(base_output_dir, methods_to_run):
     """Create directories for specified visualization methods"""
     all_methods = {
@@ -145,185 +174,53 @@ def normalize_cam(cam, target_size=None):
         return cam_resized.astype(np.float16)  # Use float16 for memory efficiency
     return cam.astype(np.float16)
 
-def generate_xai_visualizations_binned(model, dataset, output_dir, device='cuda', methods_to_run=['all'], atlas_path=None, age_bin_width=10):
-    methods = create_visualization_dirs(output_dir, methods_to_run)
-    model.eval()
 
-    # Binning setup
+def generate_age_binned_xai_visualizations(model, dataset, output_dir, device='cuda', methods_to_run=['all'], age_bin_width=10):
+    """
+    Generate XAI visualizations for different age bins.
+    
+    Args:
+        model: The trained model
+        dataset: The dataset containing samples with 'age' field
+        output_dir: Base directory for output visualizations
+        device: Device to run the model on ('cuda' or 'cpu')
+        methods_to_run: List of XAI methods to run
+        age_bin_width: Width of age bins in years
+    """
+    # Calculate max age and create bin edges
     max_age = max([sample['age'] for sample in dataset if sample is not None]).item()
     bin_edges = np.arange(0, max_age + age_bin_width, age_bin_width)
     if bin_edges[-1] < max_age:
         bin_edges = np.append(bin_edges, max_age)
     bin_labels = [f"{int(bin_edges[i])}-{int(bin_edges[i+1])}" for i in range(len(bin_edges) - 1)]
+    
+    # Create a directory for each age bin
+    for i, bin_label in enumerate(bin_labels):
+        bin_dir = os.path.join(output_dir, f"age_bin_{bin_label}")
+        os.makedirs(bin_dir, exist_ok=True)
+        
+        # Filter dataset for current age bin
+        bin_min, bin_max = bin_edges[i], bin_edges[i+1]
+        bin_dataset = AgeFilteredDataset(dataset, bin_min, bin_max)
+        
+        # Skip empty bins
+        if len(bin_dataset) == 0:
+            logging.warning(f"No samples in age bin {bin_label}, skipping...")
+            continue
+        
+        logging.info(f"Processing age bin {bin_label} with {len(bin_dataset)} samples")
+        
+        # Generate visualizations for this bin
+        generate_xai_visualizations(
+            model=model,
+            dataset=bin_dataset,
+            output_dir=bin_dir,
+            device=device,
+            methods_to_run=methods_to_run,
+            output_prefix=f"age_bin_{bin_label}_"
+        )
 
-    view_axes = {'sagittal': 0, 'coronal': 1, 'axial': 2}
-    view_names = ['sagittal', 'coronal', 'axial']
-
-    # Get image dimensions
-    first_sample = dataset[0]
-    D, H, W = first_sample['image'].squeeze().shape
-
-    for method_name, cam_class in methods.items():
-        method_output_dir = os.path.join(output_dir, method_name)
-        gc.collect()
-        torch.cuda.empty_cache()
-        for bin_idx in range(len(bin_edges) - 1):
-            bin_label = bin_labels[bin_idx]
-            bin_lower = bin_edges[bin_idx]
-            bin_upper = bin_edges[bin_idx + 1]
-            bin_output_dir = os.path.join(method_output_dir, f"bin_{bin_label}")
-            os.makedirs(bin_output_dir, exist_ok=True)
-
-            # Initialize sum arrays
-            sum_middle_slices = {view: np.zeros((H, W) if view == 'sagittal' else (D, W) if view == 'coronal' else (D, H), dtype=np.float32) for view in view_names}
-            sum_middle_heatmaps = {view: np.zeros((H, W) if view == 'sagittal' else (D, W) if view == 'coronal' else (D, H), dtype=np.float32) for view in view_names}
-            sum_all_slices_view = {view: np.zeros((H, W) if view == 'sagittal' else (D, W) if view == 'coronal' else (D, H), dtype=np.float32) for view in view_names}
-            sum_all_heatmaps_view = {view: np.zeros((H, W) if view == 'sagittal' else (D, W) if view == 'coronal' else (D, H), dtype=np.float32) for view in view_names}
-            sum_slices_per_view = {
-                'sagittal': np.zeros((D, H, W), dtype=np.float32),
-                'coronal': np.zeros((H, D, W), dtype=np.float32),
-                'axial': np.zeros((W, D, H), dtype=np.float32)
-            }
-            sum_heatmaps_per_view = {
-                'sagittal': np.zeros((D, H, W), dtype=np.float32),
-                'coronal': np.zeros((H, D, W), dtype=np.float32),
-                'axial': np.zeros((W, D, H), dtype=np.float32)
-            }
-            count = 0
-
-            # Filter dataset for this bin
-            binned_dataset = [sample for sample in dataset if sample is not None and bin_lower <= sample['age'] < bin_upper]
-            if not binned_dataset:
-                logging.warning(f"No data found for age bin {bin_label}. Skipping.")
-                continue
-            loader = DataLoader(binned_dataset, batch_size=1, shuffle=False)
-
-            # Accumulate sums
-            for sample in tqdm(loader, desc=f"Processing images for {method_name}, bin {bin_label}"):
-                if sample is None:
-                    continue
-                image, demographics, brain_age = sample['image'], sample['demographics'], sample['age']
-                image = image.to(device)
-                demographics = demographics.to(device)
-                wrapped_model = BrainAgeWrapper(model, demographics)
-                target_layers = get_target_layers(wrapped_model)
-                cam = cam_class(model=wrapped_model, target_layers=target_layers)
-
-                try:
-                    grayscale_cam = cam(input_tensor=image.unsqueeze(0))[0, :]
-                    heatmap = grayscale_cam
-                    img_np = image.cpu().numpy().squeeze()
-
-                    for view_name in view_names:
-                        view_axis = view_axes[view_name]
-                        slice_index = img_np.shape[view_axis] // 2
-                        original_slice = np.take(img_np, indices=slice_index, axis=view_axis)
-                        heatmap_slice = np.take(heatmap, indices=slice_index, axis=view_axis)
-                        sum_middle_slices[view_name] += original_slice
-                        sum_middle_heatmaps[view_name] += heatmap_slice
-
-                        all_slices_view = np.sum(img_np, axis=view_axis)
-                        all_heatmaps_view = np.sum(heatmap, axis=view_axis)
-                        sum_all_slices_view[view_name] += all_slices_view
-                        sum_all_heatmaps_view[view_name] += all_heatmaps_view
-
-                        for slice_idx in range(img_np.shape[view_axis]):
-                            slice_data = np.take(img_np, indices=slice_idx, axis=view_axis)
-                            heatmap_slice_data = np.take(heatmap, indices=slice_idx, axis=view_axis)
-                            if view_name == 'sagittal':
-                                sum_slices_per_view['sagittal'][slice_idx] += slice_data
-                                sum_heatmaps_per_view['sagittal'][slice_idx] += heatmap_slice_data
-                            elif view_name == 'coronal':
-                                sum_slices_per_view['coronal'][slice_idx] += slice_data
-                                sum_heatmaps_per_view['coronal'][slice_idx] += heatmap_slice_data
-                            elif view_name == 'axial':
-                                sum_slices_per_view['axial'][slice_idx] += slice_data
-                                sum_heatmaps_per_view['axial'][slice_idx] += heatmap_slice_data
-                    count += 1
-                except Exception as e:
-                    logging.error(f"Error in bin {bin_label}: {e}")
-                    continue
-                del image, grayscale_cam, heatmap, img_np
-                gc.collect()
-            gc.collect()
-            torch.cuda.empty_cache()
-            # Compute averages
-            if count == 0:
-                logging.warning(f"No valid samples in bin {bin_label}")
-                continue
-            avg_middle_slices = {view: sum_middle_slices[view] / count for view in view_names}
-            avg_middle_heatmaps = {view: sum_middle_heatmaps[view] / count for view in view_names}
-            avg_all_slices_view = {view: sum_all_slices_view[view] / count for view in view_names}
-            avg_all_heatmaps_view = {view: sum_all_heatmaps_view[view] / count for view in view_names}
-            avg_slices_per_view = {view: sum_slices_per_view[view] / count for view in view_names}
-            avg_heatmaps_per_view = {view: sum_heatmaps_per_view[view] / count for view in view_names}
-
-            # Plotting (similar to non-binned version, just with bin_output_dir)
-            # Figure 1
-            fig1, axes1 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
-            fig1.suptitle(f"Average Middle Slice Heatmaps - {method_name.capitalize()} - Bin: {bin_label}")
-            for i, view_name in enumerate(view_names):
-                avg_slice = avg_middle_slices[view_name]
-                avg_heatmap = normalize_cam(avg_middle_heatmaps[view_name], avg_slice.shape)
-                axes1[0, i].imshow(avg_slice, cmap='gray')
-                axes1[0, i].set_title(f"{view_name.capitalize()} - Avg Slice")
-                axes1[0, i].axis('off')
-                axes1[1, i].imshow(avg_slice, cmap='gray')
-                heatmap_im = axes1[1, i].imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
-                axes1[1, i].set_title(f"{view_name.capitalize()} - Avg Heatmap")
-                axes1[1, i].axis('off')
-            fig1.colorbar(mappable=heatmap_im, ax=axes1[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
-            plt.savefig(os.path.join(bin_output_dir, "avg_middle_slice_heatmaps.png"))
-            plt.close(fig1)
-
-            # Figure 2
-            fig2, axes2 = plt.subplots(2, 3, figsize=(15, 10), dpi=900)
-            fig2.suptitle(f"Average All Slices Combined Heatmaps - {method_name.capitalize()} - Bin: {bin_label}")
-            for i, view_name in enumerate(view_names):
-                avg_slice_view = avg_all_slices_view[view_name]
-                avg_heatmap_view = normalize_cam(avg_all_heatmaps_view[view_name], avg_slice_view.shape)
-                axes2[0, i].imshow(avg_slice_view, cmap='gray')
-                axes2[0, i].set_title(f"{view_name.capitalize()} - Avg Combined Slices")
-                axes2[0, i].axis('off')
-                axes2[1, i].imshow(avg_slice_view, cmap='gray')
-                axes2[1, i].imshow(avg_heatmap_view, cmap='jet', alpha=0.5, interpolation='none')
-                axes2[1, i].set_title(f"{view_name.capitalize()} - Avg Combined Heatmaps")
-                axes2[1, i].axis('off')
-            fig2.colorbar(mappable=axes2[1, 2].images[1], ax=axes2[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
-            plt.savefig(os.path.join(bin_output_dir, "avg_all_slices_heatmaps.png"))
-            plt.close(fig2)
-
-            # Figure 3
-            for view_name in view_names:
-                n_slices = D if view_name == 'sagittal' else H if view_name == 'coronal' else W
-                n_cols = 12
-                n_rows = ceil(n_slices / n_cols)
-                fig3, axes3 = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), dpi=900)
-                fig3.suptitle(f"All Slice Heatmaps - {method_name.capitalize()} - {view_name.capitalize()} - Bin: {bin_label}")
-                if n_rows == 1:
-                    axes3 = axes3[np.newaxis, :]
-
-                for slice_idx in range(n_slices):
-                    row_idx = slice_idx // n_cols
-                    col_idx = slice_idx % n_cols
-                    ax = axes3[row_idx, col_idx]
-                    avg_slice = avg_slices_per_view[view_name][slice_idx]
-                    avg_heatmap = normalize_cam(avg_heatmaps_per_view[view_name][slice_idx], avg_slice.shape)
-                    ax.imshow(avg_slice, cmap='gray')
-                    im = ax.imshow(avg_heatmap, cmap='jet', alpha=0.5, interpolation='none')
-                    ax.set_title(f"Slice {slice_idx}")
-                    ax.axis('off')
-
-                if n_slices % n_cols != 0:
-                    for j in range(n_slices % n_cols, n_cols):
-                        axes3[n_rows - 1, j].axis('off')
-                cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02])
-                fig3.colorbar(mappable=im, cax=cbar_ax, orientation='horizontal', label='Normalized CAM', shrink=0.6)
-                plt.tight_layout()
-                plt.savefig(os.path.join(bin_output_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600)
-                plt.close(fig3)
-
-def generate_xai_visualizations(model, dataset, output_dir, device='cuda', methods_to_run=['all'], atlas_path=None, age_bin_width=10):
+def generate_xai_visualizations(model, dataset, output_dir, device='cuda', methods_to_run=['all'], atlas_path=None, age_bin_width=10, output_prefix=""):
     methods = create_visualization_dirs(output_dir, methods_to_run)
     model.eval()
     loader = DataLoader(dataset, batch_size=1, shuffle=False)
@@ -534,7 +431,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             axes1[1, i].set_title(f"{view_name.capitalize()} - Avg Heatmap")
             axes1[1, i].axis('off')
         fig1.colorbar(mappable=heatmap_im, ax=axes1[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
-        plt.savefig(os.path.join(raw_dir, "avg_middle_slice_heatmaps.png"))
+        plt.savefig(os.path.join(raw_dir, f"{output_prefix}avg_middle_slice_heatmaps.png"))
         plt.close(fig1)
 
         # Figure 2: Average all slices combined - Raw accumulation
@@ -551,7 +448,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             axes2[1, i].set_title(f"{view_name.capitalize()} - Avg Combined Heatmaps")
             axes2[1, i].axis('off')
         fig2.colorbar(mappable=axes2[1, 2].images[1], ax=axes2[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
-        plt.savefig(os.path.join(raw_dir, "avg_all_slices_heatmaps.png"))
+        plt.savefig(os.path.join(raw_dir, f"{output_prefix}avg_all_slices_heatmaps.png"))
         plt.close(fig2)
 
         # Figure 3: All slices - Raw accumulation
@@ -585,8 +482,8 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
                     axes3[n_rows - 1, j].axis('off')
             cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02])
             fig3.colorbar(mappable=im, cax=cbar_ax, orientation='horizontal', label='Normalized CAM', shrink=0.6)
-            plt.tight_layout()
-            plt.savefig(os.path.join(raw_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600)
+            #plt.tight_layout()
+            plt.savefig(os.path.join(raw_dir, f"{output_prefix}all_slices_heatmaps_{view_name}.png"), dpi=600)
             plt.close(fig3)
             
         # Now plot for the NORMALIZED ACCUMULATION approach
@@ -605,7 +502,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             axes1[1, i].set_title(f"{view_name.capitalize()} - Avg Heatmap")
             axes1[1, i].axis('off')
         fig1.colorbar(mappable=heatmap_im, ax=axes1[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
-        plt.savefig(os.path.join(norm_dir, "avg_middle_slice_heatmaps.png"))
+        plt.savefig(os.path.join(norm_dir, f"{output_prefix}avg_middle_slice_heatmaps.png"))
         plt.close(fig1)
 
         # Figure 2: Average all slices combined - Normalized accumulation
@@ -622,7 +519,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             axes2[1, i].set_title(f"{view_name.capitalize()} - Avg Combined Heatmaps")
             axes2[1, i].axis('off')
         fig2.colorbar(mappable=axes2[1, 2].images[1], ax=axes2[1, :].ravel().tolist(), orientation='horizontal', label='Normalized CAM')
-        plt.savefig(os.path.join(norm_dir, "avg_all_slices_heatmaps.png"))
+        plt.savefig(os.path.join(norm_dir, f"{output_prefix}avg_all_slices_heatmaps.png"))
         plt.close(fig2)
 
         # Figure 3: All slices - Normalized accumulation
@@ -657,7 +554,7 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             cbar_ax = fig3.add_axes([0.125, 0.05, 0.775, 0.02])
             fig3.colorbar(mappable=im, cax=cbar_ax, orientation='horizontal', label='Normalized CAM', shrink=0.6)
             plt.tight_layout()
-            plt.savefig(os.path.join(norm_dir, f"all_slices_heatmaps_{view_name}.png"), dpi=600)
+            plt.savefig(os.path.join(norm_dir, f"{output_prefix}all_slices_heatmaps_{view_name}.png"), dpi=600)
             plt.close(fig3)
 
 def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device,methods_to_run=['all'], atlas_path=None, indices_path=None):
@@ -690,8 +587,7 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
     generate_xai_visualizations(model, dataset, model_output_dir, device,methods_to_run, atlas_path)
     gc.collect()
     torch.cuda.empty_cache()
-    generate_xai_visualizations_binned(model, dataset, model_output_dir, device,methods_to_run, atlas_path, age_bin_width=10)
-    
+    generate_age_binned_xai_visualizations(model, dataset, model_output_dir, device,methods_to_run, age_bin_width=10)    
     
     return model_output_dir
 
