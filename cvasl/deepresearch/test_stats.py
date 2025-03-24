@@ -1020,7 +1020,7 @@ class BrainAgeAnalyzer:
                         demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "LD", "PLD", "Labelling", "Readout"]) # Create demographics DF
                         #for any of the group cols, if it is not the demographics_df, add them to the demographics_df from val_dataset making sure the participant_ids match. participant_id is string. be very careful. some of the group columns might already be there
                         
-                        if set(self.group_cols).issubset(val_dataset.columns):
+                        if set(self.group_cols).issubset(val_dataset.data_df.columns):
                             for col in self.group_cols:
                                 if col not in demographics_df.columns:
                                     demographics_df[col] = val_dataset.data_df[col]
