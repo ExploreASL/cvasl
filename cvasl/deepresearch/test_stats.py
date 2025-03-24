@@ -1018,6 +1018,14 @@ class BrainAgeAnalyzer:
 
                         # Convert demographics list to DataFrame and concatenate
                         demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "LD", "PLD", "Labelling", "Readout"]) # Create demographics DF
+                        #for any of the group cols, if it is not the demographics_df, add them to the predictions_df. some of the group columns might already be there
+                        for group_col in self.group_cols:
+                            if group_col not in demographics_df.columns:
+                                if group_col in predictions_df.columns:
+                                    demographics_df[group_col] = predictions_df[group_col]
+                                else:
+                                    logging.warning(f"Group column {group_col} not found in predictions_df or demographics_df.")
+                            
                         predictions_df = pd.concat([predictions_df, demographics_df], axis=1) # Concatenate demographics
                         
                         logging.info(f"Demographics added to predictions_df for model: {model_file}")
