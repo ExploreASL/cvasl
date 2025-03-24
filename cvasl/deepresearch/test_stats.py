@@ -1024,8 +1024,7 @@ class BrainAgeAnalyzer:
                             for col in self.group_cols:
                                 if col not in demographics_df.columns:
                                     demographics_df[col] = val_dataset.data_df[col]
-                        else:
-                            logging.warning("Skipping demographic analysis - required columns not found.")
+
                         predictions_df = pd.concat([predictions_df, demographics_df], axis=1) # Concatenate demographics
                         
                         logging.info(f"Demographics added to predictions_df for model: {model_file}")
