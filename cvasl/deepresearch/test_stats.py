@@ -8,36 +8,23 @@ import logging
 import re
 import traceback
 import argparse
-import scipy.stats as stats
-from scipy.stats import gaussian_kde
-from scipy.stats import pearsonr
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from statsmodels.stats.diagnostic import het_breuschpagan, het_white, het_goldfeldquandt
+from sklearn.metrics import mean_squared_error
+from statsmodels.stats.diagnostic import het_breuschpagan, het_white
 import statsmodels.api as sm
 import pingouin as pg
-import scipy.stats as stats
 from scipy.stats import pointbiserialr
 import pandas as pd
 import numpy as np
 import torch
 import logging
 import os
-from scipy.stats import zscore  # Import zscore from scipy.stats
 from sklearn.metrics import mean_squared_error
 from data import BrainAgeDataset
-import json
 from itertools import combinations
-from scipy.stats import pearsonr, spearmanr  # Import correlation functions
+from scipy.stats import spearmanr  # Import correlation functions
 from statsmodels.stats.multitest import multipletests
 # Set up logging
-from models.cnn import Large3DCNN
-from models.densenet3d import DenseNet3D
-from models.efficientnet3d import EfficientNet3D
-from models.improvedcnn3d import Improved3DCNN
-from models.resnet3d import ResNet3D
-from models.resnext3d import ResNeXt3D
 import seaborn as sns
-from scipy.stats import levene, bartlett, zscore
 from utils import wrap_title
 import pingouin as pg
 
@@ -1174,11 +1161,11 @@ if __name__ == "__main__":
     parser.add_argument("--output_root", type=str, default="analysis_results", help="Root directory for analysis outputs")
     parser.add_argument("--indices_path", type=str, nargs='+', default="None", help="Path to files containing indices for test split for each dataset")
     parser.add_argument("--use_cuda", action="store_true", default=False, help="Enable CUDA (GPU) if available")
-    parser.add_argument("--group_cols", type=str, default="Sex,Site", help="Comma-separated list of columns for group-wise analysis") # Added group_cols argument
+    parser.add_argument("--group_cols", type=str, default="Sex,Site,Diagnosis", help="Comma-separated list of columns for group-wise analysis") # Added group_cols argument
 
     args = parser.parse_args()
 
-    group_cols = [col.strip() for col in args.group_cols.split(',')] # Process group_cols argument
+    group_cols = [col.strip() for col in args.group_cols.split(',')] 
 
     analyzer = BrainAgeAnalyzer(
         validation_csv=args.validation_csv,
@@ -1186,7 +1173,7 @@ if __name__ == "__main__":
         model_dir=args.model_dir,
         output_root=args.output_root,
         use_cuda=args.use_cuda,
-        group_columns=group_cols, # Pass group_cols to analyzer
+        group_columns=group_cols,
         indices_path=args.indices_path
     )
     logging.info("Starting Brain Age Analysis...")
