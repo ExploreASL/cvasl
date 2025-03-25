@@ -34,6 +34,7 @@ class BrainAgeDataset(Dataset):
             transform (callable, optional): Optional transform to be applied on a sample.
         """
         self.data_df = pd.read_csv(csv_file)
+        self.original_data_df = pd.read_csv(csv_file)
         self.indices = indices
         if (self.indices is not None) and os.path.exists(self.indices):
             #if indices is a valid file path
