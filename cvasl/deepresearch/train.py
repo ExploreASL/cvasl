@@ -23,6 +23,7 @@ from models.resnet3d import ResNet3D
 from models.resnext3d import ResNeXt3D
 from models.vit3d import VisionTransformer3D
 from models.loss import BrainAgeLoss
+from torch.cuda.amp import autocast, GradScaler
 
 import datetime
 torch.backends.cudnn.benchmark = True
@@ -71,7 +72,7 @@ def train_model(
         model_name = model.get_name()
     except AttributeError:
         model_name = model_type 
-
+    scaler = GradScaler()
     lr_str = f"{learning_rate:.1e}".replace("+", "").replace("-", "_")
     param_str = (
         f"{wandb_prefix}_{model_name}_{lr_str}_{num_epochs}_" 
@@ -290,11 +291,15 @@ def train_model(
                 ages = batch["age"].unsqueeze(1).to(device)
                 demographics = batch["demographics"].to(device)
                 optimizer.zero_grad()
-                outputs = cmodel(images, demographics)
-                #loss = criterion(outputs, ages)
-                loss, metrics = criterion(outputs, ages, demographics)
-                loss.backward()
-                optimizer.step()
+                with autocast():
+                    outputs = cmodel(images, demographics)
+                    #loss = criterion(outputs, ages)
+                    loss, metrics = criterion(outputs, ages, demographics)
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+                #loss.backward()
+                #optimizer.step()
                 train_loss += loss.item()
                 logging.debug(f"Batch {i} processed. Loss: {loss.item()}")
             train_loss = train_loss / len(train_loader)
