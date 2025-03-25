@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class BrainAgeAnalyzer:
-    def __init__(self, validation_csv, validation_img_dir, model_dir, output_root, use_cuda=False, group_columns=["Sex", "Site", "Labelling"], indices_path = None): # Added group_columns as parameter
+    def __init__(self, validation_csv, validation_img_dir, model_dir, output_root, use_cuda=False, group_columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], indices_path = None): # Added group_columns as parameter
         self.validation_csv = validation_csv
         self.validation_img_dir = validation_img_dir
         self.model_dir = model_dir
@@ -389,6 +389,7 @@ class BrainAgeAnalyzer:
 
             for group_col in group_cols:
                 plt.figure(figsize=(10, 6))
+                
                 sns.boxplot(x=group_col, y='brain_age_gap', data=data)
                 plt.title(wrap_title(f"Brain Age Gap Distribution by {group_col}\nThis box plot shows the distribution of the brain age gap for each group defined by '{group_col}'.  Comparing the medians, interquartile ranges, and presence of outliers across groups can reveal differences in model performance between groups."), fontsize=9)
                 plt.xlabel(group_col)
@@ -864,7 +865,7 @@ class BrainAgeAnalyzer:
                         self.create_predictions_csv(participant_ids, predicted_ages, actual_ages, model_file, model_type)
 
                         # Convert demographics list to DataFrame and concatenate
-                        demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"]) # Create demographics DF
+                        demographics_df = pd.DataFrame(np.array(demographics_list), columns=self.group_cols) # Create demographics DF
                         #for any of the group cols, if it is not the demographics_df, add them to the demographics_df from val_dataset making sure the participant_ids match. participant_id is string. be very careful. some of the group columns might already be there
                         for col in self.group_cols:
                             demographics_df[col] = val_dataset.original_data_df[col]
