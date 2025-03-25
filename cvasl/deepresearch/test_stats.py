@@ -32,13 +32,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class BrainAgeAnalyzer:
-    def __init__(self, validation_csv, validation_img_dir, model_dir, output_root, use_cuda=False, group_columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], indices_path = None): # Added group_columns as parameter
+    def __init__(self, validation_csv, validation_img_dir, model_dir, output_root, use_cuda=False, demographics_columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], group_columns=["Sex", "Site","Diagnosis"], indices_path = None): # Added group_columns as parameter
         self.validation_csv = validation_csv
         self.validation_img_dir = validation_img_dir
         self.model_dir = model_dir
         self.output_root_base = output_root
         self.output_root = output_root
         self.group_cols = group_columns
+        self.demographics_columns = demographics_columns
         self.use_cuda = use_cuda
         self.indices_path = indices_path
         os.makedirs(self.output_root, exist_ok=True)
@@ -865,10 +866,11 @@ class BrainAgeAnalyzer:
                         self.create_predictions_csv(participant_ids, predicted_ages, actual_ages, model_file, model_type)
 
                         # Convert demographics list to DataFrame and concatenate
-                        demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"]) # Create demographics DF
+                        demographics_df = pd.DataFrame(np.array(demographics_list), columns=self.demographics_columns) # Create demographics DF
                         #for any of the group cols, if it is not the demographics_df, add them to the demographics_df from val_dataset making sure the participant_ids match. participant_id is string. be very careful. some of the group columns might already be there
                         for col in self.group_cols:
                             demographics_df[col] = val_dataset.original_data_df[col]
+                            demographics_df[col] = demographics_df[col].fillna('NA')
                         predictions_df = pd.concat([predictions_df, demographics_df], axis=1) # Concatenate demographics
                         
                         logging.info(f"Demographics added to predictions_df for model: {model_file}")
