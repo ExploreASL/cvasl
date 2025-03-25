@@ -865,6 +865,7 @@ class BrainAgeAnalyzer:
 
                         # Convert demographics list to DataFrame and concatenate
                         demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"]) # Create demographics DF
+                        val_dataset.prepare_for_export()
                         #for any of the group cols, if it is not the demographics_df, add them to the demographics_df from val_dataset making sure the participant_ids match. participant_id is string. be very careful. some of the group columns might already be there
                         for col in self.group_cols:
                             if col not in demographics_df.columns:
