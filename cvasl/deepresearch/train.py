@@ -63,6 +63,7 @@ def train_model(
     brainage_delta=0.0,
     weight_decay=0.05,
     store_model=True,
+    mem_opt=False,
 ):
     logging.info("Starting training process...")
     os.makedirs(output_dir, exist_ok=True)
@@ -291,15 +292,19 @@ def train_model(
                 ages = batch["age"].unsqueeze(1).to(device)
                 demographics = batch["demographics"].to(device)
                 optimizer.zero_grad()
-                with autocast():
+                if mem_opt:
+                    with autocast():
+                        outputs = cmodel(images, demographics)
+                        loss, metrics = criterion(outputs, ages, demographics)
+                    scaler.scale(loss).backward()
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
                     outputs = cmodel(images, demographics)
                     #loss = criterion(outputs, ages)
                     loss, metrics = criterion(outputs, ages, demographics)
-                scaler.scale(loss).backward()
-                scaler.step(optimizer)
-                scaler.update()
-                #loss.backward()
-                #optimizer.step()
+                    loss.backward()
+                    optimizer.step()
                 train_loss += loss.item()
                 logging.debug(f"Batch {i} processed. Loss: {loss.item()}")
             train_loss = train_loss / len(train_loader)
