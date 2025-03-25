@@ -865,7 +865,7 @@ class BrainAgeAnalyzer:
                         self.create_predictions_csv(participant_ids, predicted_ages, actual_ages, model_file, model_type)
 
                         # Convert demographics list to DataFrame and concatenate
-                        demographics_df = pd.DataFrame(np.array(demographics_list), columns=self.group_cols) # Create demographics DF
+                        demographics_df = pd.DataFrame(np.array(demographics_list), columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"]) # Create demographics DF
                         #for any of the group cols, if it is not the demographics_df, add them to the demographics_df from val_dataset making sure the participant_ids match. participant_id is string. be very careful. some of the group columns might already be there
                         for col in self.group_cols:
                             demographics_df[col] = val_dataset.original_data_df[col]
