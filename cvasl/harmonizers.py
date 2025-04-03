@@ -2106,5 +2106,3 @@ class NestedComBat:
         if self.return_extended:
             return mri_datasets, write_testing_df, dat_testing.transpose(), covars_testing_final
         return mri_datasets
-    
-    

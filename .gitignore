@@ -30,6 +30,7 @@ all-files.txt
 # Jupyter Notebook
 .ipynb_checkpoints
 *.old
+/data
 
 
 # pyenv

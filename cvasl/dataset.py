@@ -35,7 +35,7 @@ class MRIdataset:
         cat_features_to_encode=None,
         ICV=False,
         decade=False,
-        features_to_drop=["m0", "id"],
+        features_to_drop=[],
         features_to_bin=None,
         binning_method="equal_width",
         num_bins=10,
@@ -234,7 +234,7 @@ class MRIdataset:
         self.data = self.data[_tc]
         self.data.columns = self.columns_order
         for _c in ['index','Index' ,'ID','unnamed: 0']:
-            if _c in self.data.columns:
+            if _c in self.data.columns and _c not in self.columns_order:
                 self.data = self.data.drop(columns=[_c])
 
 

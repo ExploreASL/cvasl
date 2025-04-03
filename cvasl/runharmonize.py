@@ -33,7 +33,7 @@ datasets = [edis, helius, sabre, topmri, insight46]
 
 datasets = encode_cat_features(datasets,features_to_map)
 
-method = 'autocombat' 
+method = 'neurocombat' 
 
 
 if method == 'neuroharmonize':
