@@ -29,7 +29,7 @@ all-files.txt
 0
 # Jupyter Notebook
 .ipynb_checkpoints
-
+*.old
 
 
 # pyenv
