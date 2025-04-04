@@ -225,7 +225,7 @@ class MRIdataset:
 
     def prepare_for_export(self):
         self.restore_patient_ids()
-        self.data = self.data.merge(self.dropped_features,on=self.patient_identifier)
+        self.data = self.data.merge(self.dropped_features,on=self.patient_identifier) if self.dropped_features is not None else self.data
         for _c in ['index','Index' ,'ID','unnamed: 0']:
             if _c in self.data.columns:
                 self.data = self.data.drop(columns=[_c])
