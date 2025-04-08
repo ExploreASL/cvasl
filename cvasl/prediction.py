@@ -7,7 +7,6 @@ from sklearn import metrics
 import warnings
 from sklearn.preprocessing import StandardScaler
 
-
 class PredictBrainAge:
 
     def __init__(self,
@@ -140,16 +139,16 @@ class PredictBrainAge:
         y_test = y[test_index]
         return X_train, y_train, X_test, y_test
 
-    def _train_predict_and_evaluate(self, i, X_train, y_train, X_test, y_test, X_val, y_val):
+    def _train_predict_and_evaluate(self, i, X_train, y_train, X_test, y_test, X_val, y_val, test_index):
         """Trains model, makes predictions, and evaluates metrics for a single fold."""
         self.model.fit(X_train, y_train)
         y_pred = self.model.predict(X_test)
         y_pred_val = self.model.predict(X_val) if X_val is not None else None
         metrics_data = self._calculate_fold_metrics(i, y_test, y_pred)
-        metric_data_val = self._calculate_fold_metrics(i, y_val, y_pred_val) if X_val is not None else None
+        metric_data_val = self._calculate_fold_metrics(i, y_val, y_pred_val) if X_val is not None and y_val is not None else None
         predictions_data, predictions_data_val = self._store_fold_predictions(i, y_test, y_pred, y_val, y_pred_val, test_index)
         return metrics_data, metric_data_val, predictions_data, predictions_data_val
-
+    
     def _calculate_fold_metrics(self, fold_index, y_true, y_pred):
         """Calculates various regression metrics for a given fold."""
         metrics_data = {
@@ -173,16 +172,26 @@ class PredictBrainAge:
 
     def _store_fold_predictions(self, fold_index, y_test, y_pred, y_val, y_pred_val, test_index):
         """Stores predictions for the current fold in DataFrame format."""
-        predictions_data = pd.DataFrame({'y_test': y_test.flatten(), 'y_pred': y_pred.flatten()})
+        # Ensure arrays are properly flattened only if needed
+        y_test_flat = y_test.flatten() if hasattr(y_test, 'flatten') else y_test
+        y_pred_flat = y_pred.flatten() if hasattr(y_pred, 'flatten') else y_pred
+        
+        predictions_data = pd.DataFrame({'y_test': y_test_flat, 'y_pred': y_pred_flat})
         predictions_data[self.patient_identifier] = self.data[self.patient_identifier].values[test_index]
         predictions_data['site'] = self.data[self.site_indicator].values[test_index]
+        predictions_data['fold'] = fold_index  # Add fold index to track predictions by fold
+        
         predictions_data_val = None
-        if self.data_validation is not None:
-            predictions_data_val = pd.DataFrame({'y_test': y_val.flatten(), 'y_pred': y_pred_val.flatten()})
+        if y_val is not None and y_pred_val is not None and self.data_validation is not None:
+            y_val_flat = y_val.flatten() if hasattr(y_val, 'flatten') else y_val
+            y_pred_val_flat = y_pred_val.flatten() if hasattr(y_pred_val, 'flatten') else y_pred_val
+            
+            predictions_data_val = pd.DataFrame({'y_test': y_val_flat, 'y_pred': y_pred_val_flat})
             predictions_data_val[self.patient_identifier] = self.data_validation[self.patient_identifier].values
             predictions_data_val['site'] = self.data_validation[self.site_indicator].values
+            predictions_data_val['fold'] = fold_index  # Add fold index to validation predictions too
+        
         return predictions_data, predictions_data_val
-
 
     def predict(self):
         """
@@ -214,7 +223,7 @@ class PredictBrainAge:
                 X_scaled, y, self.data['fuse_bin'], train_index, test_index)
 
             metrics_data, metric_data_val, predictions_data, predictions_data_val = self._train_predict_and_evaluate(
-                i, X_train, y_train, X_test, y_test, X_val_scaled, y_val) # Use scaled validation data
+            i, X_train, y_train, X_test, y_test, X_val_scaled, y_val, test_index) # Added test_index
 
             all_metrics.append(metrics_data)
             if metric_data_val:
