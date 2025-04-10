@@ -80,16 +80,16 @@ metrics_df_all_harm = []
 
 pred_features = ['aca_b_cbf', 'aca_b_cov', 'csf_vol', 'gm_icvratio', 'gm_vol','gmwm_icvratio', 'mca_b_cbf', 'mca_b_cov','pca_b_cbf', 'pca_b_cov', 'totalgm_b_cbf','totalgm_b_cov', 'wm_vol', 'wmh_count', 'wmhvol_wmvol']
 for model in [ExtraTreesRegressor(n_estimators=100,random_state=np.random.randint(0,100000), criterion='absolute_error', min_samples_split=2, min_samples_leaf=1, max_features='log2',bootstrap=False, n_jobs=-1, warm_start=True)]:#,LinearRegression(),SGDRegressor(),MLPRegressor(),SVR(),ElasticNetCV(),tree.DecisionTreeRegressor(),linear_model.Lasso(alpha=0.1),linear_model.Ridge(alpha=0.5),linear_model.BayesianRidge(),linear_model.ARDRegression(),linear_model.PassiveAggressiveRegressor(),linear_model.TheilSenRegressor(),linear_model.HuberRegressor(),linear_model.RANSACRegressor()]:   
-    for _it in range(10):
+    for _it in range(3):
         #randomly select seed
         seed = np.random.randint(0,100000)
         pred_harm = PredictBrainAge(model_name='extratree',model_file_name='extratree',model=model,
-                            datasets=[topmri_harm],datasets_validation=[edis_harm,helius_harm,sabre_harm,insight46_harm] ,features=pred_features,target='age',
-                            cat_category='sex',cont_category='age',n_bins=2,splits=3,test_size_p=0.05,random_state=seed)
+                            datasets=[topmri_harm],datasets_validation=[edis_harm, helius_harm, sabre_harm, insight46_harm] ,features=pred_features,target='age',
+                            cat_category='sex',cont_category='age',n_bins=2,splits=2,test_size_p=0.05,random_state=seed)
         
         pred = PredictBrainAge(model_name='extratree',model_file_name='extratree',model=model,
-                            datasets=[topmri],datasets_validation=[edis,helius,sabre,insight46] ,features=pred_features,target='age',
-                            cat_category='sex',cont_category='age',n_bins=4,splits=3,test_size_p=0.1,random_state=seed)
+                            datasets=[topmri],datasets_validation=[edis, helius, sabre, insight46] ,features=pred_features,target='age',
+                            cat_category='sex',cont_category='age',n_bins=4,splits=2,test_size_p=0.1,random_state=seed)
 
 
 
@@ -103,57 +103,58 @@ for model in [ExtraTreesRegressor(n_estimators=100,random_state=np.random.randin
         metrics_df_all.append(metrics_df)
         metrics_df_val_all.append(metrics_df_val)
         
-        #print(f'Trial {_it+1} completed') 
+        print(f'Trial {_it+1} completed') 
 
-    #now return the mean of each column of metrics_df_val
-    metrics_df_val = pd.concat(metrics_df_val_all)
-    metrics_df = pd.concat(metrics_df_all)
+    try:
+        metrics_df_val = pd.concat(metrics_df_val_all)
+        metrics_df = pd.concat(metrics_df_all) 
 
-    metrics_df_val_harm = pd.concat(metrics_df_val_all_harm)
-    metrics_df_harm = pd.concat(metrics_df_all_harm)
+        metrics_df_val_harm = pd.concat(metrics_df_val_all_harm)
+        metrics_df_harm = pd.concat(metrics_df_all_harm)
 
-    explained_metrics = ['explained_variance', 'max_error',
-        'mean_absolute_error', 'mean_squared_error', 'mean_squared_log_error',
-        'median_absolute_error', 'r2', 'mean_poisson_deviance',
-        'mean_gamma_deviance', 'mean_tweedie_deviance', 'd2_tweedie_score',
-        'mean_absolute_percentage_error']
+        explained_metrics = ['explained_variance', 'max_error',
+            'mean_absolute_error', 'mean_squared_error', 'mean_squared_log_error',
+            'median_absolute_error', 'r2', 'mean_poisson_deviance',
+            'mean_gamma_deviance', 'mean_tweedie_deviance', 'd2_tweedie_score',
+            'mean_absolute_percentage_error']
 
-    explained_metrics = ['mean_absolute_error']
-    val_mean = metrics_df_val[explained_metrics].mean(axis=0)
-    #and the stabdard error
-    val_se = metrics_df_val[explained_metrics].std(axis=0)/np.sqrt(len(metrics_df_val))
+        explained_metrics = ['mean_absolute_error']
+        val_mean = metrics_df_val[explained_metrics].mean(axis=0)
+        #and the stabdard error
+        val_se = metrics_df_val[explained_metrics].std(axis=0)/np.sqrt(len(metrics_df_val))
 
-    val_mean_harm = metrics_df_val_harm[explained_metrics].mean(axis=0)
-    #and the stabdard error
-    val_se_harm = metrics_df_val_harm[explained_metrics].std(axis=0)/np.sqrt(len(metrics_df_val_harm))
+        val_mean_harm = metrics_df_val_harm[explained_metrics].mean(axis=0)
+        #and the stabdard error
+        val_se_harm = metrics_df_val_harm[explained_metrics].std(axis=0)/np.sqrt(len(metrics_df_val_harm))
 
-    # concat val_mean and val_se as two columns in a new dataframe with column names 'mean' and 'se'
-    val_mean_se = pd.concat([val_mean,val_se,val_mean_harm,val_se_harm],axis=1)
-    val_mean_se.columns = ['mean_unharm','se unharm','mean_harm','se_harm']
-    val_mean_se[f'unharmonized validation::{model.__class__.__name__}'] = val_mean_se['mean_unharm'].astype(str) + ' ± ' + val_mean_se['se unharm'].astype(str)
-    val_mean_se[f'harmonized validation::{model.__class__.__name__}'] = val_mean_se['mean_harm'].astype(str) + ' ± ' + val_mean_se['se_harm'].astype(str)
-    print(val_mean_se[[f'unharmonized validation::{model.__class__.__name__}',f'harmonized validation::{model.__class__.__name__}']])
-
-
-    train_mean = metrics_df[explained_metrics].mean(axis=0)
-    train_se = metrics_df[explained_metrics].std(axis=0)/np.sqrt(len(metrics_df))
-    train_mean_harm = metrics_df_harm[explained_metrics].mean(axis=0)
-    train_se_harm = metrics_df_harm[explained_metrics].std(axis=0)/np.sqrt(len(metrics_df_harm))
+        # concat val_mean and val_se as two columns in a new dataframe with column names 'mean' and 'se'
+        val_mean_se = pd.concat([val_mean,val_se,val_mean_harm,val_se_harm],axis=1)
+        val_mean_se.columns = ['mean_unharm','se unharm','mean_harm','se_harm']
+        val_mean_se[f'unharmonized validation::{model.__class__.__name__}'] = val_mean_se['mean_unharm'].astype(str) + ' ± ' + val_mean_se['se unharm'].astype(str)
+        val_mean_se[f'harmonized validation::{model.__class__.__name__}'] = val_mean_se['mean_harm'].astype(str) + ' ± ' + val_mean_se['se_harm'].astype(str)
+        print(val_mean_se[[f'unharmonized validation::{model.__class__.__name__}',f'harmonized validation::{model.__class__.__name__}']])
 
 
-    train_mean_se = pd.concat([train_mean,train_se,train_mean_harm,train_se_harm],axis=1)
-    train_mean_se.columns = ['mean_unharm','se unharm','mean_harm','se_harm']
-    train_mean_se[f'unharmonized training::{model.__class__.__name__}'] = train_mean_se['mean_unharm'].astype(str) + ' ± ' + train_mean_se['se unharm'].astype(str)
-    train_mean_se[f'harmonized training::{model.__class__.__name__}'] = train_mean_se['mean_harm'].astype(str) + ' ± ' + train_mean_se['se_harm'].astype(str)
-    print(train_mean_se[[f'unharmonized training::{model.__class__.__name__}',f'harmonized training::{model.__class__.__name__}']])
-    print('\n')
+        train_mean = metrics_df[explained_metrics].mean(axis=0)
+        train_se = metrics_df[explained_metrics].std(axis=0)/np.sqrt(len(metrics_df))
+        train_mean_harm = metrics_df_harm[explained_metrics].mean(axis=0)
+        train_se_harm = metrics_df_harm[explained_metrics].std(axis=0)/np.sqrt(len(metrics_df_harm))
+
+
+        train_mean_se = pd.concat([train_mean,train_se,train_mean_harm,train_se_harm],axis=1)
+        train_mean_se.columns = ['mean_unharm','se unharm','mean_harm','se_harm']
+        train_mean_se[f'unharmonized training::{model.__class__.__name__}'] = train_mean_se['mean_unharm'].astype(str) + ' ± ' + train_mean_se['se unharm'].astype(str)
+        train_mean_se[f'harmonized training::{model.__class__.__name__}'] = train_mean_se['mean_harm'].astype(str) + ' ± ' + train_mean_se['se_harm'].astype(str)
+        print(train_mean_se[[f'unharmonized training::{model.__class__.__name__}',f'harmonized training::{model.__class__.__name__}']])
+        print('\n')
+    except Exception as e:
+        print('Error in concatenating metrics dataframes. Please check the evaluation process.')
+        continue
 
 print('prediction on validation data')
 for dataset_validation, dataset_validation_harm in zip(datasets, datasets_harm):
-    p = pred.predict(dataset_validation)
-    ph = pred_harm.predict(dataset_validation_harm)
-    print(p.data.columns,p.data.shape,dataset_validation.data.shape)
-    print(ph.data.columns,ph.data.shape,dataset_validation.data.shape)
-
+    dataset_validation = pred.predict(dataset_validation)
+    dataset_validation_harm = pred_harm.predict(dataset_validation_harm)
+    print(dataset_validation_harm.data.head())
 
 
