@@ -12,7 +12,7 @@ import cvasl.vendor.neurocombat.neurocombat as neurocombat
 import cvasl.vendor.open_nested_combat.nest as nest
 from neuroHarmonize import harmonizationLearn
 import rpy2.robjects as robjects
-from dataset import *
+from cvasl.dataset import *
 
 class NeuroHarmonize:
     def __init__(
