@@ -5,6 +5,8 @@ import pandas as pd
 from scipy import stats
 import warnings
 import csv
+from datetime import datetime
+import numpy as np
 
 def read_file_auto(filepath):
     # Open the file and read the first line to detect the delimiter
@@ -31,7 +33,7 @@ def encode_cat_features(dff,cat_features_to_encode):
             data[feature] = data[feature].map(mapping)
 
     for _d in dff:
-        _d.data = data[data['site'] == _d.site_id]
+        _d.data = data[data['synthetic_site_id'] == _d.synthetic_site_id]
         _d.feature_mappings = feature_mappings
         _d.reverse_mappings = reverse_mappings
         _d.cat_features_to_encode = cat_features_to_encode
@@ -88,7 +90,9 @@ class MRIdataset:
             self.data = read_file_auto(path)
 
         self.site_id = site_id
-        self.data["Site_Original"] = self.data["Site"]
+        self.true_site_id = str(list(self.data.Site.unique())[0])
+        self.synthetic_site_id =  self.true_site_id + datetime.now().strftime("_%Y%m%d_%H%M%S.%f") + str(np.random.randint(0, 99999))
+        self.data["synthetic_site_id"] = self.synthetic_site_id
         self.data["Site"] = self.site_id
         self.feature_mappings = {}
         self.reverse_mappings = {}
@@ -249,8 +253,8 @@ class MRIdataset:
         for _c in ['index','Index' ,'ID','unnamed: 0']:
             if _c in self.data.columns and _c not in self.columns_order:
                 self.data = self.data.drop(columns=[_c])
-        self.data['Site'] = self.data['Site_Original']
-        self.data = self.data.drop(columns=['Site_Original'])
+        self.data['Site'] = self.true_site_id
+        self.data = self.data.drop(columns=['synthetic_site_id'],axis=1)
         
 
 

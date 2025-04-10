@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegressionipy
 from sklearn.linear_model import LinearRegression
 from sklearn import linear_model
 from sklearn import tree
