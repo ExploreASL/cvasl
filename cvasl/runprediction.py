@@ -1,7 +1,7 @@
 import pandas as pd
 import sys
 import numpy as np
-from cvasl.mriharmonize import *
+#from cvasl.mriharmonize import *
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
@@ -19,6 +19,9 @@ from sklearn.linear_model import ElasticNetCV
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import GradientBoostingRegressor
+from cvasl.dataset import *
+from cvasl.harmonizers import *
+from cvasl.prediction import *
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -28,7 +31,7 @@ method = 'neuroharmonize'
 
 features_to_map = ['readout', 'labelling', 'sex']
 patient_identifier = 'participant_id'
-features_to_drop = ["m0", "id"]
+features_to_drop = ["m0"]
 
 Edis_path = f'../data/EDIS_output_{method}.csv'
 helius_path = f'../data/HELIUS_output_{method}.csv'
@@ -81,17 +84,17 @@ for model in [ExtraTreesRegressor(n_estimators=100,random_state=np.random.randin
         #randomly select seed
         seed = np.random.randint(0,100000)
         pred_harm = PredictBrainAge(model_name='extratree',model_file_name='extratree',model=model,
-                            datasets=[topmri_harm],datasets_validation=[edis_harm,helius_harm,sabre_harm,insight46_harm] ,features=pred_features,target=['age'],
-                            cat_category='sex',cont_category='age',n_bins=2,splits=10,test_size_p=0.05,random_state=seed)
+                            datasets=[topmri_harm],datasets_validation=[edis_harm,helius_harm,sabre_harm,insight46_harm] ,features=pred_features,target='age',
+                            cat_category='sex',cont_category='age',n_bins=2,splits=3,test_size_p=0.05,random_state=seed)
         
         pred = PredictBrainAge(model_name='extratree',model_file_name='extratree',model=model,
-                            datasets=[topmri],datasets_validation=[edis,helius,sabre,insight46] ,features=pred_features,target=['age'],
-                            cat_category='sex',cont_category='age',n_bins=4,splits=5,test_size_p=0.1,random_state=seed)
+                            datasets=[topmri],datasets_validation=[edis,helius,sabre,insight46] ,features=pred_features,target='age',
+                            cat_category='sex',cont_category='age',n_bins=4,splits=3,test_size_p=0.1,random_state=seed)
 
 
 
-        metrics_df_harm,metrics_df_val_harm, predictions_df_harm,predictions_df_val_harm, models_harm = pred_harm.predict()
-        metrics_df,metrics_df_val, predictions_df,predictions_df_val, models = pred.predict()
+        metrics_df_harm,metrics_df_val_harm, predictions_df_harm,predictions_df_val_harm, models_harm = pred_harm.train_and_evaluate()
+        metrics_df,metrics_df_val, predictions_df,predictions_df_val, models = pred.train_and_evaluate()
         
         
         metrics_df_all_harm.append(metrics_df_harm)
@@ -144,5 +147,13 @@ for model in [ExtraTreesRegressor(n_estimators=100,random_state=np.random.randin
     train_mean_se[f'harmonized training::{model.__class__.__name__}'] = train_mean_se['mean_harm'].astype(str) + ' ± ' + train_mean_se['se_harm'].astype(str)
     print(train_mean_se[[f'unharmonized training::{model.__class__.__name__}',f'harmonized training::{model.__class__.__name__}']])
     print('\n')
+
+print('prediction on validation data')
+for dataset_validation, dataset_validation_harm in zip(datasets, datasets_harm):
+    p = pred.predict(dataset_validation)
+    ph = pred_harm.predict(dataset_validation_harm)
+    print(p.data.columns,p.data.shape,dataset_validation.data.shape)
+    print(ph.data.columns,ph.data.shape,dataset_validation.data.shape)
+
 
 
