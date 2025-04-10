@@ -251,24 +251,23 @@ class PredictBrainAge:
 
         return metrics_df, metrics_df_val, predictions_df, predictions_df_val, models
     
-    def predict(self, validation_dataset=None):
+    def predict(self, val_dataset=None):
         """
         Predicts brain age using the trained model on a new MRIdataset.
 
         Args:
-            MRIdataset (MRIdataset): The MRIdataset object for prediction.
+            val_dataset (MRIdataset): The MRIdataset object for prediction.
 
         Returns:
             pd.DataFrame: DataFrame containing predictions.
         """
-        if not isinstance(validation_dataset, MRIdataset):
+        if not isinstance(val_dataset, MRIdataset):
             raise TypeError("MRIDataset must be an instance of MRIdataset.")
         
-        X = validation_dataset.data[self.features].values
+        X = val_dataset.data[self.features].values
         X_scaled = StandardScaler().fit_transform(X)
         y_pred = self.model.predict(X_scaled)
         
-        validation_dataset.prepare_for_export()
-        validation_dataset.data['y_pred'] = y_pred
-        print("==================Successfully predicted brain age for the validation dataset.")
-        return validation_dataset
+        val_dataset.prepare_for_export()
+        val_dataset.data['age_predicted'] = y_pred
+        return val_dataset
