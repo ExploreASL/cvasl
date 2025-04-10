@@ -12,6 +12,7 @@ import cvasl.vendor.neurocombat.neurocombat as neurocombat
 import cvasl.vendor.open_nested_combat.nest as nest
 from neuroHarmonize import harmonizationLearn
 import rpy2.robjects as robjects
+from dataset import *
 
 class NeuroHarmonize:
     def __init__(
@@ -1855,7 +1856,7 @@ class CombatPlusPlus:
     def _load_harmonized_data_from_csv(self, filepath):
         """Loads harmonized data from the CSV file output by the R script."""
         try:
-            harmonized_data = pd.read_csv(filepath, index_col=0)
+            harmonized_data = read_file_auto(filepath, index_col=0)
             return harmonized_data
         except FileNotFoundError:
             raise FileNotFoundError(f"Harmonized data CSV not found at: {filepath}")

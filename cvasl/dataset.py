@@ -4,6 +4,17 @@ sys.path.insert(0, '../')
 import pandas as pd
 from scipy import stats
 import warnings
+import csv
+
+def read_file_auto(filepath):
+    # Open the file and read the first line to detect the delimiter
+    with open(filepath, 'r') as file:
+        first_line = file.readline()
+        sniffer = csv.Sniffer()
+        delimiter = sniffer.sniff(first_line).delimiter
+
+    # Read the file with the detected delimiter
+    return pd.read_csv(filepath, delimiter=delimiter)
 
 def encode_cat_features(dff,cat_features_to_encode):
 
@@ -74,9 +85,10 @@ class MRIdataset:
         if isinstance(path, list):
             self.data = pd.concat([pd.read_csv(_p) for _p in path])
         else:
-            self.data = pd.read_csv(path)
+            self.data = read_file_auto(path)
 
         self.site_id = site_id
+        self.data["Site_Original"] = self.data["Site"]
         self.data["Site"] = self.site_id
         self.feature_mappings = {}
         self.reverse_mappings = {}
@@ -233,9 +245,13 @@ class MRIdataset:
         _tc = [_c.lower() for _c in self.columns_order]
         self.data = self.data[_tc]
         self.data.columns = self.columns_order
+        
         for _c in ['index','Index' ,'ID','unnamed: 0']:
             if _c in self.data.columns and _c not in self.columns_order:
                 self.data = self.data.drop(columns=[_c])
+        self.data['Site'] = self.data['Site_Original']
+        self.data = self.data.drop(columns=['Site_Original'])
+        
 
 
     def _extended_summary_statistics(self):

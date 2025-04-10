@@ -27,7 +27,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 #method = 'neurocombat'
-method = 'neuroharmonize'
+method = 'neurocombat'
 
 features_to_map = ['readout', 'labelling', 'sex']
 patient_identifier = 'participant_id'

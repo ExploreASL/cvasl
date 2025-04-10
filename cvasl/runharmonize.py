@@ -36,7 +36,7 @@ datasets = encode_cat_features(datasets,features_to_map)
 method = 'neurocombat' 
 
 
-if method == 'neuroharmonize':
+if method == 'neurocombat':
 
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
     covariates = ['age', 'sex',  'icv', 'site']
