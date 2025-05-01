@@ -32,10 +32,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class BrainAgeAnalyzer:
-    def __init__(self, validation_csv, validation_img_dir, model_dir, output_root, use_cuda=False, demographics_columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], group_columns=["Sex", "Site","Diagnosis"], indices_path = None): # Added group_columns as parameter
+    def __init__(self, validation_csv, validation_img_dir, masks_dir, model_dir, output_root, use_cuda=False, demographics_columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], group_columns=["Sex", "Site","Diagnosis"], indices_path = None): # Added group_columns as parameter
         self.validation_csv = validation_csv
         self.validation_img_dir = validation_img_dir
         self.model_dir = model_dir
+        self.masks_dir = masks_dir
         self.output_root_base = output_root
         self.output_root = output_root
         self.group_cols = group_columns
@@ -49,7 +50,7 @@ class BrainAgeAnalyzer:
             self.validation_csv = [self.validation_csv]
         if type(self.validation_img_dir) == str:
             self.validation_img_dir = [self.validation_img_dir]
-        self.validation_datasets = [BrainAgeDataset(_c,_v, indices=_i,cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"]) for _c,_v,_i in zip(self.validation_csv, self.validation_img_dir,self.indices_path)]
+        self.validation_datasets = [BrainAgeDataset(_c,_v, indices=_i,cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], masks_dir=_m) for _c,_v,_i,_m in zip(self.validation_csv, self.validation_img_dir,self.indices_path,self.masks_dir)]
         self.validation_dataset_names = [os.path.basename(_c).split(".")[0] for _c in self.validation_csv]
         logging.info(f"Loaded {len(self.validation_datasets)} validation datasets with shapes {[len(d) for d in self.validation_datasets]}")
 
