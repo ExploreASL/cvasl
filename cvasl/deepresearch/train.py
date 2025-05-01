@@ -115,7 +115,7 @@ def train_model(
         run = wandb.run
     else:
         run = None
-    dataset = BrainAgeDataset(csv_file, image_dir)
+    dataset = BrainAgeDataset(csv_file, image_dir,mask_path=csv_file)
     if run:
         create_demographics_table(dataset, run)
     dataset = [

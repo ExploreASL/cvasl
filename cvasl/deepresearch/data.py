@@ -18,9 +18,12 @@ import argparse
 import json
 import torch.nn.functional as F
 import platform
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 class BrainAgeDataset(Dataset):
-    def __init__(self, csv_file, image_dir, cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD"], num_cols=[], target_col='Age', patient_id_col='participant_id', indices = None, transform=None):
+    def __init__(self, csv_file, image_dir, cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD"], num_cols=[], target_col='Age', patient_id_col='participant_id', indices = None, transform=None, mask_path = None):
         """
         Initializes BrainAgeDataset.
 
@@ -33,6 +36,7 @@ class BrainAgeDataset(Dataset):
             patient_id_col (str, optional): Name of the patient ID column. Defaults to 'participant_id'.
             transform (callable, optional): Optional transform to be applied on a sample.
         """
+        self.mask_path = mask_path
         self.data_df = pd.read_csv(csv_file)
         self.original_data_df = pd.read_csv(csv_file)
         self.indices = indices
@@ -73,13 +77,13 @@ class BrainAgeDataset(Dataset):
             image_path = None
 
             for filename in all_files_in_dir:
-                if original_filename_base in filename:
+                if 'qCBF' in filename and original_filename_base in filename:
                     image_path = os.path.join(image_dir, filename)
                     found_match = True
                     break
             if not found_match and transformed_filename_base:
                 for filename in all_files_in_dir:
-                    if transformed_filename_base in filename:
+                    if 'qCBF' in filename and transformed_filename_base in filename:
                         image_path = os.path.join(image_dir, filename)
                         found_match = True
                         break
@@ -200,7 +204,7 @@ class BrainAgeDataset(Dataset):
             image_path = os.path.join(self.image_dir, image_name)
             logging.debug(f"Loading and preprocessing image: {image_path}")
             try:
-                image = self.load_and_preprocess(image_path)
+                image = self.load_and_preprocess(image_path, image_path.replace('qCBF', 'BrainMaskProcessing') if self.mask_path else None)
                 if image is None:
                     return None
             except Exception as e:
@@ -227,35 +231,136 @@ class BrainAgeDataset(Dataset):
         logging.debug(f"Returning sample for patient: {patient_id}")
         return sample
 
-    def load_and_preprocess(self, image_path):
+    def load_and_preprocess(self, image_path, mask_file_path=None):
         """
-        Loads, preprocesses, and handles NaN values in the NIfTI image.
-        Replaces NaNs with voxel-wise average calculated over the dataset.
-        If voxel-wise averages are not available, falls back to in-image mean.
-        Prints percentage of NaN/Inf values after replacement.
+        Loads, preprocesses (handles NaNs), optionally applies a binary mask,
+        and normalizes the NIfTI image data.
+        - NaN handling uses voxel averages or in-image mean (calculated pre-mask).
+        - Masking zeros out data outside the mask.
+        - Normalization uses mean/std of the *masked-in* non-NaN data if mask applied,
+          otherwise uses global mean/std.
+        Returns the preprocessed, masked, and normalized data array.
         """
         logging.debug(f"Loading image data from: {image_path}")
-        img = nib.load(image_path)
-        data = img.get_fdata()
-        logging.debug(f"Image data loaded with shape: {data.shape}")
-        data = np.squeeze(data)
-        logging.debug(f"Image data squeezed to shape: {data.shape}")
-        mask = np.isnan(data)
+        try:
+            img = nib.load(image_path)
+            # Load data as float32 for processing
+            data = img.get_fdata(dtype=np.float32)
+            logging.debug(f"Image data loaded with shape: {data.shape}")
+        except Exception as e:
+            logging.error(f"Failed to load image file {image_path}: {e}")
+            return None # Cannot proceed if image fails to load
 
-        if self.voxel_averages is not None:
-            data = np.where(mask, self.voxel_averages, data)
-        else:
-            mean_val = np.nanmean(data) if np.any(mask) else 0
-            logging.debug(f"Replacing NaNs with in-image mean value: {mean_val}")
-            data[mask] = mean_val
+        data_squeezed = np.squeeze(data) # Squeeze early for consistent shape checks
+        logging.debug(f"Data squeezed to shape: {data_squeezed.shape}")
 
-        mean = np.mean(data)
-        std = np.std(data)
-        logging.debug(f"Mean: {mean}, Std: {std}")
-        if std > 0:
-            data = (data - mean) / std
+        # --- Handle NaNs (before masking potentially) ---
+        nan_mask = np.isnan(data_squeezed)
+        num_nans = np.sum(nan_mask)
+        inf_mask = np.isinf(data_squeezed)
+
+        if self.mask_path:
+            data_squeezed[nan_mask] = 0
+            data_squeezed[inf_mask] = 0
+            logging.debug(f"Replaced NaNs and Infs with 0 in data.")
+            nan_mask = np.isnan(data_squeezed)
+            num_nans = np.sum(nan_mask)
+            inf_mask = np.isinf(data_squeezed)
+            
+
+        if num_nans > 0:
+            logging.debug(f"Found {num_nans} NaN values before replacement.")
+            if self.voxel_averages is not None:
+                # Check shape compatibility AFTER squeezing
+                if self.voxel_averages.shape == data_squeezed.shape:
+                    data_squeezed = np.where(nan_mask, self.voxel_averages, data_squeezed)
+                    logging.debug("Replaced NaNs using voxel averages.")
+                else:
+                    logging.warning(f"Voxel averages shape {self.voxel_averages.shape} incompatible with squeezed data shape {data_squeezed.shape}. Falling back to in-image mean.")
+                    # Calculate mean from non-NaN values of the squeezed data
+                    mean_val = np.nanmean(data_squeezed) if np.any(~nan_mask) else 0
+                    logging.debug(f"Replacing NaNs with in-image mean value: {mean_val}")
+                    data_squeezed[nan_mask] = mean_val # Apply mean_val where original data was NaN
+            else: # No voxel averages
+                mean_val = np.nanmean(data_squeezed) if np.any(~nan_mask) else 0
+                logging.debug(f"Replacing NaNs with in-image mean value: {mean_val}")
+                data_squeezed[nan_mask] = mean_val # Apply mean_val where original data was NaN
+
+            # Check if NaNs still exist (e.g., if mean_val was NaN because all input was NaN)
+            remaining_nan_mask = np.isnan(data_squeezed)
+            if np.any(remaining_nan_mask):
+                logging.warning(f"{np.sum(remaining_nan_mask)} NaNs remain after replacement attempts. Setting them to 0.")
+                data_squeezed[remaining_nan_mask] = 0
+
+        # --- Apply Mask (after NaN handling) ---
+        processed_data = data_squeezed # Start with NaN-handled data
+        mask_applied = False
+        final_mask = None # Keep track of the boolean mask used
+        if self.mask_path is not None:
+            print('=====================MASK')
+            print(mask_file_path)
+        if mask_file_path and os.path.exists(mask_file_path):
+            try:
+                logging.info(f"Loading mask data from: {mask_file_path}")
+                mask_img = nib.load(mask_file_path)
+                # Load mask data, ensure it's boolean
+                mask_data = mask_img.get_fdata().astype(bool)
+                logging.info(f"Mask data loaded with shape: {mask_data.shape}")
+
+                # Ensure mask shape matches squeezed data shape (allow broadcasting for singleton dims removal)
+                if processed_data.shape != mask_data.shape:
+                     # Try squeezing mask too
+                     mask_data_squeezed = np.squeeze(mask_data)
+                     if processed_data.shape == mask_data_squeezed.shape:
+                         final_mask = mask_data_squeezed # Use the squeezed boolean mask
+                         logging.info(f"Squeezed mask to shape {final_mask.shape} to match data.")
+                     else:
+                         raise ValueError(f"Squeezed data shape {processed_data.shape} and mask shape {mask_img.shape} (squeezed: {mask_data_squeezed.shape}) are incompatible.")
+                else:
+                     final_mask = mask_data # Use original boolean mask
+
+                logging.info(f"Applying mask.")
+                # Apply mask: Zero out voxels outside the mask
+                processed_data[~final_mask] = 0
+                mask_applied = True # Flag that mask was used for normalization step
+                logging.info(f"Data masked. Non-zero elements: {np.count_nonzero(processed_data)}")
+
+            except Exception as e:
+                logging.error(f"Error loading or applying mask {mask_file_path}: {e}. Proceeding without explicit mask application for this image.")
+                final_mask = None # Ensure mask is not used if loading failed
+        elif mask_file_path:
+            logging.warning(f"Mask file path provided but not found: {mask_file_path}. Proceeding without mask.")
+
+        # --- Normalization (on potentially masked, NaN-handled data) ---
+        if mask_applied and final_mask is not None:
+            # Normalize based on non-zero values within the mask if mask was applied
+            # Use final_mask to select voxels for statistics calculation
+            if np.any(final_mask): # Check if mask is not all False
+                masked_in_values = processed_data[final_mask]
+                mean = np.mean(masked_in_values)
+                std = np.std(masked_in_values)
+                logging.debug(f"Normalization stats (masked region): Mean={mean}, Std={std}")
+
+                if std > 0:
+                    # Apply normalization only to the masked-in region
+                    processed_data[final_mask] = (masked_in_values - mean) / std
+                elif np.any(masked_in_values): # If std is 0 but there are values, just center
+                    processed_data[final_mask] = masked_in_values - mean
+                # Voxels outside mask (where final_mask is False) remain 0
+            else: # Handle case of empty mask
+                 logging.debug("Mask is empty (all False), skipping normalization.")
+                 mean, std = 0, 0
         else:
-            data = data - mean
+            # Original normalization if no mask was applied or mask failed
+            mean = np.mean(processed_data)
+            std = np.std(processed_data)
+            logging.debug(f"Normalization stats (full image): Mean={mean}, Std={std}")
+            if std > 0:
+                processed_data = (processed_data - mean) / std
+            else: # Handle flat image
+                processed_data = processed_data - mean
+
         logging.debug(
-            f"Returning preprocessed image data with shape: {data.shape}")
-        return data.astype(np.float32)
+            f"Returning final preprocessed data array with shape: {processed_data.shape}")
+        # Final check for dtype, should already be float32
+        return processed_data.astype(np.float32)

@@ -33,7 +33,7 @@ datasets = [edis, helius, sabre, topmri, insight46]
 
 datasets = encode_cat_features(datasets,features_to_map)
 
-method = 'autocombat' 
+method = 'neurocombat' 
 
 
 if method == 'neuroharmonize':
@@ -59,8 +59,7 @@ elif method == 'covbat':
 
 elif method == 'neurocombat':
     
-    features_to_harmonize = ['ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV',
-        'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF',]
+    features_to_harmonize = ['ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV','ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF']
     discrete_covariates= ['sex']
     continuous_covariates=  ['age']
     site_indicator = 'site'

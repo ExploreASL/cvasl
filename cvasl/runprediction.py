@@ -19,6 +19,7 @@ from sklearn.linear_model import ElasticNetCV
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import GradientBoostingRegressor
+from prediction import PredictBrainAge
 
 import warnings
 warnings.filterwarnings("ignore")

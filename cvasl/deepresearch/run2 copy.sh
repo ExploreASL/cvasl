@@ -1,5 +1,23 @@
 #!/bin/bash
 
+# slurm specific parameters
+#SBATCH --job-name=aslbrainage
+#SBATCH --gres=gpu:a100:1
+#SBATCH --partition=luna-gpu-long
+#SBATCH --mem=64G
+#SBATCH --cpus-per-task=2
+#SBATCH --time=6-23:59
+#SBATCH --nice=0
+#SBATCH --qos=radv
+#SBATCH --mail-type=BEGIN
+#SBATCH --mail-user=s.amiri@esciencecenter.nl
+set -eu
+
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+module load Anaconda3/2024.02-1
+module load cuda/12.8
+conda activate brainage
 
 # Function to run training command and handle errors
 run_training() {
@@ -52,31 +70,35 @@ run_training() {
     local gamma=$3
     local smoothing=$4
     local use_huber=$5
+    echo "Use Huber: $use_huber", "Alpha: $alpha", "Beta: $beta", "Gamma: $gamma", "Smoothing: $smoothing"
     shift 5
+    
     brainage_args="--brainage_alpha $alpha --brainage_beta $beta --brainage_gamma $gamma --brainage_smoothing $smoothing"
 
     if [[ "$use_huber" == "True" ]]; then
         brainage_args+=" --brainage_use_huber --brainage_delta $1"
         shift 1
     fi
+    echo "Brainage args: $brainage_args"
     # No 'else' needed.  If use_huber is not "True", we just don't add the flag.
 
 
   # Construct the Python command.
+
   python train.py \
     --model_type "$model_type" \
-    --csv_file "/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/cvasl-exploreasl/cvasl/cvasl/deepresearch/trainingdata/mock_dataset/mock_data.csv" \
-    --image_dir "/Users/sabaamiri/Library/CloudStorage/OneDrive-NetherlandseScienceCenter/Dev/cvasl-exploreasl/cvasl/cvasl/deepresearch/trainingdata/mock_dataset/images" \
-    --num_epochs 1 \
-    --batch_size 5 \
+    --csv_file "/home/radv/samiri/my-scratch/trainingdata/masked/topmri.csv" \
+    --image_dir "/home/radv/samiri/my-scratch/trainingdata/masked/topmri" \
+    --num_epochs 100 \
+    --batch_size 10 \
     --learning_rate "$learning_rate" \
-    --bins 2 \
+    --bins 20 \
     --use_wandb \
     --wandb_prefix lossopt \
     --use_cuda \
     --store_model \
-    --split_strategy "stratified" \
-    --output_dir "./saved_models" \
+    --split_strategy "stratified_group_sex" \
+    --output_dir "/home/radv/samiri/my-scratch/saved_models" \
     $resnet_args $densenet_args $resnext_args $efficientnet_args $large_cnn_args $improved_cnn_args $hybrid_cnn_args $brainage_args "$@" 2>&1 | tee -a "$output_file"
 
   # Check exit status.
@@ -97,42 +119,31 @@ mkdir -p saved_models_test
 
 # Learning rates to loop through
 learning_rates=(0.0005 0.00045 0.00055)
+learning_rates2=(0.0005 0.00045 0.00055)
 # Common filter values (for consistent comparison)
 
 # BrainAgeLoss parameter combinations
+
 loss_params=(
   # Baseline (MAE) -  Keep this for comparison.
   "0.0 0.0 0.0 0.0 False"
 
   # Individual Component Tests (as before, but with Huber variants)
-  "0.0 0.1 0.0 0.0 False"  # Beta only (MAE)
-  "0.1 0.0 0.0 0.0 False"  # Alpha only (MAE)
-  "0.0 0.0 0.1 0.0 False"  # Gamma only (MAE)
-  "0.0 0.1 0.0 0.0 True 1.0"  # Beta only (Huber, delta=1.0)
-  "0.1 0.0 0.0 0.0 True 1.0"  # Alpha only (Huber, delta=1.0)
-  "0.0 0.0 0.1 0.0 True 1.0"  # Gamma only (Huber, delta=1.0)
 
   # Exploring different Huber deltas (with a moderate combination)
   "0.5 0.2 0.1 0.0 True 0.5"  # Lower delta (more like MAE)
   "0.5 0.2 0.1 0.0 True 2.0"  # Higher delta (more robust)
-  "0.5 0.2 0.1 0.0 True 5.0" # Even higher delta
 
   # Combined Effects (Varying Alpha - Correlation Loss)
   "0.1 0.1 0.1 0.0 False"  # Low alpha
-  "0.5 0.1 0.1 0.0 False"  # Moderate alpha
-  "1.0 0.1 0.1 0.0 False"  # High alpha
   "2.0 0.1 0.1 0.0 False"  # Very high alpha (emphasize correlation)
 
   # Combined Effects (Varying Beta - Bias Regularization)
   "0.5 0.05 0.1 0.0 False" # Low Beta
-  "0.5 0.2 0.1 0.0 False"  # Moderate Beta
-  "0.5 0.5 0.1 0.0 False"  # High Beta
   "0.5 1.0 0.1 0.0 False"  # Very High Beta (emphasize std dev matching)
 
   # Combined Effects (Varying Gamma - Age-Specific Weighting)
   "0.5 0.1 0.05 0.0 False" # low gamma
-  "0.5 0.1 0.2 0.0 False"  # Moderate Gamma
-  "0.5 0.1 0.5 0.0 False"  # High Gamma
   "0.5 0.1 1.0 0.0 False"  # Very High Gamma (emphasize older ages)
 
   # Combined Effects (with Huber Loss, delta=1.0)
@@ -143,53 +154,41 @@ loss_params=(
 
   # Exploring Smoothing (with a moderate combination)
   "0.5 0.2 0.1 0.1 False"  # Low smoothing
-  "0.5 0.2 0.1 0.2 False"    # moderate smoothing
   "0.5 0.2 0.1 0.5 False"    # high smoothing
   "0.5 0.2 0.1 0.1 True 1.0" # low smoothing huber
-  "0.5 0.2 0.1 0.2 True 1.0"   # moderate smoothing huber
   "0.5 0.2 0.1 0.5 True 1.0"    # high smoothing huber
   
-  # Zeroing out individual components, keeping others moderate (Huber)
-  "0.0 0.2 0.1 0.1 True 1.0"  # No alpha
-  "0.5 0.0 0.1 0.1 True 1.0"  # No beta
-  "0.5 0.2 0.0 0.1 True 1.0"  # No gamma
-
-    # a few more combinations
-    "0.2 0.4 0.3 0.1 True 1.0"
-    "0.7 0.1 0.6 0.05 True 1.0"
-    "1.5 0.8 0.2 0.2 True 1.0"
-
-
 )
     # Loop through each learning rate
-    for lr in "${learning_rates[@]}"; do
-        # --- Large CNN ---
-        for dropout_rate in 0.05 0.1 0.2 0.3; do
-            for layers in 4 5 6; do
-                for filters in 8 20 64; do
-                    for multiplier in 1.5 2.5; do # Increased multipliers for large CNN
-                        for loss_param in "${loss_params[@]}"; do
-                          run_training "large" "$lr" $dropout_rate $layers $filters $multiplier $loss_param
-                      done
-                    done
+for lr in "${learning_rates[@]}"; do
+    # --- Large CNN ---
+    for dropout_rate in 0.05 0.1 0.2 0.3; do
+        for layers in 4 5 6; do
+            for filters in 8 20 64; do
+                for multiplier in 1.5 2.5; do # Increased multipliers for large CNN
+                    for loss_param in "${loss_params[@]}"; do
+                      echo "Running large CNN with dropout rate: $dropout_rate, layers: $layers, filters: $filters, multiplier: $multiplier, loss params: $loss_param"
+                      run_training "large" "$lr" $dropout_rate $layers $filters $multiplier $loss_param
+                  done
                 done
             done
         done
     done
-    # --- Improved CNN ---
-    for lr in "${learning_rates[@]}"; do
 
-    for dropout_rate in 0.05 0.1 0.2 0.25 0.3; do
+    for dropout_rate in 0.05 0.1 0.2 0.3; do
         for layers in 6 7; do
             for filters in 8 40 ; do
                 for multiplier in 0.8 1.1 1.5; do
                     for loss_param in "${loss_params[@]}"; do
+                        echo "Running improved CNN with dropout rate: $dropout_rate, layers: $layers, filters: $filters, multiplier: $multiplier, loss params: $loss_param"
                         run_training "improved_cnn" "$lr" $dropout_rate $layers $filters $multiplier $loss_param
                     done
                 done
             done
         done
     done
-    done
+done
+    
 
 
+echo "All model training attempts completed.  See 'log' for details."
