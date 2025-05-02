@@ -18,8 +18,9 @@ import argparse
 import json
 import torch.nn.functional as F
 import platform
+
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 class BrainAgeDataset(Dataset):
@@ -266,7 +267,6 @@ class BrainAgeDataset(Dataset):
             nan_mask = np.isnan(data_squeezed)
             num_nans = np.sum(nan_mask)
             inf_mask = np.isinf(data_squeezed)
-            
 
         if num_nans > 0:
             logging.debug(f"Found {num_nans} NaN values before replacement.")
@@ -296,16 +296,14 @@ class BrainAgeDataset(Dataset):
         processed_data = data_squeezed # Start with NaN-handled data
         mask_applied = False
         final_mask = None # Keep track of the boolean mask used
-        if self.mask_path is not None:
-            print('=====================MASK')
-            print(mask_file_path)
+
         if mask_file_path and os.path.exists(mask_file_path):
             try:
-                logging.info(f"Loading mask data from: {mask_file_path}")
+                logging.debug(f"Loading mask data from: {mask_file_path}")
                 mask_img = nib.load(mask_file_path)
                 # Load mask data, ensure it's boolean
                 mask_data = mask_img.get_fdata().astype(bool)
-                logging.info(f"Mask data loaded with shape: {mask_data.shape}")
+                logging.debug(f"Mask data loaded with shape: {mask_data.shape}")
 
                 # Ensure mask shape matches squeezed data shape (allow broadcasting for singleton dims removal)
                 if processed_data.shape != mask_data.shape:
@@ -313,17 +311,17 @@ class BrainAgeDataset(Dataset):
                      mask_data_squeezed = np.squeeze(mask_data)
                      if processed_data.shape == mask_data_squeezed.shape:
                          final_mask = mask_data_squeezed # Use the squeezed boolean mask
-                         logging.info(f"Squeezed mask to shape {final_mask.shape} to match data.")
+                         logging.debug(f"Squeezed mask to shape {final_mask.shape} to match data.")
                      else:
                          raise ValueError(f"Squeezed data shape {processed_data.shape} and mask shape {mask_img.shape} (squeezed: {mask_data_squeezed.shape}) are incompatible.")
                 else:
                      final_mask = mask_data # Use original boolean mask
 
-                logging.info(f"Applying mask.")
+                logging.debug(f"Applying mask.")
                 # Apply mask: Zero out voxels outside the mask
                 processed_data[~final_mask] = 0
                 mask_applied = True # Flag that mask was used for normalization step
-                logging.info(f"Data masked. Non-zero elements: {np.count_nonzero(processed_data)}")
+                logging.debug(f"Data masked. Non-zero elements: {np.count_nonzero(processed_data)}")
 
             except Exception as e:
                 logging.error(f"Error loading or applying mask {mask_file_path}: {e}. Proceeding without explicit mask application for this image.")
