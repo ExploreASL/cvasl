@@ -1014,6 +1014,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_dir", type=str, default="./saved_models", help="Path to the directory containing saved models")
     parser.add_argument("--output_root", type=str, default="analysis_results", help="Root directory for analysis outputs")
     parser.add_argument("--indices_path", type=str, nargs='+', default="None", help="Path to files containing indices for test split for each dataset")
+    parser.add_argument("--masks_path", type=str, nargs='+', default="None", help="Path to files containing binary masks")
     parser.add_argument("--use_cuda", action="store_true", default=False, help="Enable CUDA (GPU) if available")
     parser.add_argument("--group_cols", type=str, default="Sex,Site,Diagnosis", help="Comma-separated list of columns for group-wise analysis") # Added group_cols argument
 
