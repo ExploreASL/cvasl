@@ -32,11 +32,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class BrainAgeAnalyzer:
-    def __init__(self, validation_csv, validation_img_dir, masks_dir, model_dir, output_root, use_cuda=False, demographics_columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], group_columns=["Sex", "Site","Diagnosis"], indices_path = None): # Added group_columns as parameter
+    def __init__(self, validation_csv, validation_img_dir, mask_path, model_dir, output_root, use_cuda=False, demographics_columns=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], group_columns=["Sex", "Site","Diagnosis"], indices_path = None): # Added group_columns as parameter
         self.validation_csv = validation_csv
         self.validation_img_dir = validation_img_dir
         self.model_dir = model_dir
-        self.masks_dir = masks_dir
+        self.mask_path = mask_path
         self.output_root_base = output_root
         self.output_root = output_root
         self.group_cols = group_columns
@@ -50,7 +50,7 @@ class BrainAgeAnalyzer:
             self.validation_csv = [self.validation_csv]
         if type(self.validation_img_dir) == str:
             self.validation_img_dir = [self.validation_img_dir]
-        self.validation_datasets = [BrainAgeDataset(_c,_v, indices=_i,cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], masks_dir=_m) for _c,_v,_i,_m in zip(self.validation_csv, self.validation_img_dir,self.indices_path,self.masks_dir)]
+        self.validation_datasets = [BrainAgeDataset(_c,_v, indices=_i,cat_cols=["Sex", "Site", "Labelling", "Readout", "LD", "PLD","Diagnosis"], mask_path=_m) for _c,_v,_i,_m in zip(self.validation_csv, self.validation_img_dir,self.indices_path,self.mask_path)]
         self.validation_dataset_names = [os.path.basename(_c).split(".")[0] for _c in self.validation_csv]
         logging.info(f"Loaded {len(self.validation_datasets)} validation datasets with shapes {[len(d) for d in self.validation_datasets]}")
 
@@ -1014,7 +1014,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_dir", type=str, default="./saved_models", help="Path to the directory containing saved models")
     parser.add_argument("--output_root", type=str, default="analysis_results", help="Root directory for analysis outputs")
     parser.add_argument("--indices_path", type=str, nargs='+', default="None", help="Path to files containing indices for test split for each dataset")
-    parser.add_argument("--masks_path", type=str, nargs='+', default="None", help="Path to files containing binary masks")
+    parser.add_argument("--mask_path", type=str, nargs='+', default="None", help="Path to files containing binary masks")
     parser.add_argument("--use_cuda", action="store_true", default=False, help="Enable CUDA (GPU) if available")
     parser.add_argument("--group_cols", type=str, default="Sex,Site,Diagnosis", help="Comma-separated list of columns for group-wise analysis") # Added group_cols argument
 
@@ -1030,7 +1030,7 @@ if __name__ == "__main__":
         use_cuda=args.use_cuda,
         group_columns=group_cols,
         indices_path=args.indices_path,
-        masks_dir=args.masks_path,
+        mask_path=args.mask_path,
     )
     logging.info("Starting Brain Age Analysis...")
     analyzer.run_all_analyses()
