@@ -1029,7 +1029,8 @@ if __name__ == "__main__":
         output_root=args.output_root,
         use_cuda=args.use_cuda,
         group_columns=group_cols,
-        indices_path=args.indices_path
+        indices_path=args.indices_path,
+        masks_dir=args.masks_path,
     )
     logging.info("Starting Brain Age Analysis...")
     analyzer.run_all_analyses()
