@@ -163,17 +163,28 @@ def get_target_layers(wrappedmodel):
         return None  # Default or unknown model type
 
 
-def normalize_cam(cam, target_size=None):
-    """Memory-efficient normalization and resizing"""
+def normalize_cam(cam, target_size=None, preserve_zeros=True):
+    """Memory-efficient normalization and resizing with option to preserve zero values"""
     cam = np.maximum(cam, 0)
-    cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam) + 1e-7) # Small value for numerical stability
+    
+    if preserve_zeros:
+        # Only normalize non-zero values to preserve masked areas
+        non_zero_mask = cam > 0
+        if np.any(non_zero_mask):
+            non_zero_values = cam[non_zero_mask]
+            min_val = np.min(non_zero_values)
+            max_val = np.max(non_zero_values)
+            if max_val > min_val:
+                cam[non_zero_mask] = (non_zero_values - min_val) / (max_val - min_val)
+            # Zero values remain zero
+    else:
+        # Original normalization
+        cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam) + 1e-7)
 
-    if target_size is not None: # Resize if target_size is provided
-        #cam_resized = cv2.resize(cam, target_size, interpolation=cv2.INTER_LINEAR) # Use cv2.resize
+    if target_size is not None:
         cam_resized = cv2.resize(cam, (target_size[1], target_size[0]), interpolation=cv2.INTER_LINEAR)
-        return cam_resized.astype(np.float16)  # Use float16 for memory efficiency
+        return cam_resized.astype(np.float16)
     return cam.astype(np.float16)
-
 
 def generate_age_binned_xai_visualizations(model, dataset, output_dir, device='cuda', methods_to_run=['all'], age_bin_width=10):
     """
