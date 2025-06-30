@@ -949,7 +949,7 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
     model_output_dir = os.path.join(base_output_dir, model_name, model_filename.replace('.pth', ''))
     os.makedirs(model_output_dir, exist_ok=True)
 
-    dataset = BrainAgeDataset(csv_path, test_data_dir, mask_path=csv_path, indices=indices_path)
+    dataset = BrainAgeDataset(csv_path, test_data_dir, mask_path=test_data_dir, indices=indices_path)
     dataset = [sample for sample in dataset if sample is not None]
     
     # Add this line to check masking right after data loading
