@@ -583,6 +583,24 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
         logging.info("Generating individual patient visualizations...")
         generate_individual_patient_visualizations(model, dataset, output_dir, device, methods_to_run)            
 
+def plot_heatmap_with_masked_colormap(ax, original_slice, heatmap_slice, alpha=0.5):
+    """Plot heatmap with proper masking of zero values"""
+    # Create a custom colormap where the lowest value is fully transparent
+    cmap = plt.cm.jet
+    my_cmap = cmap(np.arange(cmap.N))
+    my_cmap[:, -1] = np.linspace(0, 1, cmap.N)  # First value transparent
+    my_cmap = ListedColormap(my_cmap)
+    
+    # Apply a strict mask to heatmap - ensure zeros are truly zero
+    masked_heatmap = np.copy(heatmap_slice)
+    mask = masked_heatmap < 0.01  # Consider anything below 0.01 as background
+    masked_heatmap[mask] = np.nan  # NaN values will be transparent
+    
+    # Plot
+    ax.imshow(original_slice, cmap='gray')
+    im = ax.imshow(masked_heatmap, cmap=my_cmap, alpha=alpha, interpolation='none')
+    return im
+
 def generate_individual_patient_visualizations(model, dataset, output_dir, device='cuda', methods_to_run=['all']):
     """
     Generate XAI visualizations for individual patients.
@@ -769,6 +787,151 @@ def generate_individual_patient_visualizations(model, dataset, output_dir, devic
         gc.collect()
         torch.cuda.empty_cache()
 
+def verify_brain_masking(dataset, output_dir=None, num_samples=5):
+    """
+    Verifies brain masking by plotting the middle slice in three orthogonal views 
+    for the first few images in the dataset immediately after they're loaded.
+    
+    Args:
+        dataset: BrainAgeDataset or list of samples
+        output_dir: Directory to save the verification plots (defaults to './mask_verification')
+        num_samples: Number of samples to check
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import os
+    from matplotlib.colors import ListedColormap
+    
+    if output_dir is None:
+        output_dir = './mask_verification'
+    os.makedirs(output_dir, exist_ok=True)
+    
+    view_names = ['sagittal', 'coronal', 'axial']
+    view_axes = {'sagittal': 0, 'coronal': 1, 'axial': 2}
+    
+    # Create a custom colormap with true black for zeros
+    custom_gray = plt.cm.gray(np.arange(256))
+    custom_gray[0] = [0, 0, 0, 1]  # Pure black for zero values
+    custom_cmap = ListedColormap(custom_gray)
+    
+    # Determine if we're dealing with a dataset or a list
+    if hasattr(dataset, '__getitem__') and not isinstance(dataset, list):
+        # It's a dataset object
+        sample_getter = lambda i: dataset[i]
+        n_samples = min(num_samples, len(dataset))
+    else:
+        # It's a list of samples
+        sample_getter = lambda i: dataset[i]
+        n_samples = min(num_samples, len(dataset))
+    
+    for i in range(n_samples):
+        sample = sample_getter(i)
+        if sample is None:
+            logging.info(f"Sample {i} is None, skipping")
+            continue
+            
+        image = sample['image'].numpy() if torch.is_tensor(sample['image']) else sample['image']
+        age = sample['age'].item() if torch.is_tensor(sample['age']) else sample['age']
+        patient_id = sample.get('patient_id', f"patient_{i}")
+        
+        if isinstance(patient_id, torch.Tensor):
+            patient_id = patient_id.item() if patient_id.numel() == 1 else str(patient_id)
+        
+        # Create figure with 4 rows and 3 columns
+        fig, axes = plt.subplots(4, 3, figsize=(15, 20))
+        fig.suptitle(f"Patient {patient_id} - Age {age:.1f} - Mask Verification", fontsize=16)
+        
+        # Calculate masking statistics
+        total_voxels = image.size
+        zero_voxels = np.sum(image == 0)
+        nonzero_voxels = total_voxels - zero_voxels
+        percent_zero = (zero_voxels / total_voxels) * 100
+        percent_nonzero = 100 - percent_zero
+        
+        # Add text with statistics
+        stats_text = (
+            f"Total voxels: {total_voxels:,}\n"
+            f"Zero voxels: {zero_voxels:,} ({percent_zero:.2f}%)\n"
+            f"Non-zero voxels: {nonzero_voxels:,} ({percent_nonzero:.2f}%)"
+        )
+        fig.text(0.5, 0.02, stats_text, ha='center', fontsize=12, bbox=dict(facecolor='white', alpha=0.5))
+        
+        for j, view_name in enumerate(view_names):
+            view_axis = view_axes[view_name]
+            slice_index = image.shape[view_axis] // 2
+            
+            # Get middle slice
+            original_slice = np.take(image, indices=slice_index, axis=view_axis)
+            
+            # Create binary mask (1 where brain is present, 0 elsewhere)
+            binary_mask = original_slice != 0
+            
+            # Row 1: Original image with default colormap (shows how matplotlib renders by default)
+            axes[0, j].imshow(original_slice, cmap='gray')
+            axes[0, j].set_title(f"{view_name.capitalize()} - Default gray colormap")
+            axes[0, j].axis('off')
+            
+            # Row 2: Original image with custom colormap (pure black for zeros)
+            axes[1, j].imshow(original_slice, cmap=custom_cmap, vmin=0)
+            axes[1, j].set_title(f"{view_name.capitalize()} - Custom colormap (black zeros)")
+            axes[1, j].axis('off')
+            
+            # Row 3: Binary mask (white = brain, black = background)
+            axes[2, j].imshow(binary_mask, cmap='binary')
+            axes[2, j].set_title(f"{view_name.capitalize()} - Binary mask")
+            axes[2, j].axis('off')
+            
+            # Row 4: Histogram of pixel values
+            if np.any(binary_mask):
+                # Log-scale histogram of non-zero values
+                nonzero_values = original_slice[binary_mask]
+                axes[3, j].hist(nonzero_values.flatten(), bins=50, log=True)
+                axes[3, j].axvline(x=0, color='r', linestyle='--', alpha=0.7)
+                axes[3, j].set_title(f"{view_name.capitalize()} - Histogram (log scale)")
+            else:
+                axes[3, j].text(0.5, 0.5, "No non-zero values", ha='center')
+                axes[3, j].set_title(f"{view_name.capitalize()} - No brain voxels")
+                axes[3, j].axis('off')
+        
+        plt.tight_layout(rect=[0, 0.04, 1, 0.96])
+        plt.savefig(os.path.join(output_dir, f"mask_verification_patient_{patient_id}.png"), dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        
+        # Create a mask boundary visualization
+        fig2, axes2 = plt.subplots(1, 3, figsize=(15, 5))
+        fig2.suptitle(f"Patient {patient_id} - Mask Boundary Visualization", fontsize=16)
+        
+        for j, view_name in enumerate(view_names):
+            view_axis = view_axes[view_name]
+            slice_index = image.shape[view_axis] // 2
+            
+            # Get original slice
+            original_slice = np.take(image, indices=slice_index, axis=view_axis)
+            brain_mask = original_slice != 0
+            
+            # Use masked array for proper visualization
+            masked_data = np.ma.masked_where(~brain_mask, original_slice)
+            
+            # Plot with proper masking
+            axes2[j].imshow(original_slice, cmap='gray', alpha=0.7)
+            
+            # Highlight the boundary
+            from scipy import ndimage
+            boundary = ndimage.binary_dilation(brain_mask, iterations=1) ^ brain_mask
+            y, x = np.where(boundary)
+            if len(y) > 0:
+                axes2[j].scatter(x, y, s=1, c='red', alpha=0.8)
+                
+            axes2[j].set_title(f"{view_name.capitalize()} - Mask Boundary")
+            axes2[j].axis('off')
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, f"mask_boundary_{patient_id}.png"), dpi=300, bbox_inches='tight')
+        plt.close(fig2)
+    
+    logging.info(f"Saved mask verification images for {n_samples} patients to: {output_dir}")
+    return output_dir
+
 def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device, methods_to_run=['all'], atlas_path=None, indices_path=None, individual_patients=False):
     """Process a single model for XAI visualization"""
     """Loads a model based on its filename using load_model_with_params."""
@@ -788,7 +951,11 @@ def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, d
 
     dataset = BrainAgeDataset(csv_path, test_data_dir, mask_path=csv_path, indices=indices_path)
     dataset = [sample for sample in dataset if sample is not None]
-
+    
+    # Add this line to check masking right after data loading
+    mask_verification_dir = os.path.join(model_output_dir, 'mask_verification')
+    verify_brain_masking(dataset, output_dir=mask_verification_dir)
+    
     num_demographics = 6
     # Initialize the appropriate model
 
