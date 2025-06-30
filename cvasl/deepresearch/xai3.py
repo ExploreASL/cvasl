@@ -338,17 +338,21 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             try:
                 # Get raw GradCAM heatmap
                 grayscale_cam = cam(input_tensor=image.unsqueeze(0))[0, :]
-                
+
                 img_np = image.cpu().numpy().squeeze()
                 
-                # Create binary mask from input image (1 where brain is present, 0 elsewhere)
-                brain_mask = (img_np != 0).astype(np.float32)
+                # --- FIX STARTS HERE ---
+                # Create a boolean mask from the input image itself.
+                brain_mask = img_np != 0
                 
-                # Apply brain mask to the CAM outputs
-                grayscale_cam = grayscale_cam * brain_mask
+                # Re-apply the mask to the heatmap to eliminate upsampling artifacts.
+                grayscale_cam[~brain_mask] = 0
+                # --- FIX ENDS HERE ---
+
                 raw_heatmap = grayscale_cam
                 
-                # Now normalize the already-masked heatmap
+                # Get normalized GradCAM heatmap (for equal contribution)
+                # First normalize the entire 3D heatmap
                 normalized_heatmap = normalize_cam(grayscale_cam)
                 
                 img_np = image.cpu().numpy().squeeze()
@@ -628,19 +632,21 @@ def generate_individual_patient_visualizations(model, dataset, output_dir, devic
                 
                 # Get GradCAM heatmap
                 grayscale_cam = cam(input_tensor=image.unsqueeze(0))[0, :]
-                
+
                 img_np = image.cpu().numpy().squeeze()
+
+                # --- FIX STARTS HERE ---
+                # Create a boolean mask from the input image itself.
+                brain_mask = img_np != 0
                 
-                # Create binary mask from input image
-                brain_mask = (img_np != 0).astype(np.float32)
+                # Re-apply the mask to the heatmap to eliminate upsampling artifacts.
+                grayscale_cam[~brain_mask] = 0
+                # --- FIX ENDS HERE ---
+
+                normalized_heatmap = normalize_cam(grayscale_cam)
                 
-                # Apply brain mask to CAM
-                grayscale_cam = grayscale_cam * brain_mask
-                
-                # Now normalize the masked heatmap
-                normalized_heatmap = normalize_cam(grayscale_cam)                    
-                img_np = image.cpu().numpy().squeeze()
                 D, H, W = img_np.shape
+
 
                 # Figure 1: Middle slice heatmaps for this patient
                 fig1, axes1 = plt.subplots(2, 3, figsize=(15, 10), dpi=300)
