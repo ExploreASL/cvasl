@@ -338,10 +338,17 @@ def generate_xai_visualizations(model, dataset, output_dir, device='cuda', metho
             try:
                 # Get raw GradCAM heatmap
                 grayscale_cam = cam(input_tensor=image.unsqueeze(0))[0, :]
+                
+                img_np = image.cpu().numpy().squeeze()
+                
+                # Create binary mask from input image (1 where brain is present, 0 elsewhere)
+                brain_mask = (img_np != 0).astype(np.float32)
+                
+                # Apply brain mask to the CAM outputs
+                grayscale_cam = grayscale_cam * brain_mask
                 raw_heatmap = grayscale_cam
                 
-                # Get normalized GradCAM heatmap (for equal contribution)
-                # First normalize the entire 3D heatmap
+                # Now normalize the already-masked heatmap
                 normalized_heatmap = normalize_cam(grayscale_cam)
                 
                 img_np = image.cpu().numpy().squeeze()
@@ -621,8 +628,17 @@ def generate_individual_patient_visualizations(model, dataset, output_dir, devic
                 
                 # Get GradCAM heatmap
                 grayscale_cam = cam(input_tensor=image.unsqueeze(0))[0, :]
-                normalized_heatmap = normalize_cam(grayscale_cam)
                 
+                img_np = image.cpu().numpy().squeeze()
+                
+                # Create binary mask from input image
+                brain_mask = (img_np != 0).astype(np.float32)
+                
+                # Apply brain mask to CAM
+                grayscale_cam = grayscale_cam * brain_mask
+                
+                # Now normalize the masked heatmap
+                normalized_heatmap = normalize_cam(grayscale_cam)                    
                 img_np = image.cpu().numpy().squeeze()
                 D, H, W = img_np.shape
 
