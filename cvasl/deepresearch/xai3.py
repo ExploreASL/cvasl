@@ -787,15 +787,15 @@ def generate_individual_patient_visualizations(model, dataset, output_dir, devic
         gc.collect()
         torch.cuda.empty_cache()
 
-def verify_brain_masking(dataset, output_dir=None, num_samples=5):
+def verify_brain_masking(dataset, output_dir=None, num_samples=50):
     """
     Verifies brain masking by plotting the middle slice in three orthogonal views 
-    for the first few images in the dataset immediately after they're loaded.
+    for images in the dataset and analyzes masking statistics across all samples.
     
     Args:
         dataset: BrainAgeDataset or list of samples
         output_dir: Directory to save the verification plots (defaults to './mask_verification')
-        num_samples: Number of samples to check
+        num_samples: Number of samples to check (default 50)
     """
     import matplotlib.pyplot as plt
     import numpy as np
@@ -824,6 +824,11 @@ def verify_brain_masking(dataset, output_dir=None, num_samples=5):
         sample_getter = lambda i: dataset[i]
         n_samples = min(num_samples, len(dataset))
     
+    # Statistics collection
+    zero_percentages = []
+    valid_samples = 0
+    sample_stats = []
+    
     for i in range(n_samples):
         sample = sample_getter(i)
         if sample is None:
@@ -837,10 +842,6 @@ def verify_brain_masking(dataset, output_dir=None, num_samples=5):
         if isinstance(patient_id, torch.Tensor):
             patient_id = patient_id.item() if patient_id.numel() == 1 else str(patient_id)
         
-        # Create figure with 4 rows and 3 columns
-        fig, axes = plt.subplots(4, 3, figsize=(15, 20))
-        fig.suptitle(f"Patient {patient_id} - Age {age:.1f} - Mask Verification", fontsize=16)
-        
         # Calculate masking statistics
         total_voxels = image.size
         zero_voxels = np.sum(image == 0)
@@ -848,89 +849,232 @@ def verify_brain_masking(dataset, output_dir=None, num_samples=5):
         percent_zero = (zero_voxels / total_voxels) * 100
         percent_nonzero = 100 - percent_zero
         
-        # Add text with statistics
-        stats_text = (
-            f"Total voxels: {total_voxels:,}\n"
-            f"Zero voxels: {zero_voxels:,} ({percent_zero:.2f}%)\n"
-            f"Non-zero voxels: {nonzero_voxels:,} ({percent_nonzero:.2f}%)"
-        )
-        fig.text(0.5, 0.02, stats_text, ha='center', fontsize=12, bbox=dict(facecolor='white', alpha=0.5))
+        # Store statistics
+        zero_percentages.append(percent_zero)
+        sample_stats.append({
+            'patient_id': patient_id,
+            'age': age,
+            'total_voxels': total_voxels,
+            'zero_voxels': zero_voxels,
+            'percent_zero': percent_zero
+        })
+        valid_samples += 1
         
-        for j, view_name in enumerate(view_names):
-            view_axis = view_axes[view_name]
-            slice_index = image.shape[view_axis] // 2
+        # Only create detailed visualizations for first 5 samples to avoid too many files
+        if i < 5:
+            # Create figure with 4 rows and 3 columns
+            fig, axes = plt.subplots(4, 3, figsize=(15, 20))
+            fig.suptitle(f"Patient {patient_id} - Age {age:.1f} - Mask Verification", fontsize=16)
             
-            # Get middle slice
-            original_slice = np.take(image, indices=slice_index, axis=view_axis)
+            # Add text with statistics
+            stats_text = (
+                f"Total voxels: {total_voxels:,}\n"
+                f"Zero voxels: {zero_voxels:,} ({percent_zero:.2f}%)\n"
+                f"Non-zero voxels: {nonzero_voxels:,} ({percent_nonzero:.2f}%)"
+            )
+            fig.text(0.5, 0.02, stats_text, ha='center', fontsize=12, bbox=dict(facecolor='white', alpha=0.5))
             
-            # Create binary mask (1 where brain is present, 0 elsewhere)
-            binary_mask = original_slice != 0
-            
-            # Row 1: Original image with default colormap (shows how matplotlib renders by default)
-            axes[0, j].imshow(original_slice, cmap='gray')
-            axes[0, j].set_title(f"{view_name.capitalize()} - Default gray colormap")
-            axes[0, j].axis('off')
-            
-            # Row 2: Original image with custom colormap (pure black for zeros)
-            axes[1, j].imshow(original_slice, cmap=custom_cmap, vmin=0)
-            axes[1, j].set_title(f"{view_name.capitalize()} - Custom colormap (black zeros)")
-            axes[1, j].axis('off')
-            
-            # Row 3: Binary mask (white = brain, black = background)
-            axes[2, j].imshow(binary_mask, cmap='binary')
-            axes[2, j].set_title(f"{view_name.capitalize()} - Binary mask")
-            axes[2, j].axis('off')
-            
-            # Row 4: Histogram of pixel values
-            if np.any(binary_mask):
-                # Log-scale histogram of non-zero values
-                nonzero_values = original_slice[binary_mask]
-                axes[3, j].hist(nonzero_values.flatten(), bins=50, log=True)
-                axes[3, j].axvline(x=0, color='r', linestyle='--', alpha=0.7)
-                axes[3, j].set_title(f"{view_name.capitalize()} - Histogram (log scale)")
-            else:
-                axes[3, j].text(0.5, 0.5, "No non-zero values", ha='center')
-                axes[3, j].set_title(f"{view_name.capitalize()} - No brain voxels")
-                axes[3, j].axis('off')
-        
-        plt.tight_layout(rect=[0, 0.04, 1, 0.96])
-        plt.savefig(os.path.join(output_dir, f"mask_verification_patient_{patient_id}.png"), dpi=300, bbox_inches='tight')
-        plt.close(fig)
-        
-        # Create a mask boundary visualization
-        fig2, axes2 = plt.subplots(1, 3, figsize=(15, 5))
-        fig2.suptitle(f"Patient {patient_id} - Mask Boundary Visualization", fontsize=16)
-        
-        for j, view_name in enumerate(view_names):
-            view_axis = view_axes[view_name]
-            slice_index = image.shape[view_axis] // 2
-            
-            # Get original slice
-            original_slice = np.take(image, indices=slice_index, axis=view_axis)
-            brain_mask = original_slice != 0
-            
-            # Use masked array for proper visualization
-            masked_data = np.ma.masked_where(~brain_mask, original_slice)
-            
-            # Plot with proper masking
-            axes2[j].imshow(original_slice, cmap='gray', alpha=0.7)
-            
-            # Highlight the boundary
-            from scipy import ndimage
-            boundary = ndimage.binary_dilation(brain_mask, iterations=1) ^ brain_mask
-            y, x = np.where(boundary)
-            if len(y) > 0:
-                axes2[j].scatter(x, y, s=1, c='red', alpha=0.8)
+            for j, view_name in enumerate(view_names):
+                view_axis = view_axes[view_name]
+                slice_index = image.shape[view_axis] // 2
                 
-            axes2[j].set_title(f"{view_name.capitalize()} - Mask Boundary")
-            axes2[j].axis('off')
+                # Get middle slice
+                original_slice = np.take(image, indices=slice_index, axis=view_axis)
+                
+                # Create binary mask (1 where brain is present, 0 elsewhere)
+                binary_mask = original_slice != 0
+                
+                # Row 1: Original image with default colormap (shows how matplotlib renders by default)
+                axes[0, j].imshow(original_slice, cmap='gray')
+                axes[0, j].set_title(f"{view_name.capitalize()} - Default gray colormap")
+                axes[0, j].axis('off')
+                
+                # Row 2: Original image with custom colormap (pure black for zeros)
+                axes[1, j].imshow(original_slice, cmap=custom_cmap, vmin=0)
+                axes[1, j].set_title(f"{view_name.capitalize()} - Custom colormap (black zeros)")
+                axes[1, j].axis('off')
+                
+                # Row 3: Binary mask (white = brain, black = background)
+                axes[2, j].imshow(binary_mask, cmap='binary')
+                axes[2, j].set_title(f"{view_name.capitalize()} - Binary mask")
+                axes[2, j].axis('off')
+                
+                # Row 4: Histogram of pixel values
+                if np.any(binary_mask):
+                    # Log-scale histogram of non-zero values
+                    nonzero_values = original_slice[binary_mask]
+                    axes[3, j].hist(nonzero_values.flatten(), bins=50, log=True)
+                    axes[3, j].axvline(x=0, color='r', linestyle='--', alpha=0.7)
+                    axes[3, j].set_title(f"{view_name.capitalize()} - Histogram (log scale)")
+                else:
+                    axes[3, j].text(0.5, 0.5, "No non-zero values", ha='center')
+                    axes[3, j].set_title(f"{view_name.capitalize()} - No brain voxels")
+                    axes[3, j].axis('off')
+            
+            plt.tight_layout(rect=[0, 0.04, 1, 0.96])
+            plt.savefig(os.path.join(output_dir, f"mask_verification_patient_{patient_id}.png"), dpi=300, bbox_inches='tight')
+            plt.close(fig)
+            
+            # Create a mask boundary visualization
+            fig2, axes2 = plt.subplots(1, 3, figsize=(15, 5))
+            fig2.suptitle(f"Patient {patient_id} - Mask Boundary Visualization", fontsize=16)
+            
+            for j, view_name in enumerate(view_names):
+                view_axis = view_axes[view_name]
+                slice_index = image.shape[view_axis] // 2
+                
+                # Get original slice
+                original_slice = np.take(image, indices=slice_index, axis=view_axis)
+                brain_mask = original_slice != 0
+                
+                # Use masked array for proper visualization
+                masked_data = np.ma.masked_where(~brain_mask, original_slice)
+                
+                # Plot with proper masking
+                axes2[j].imshow(original_slice, cmap='gray', alpha=0.7)
+                
+                # Highlight the boundary
+                from scipy import ndimage
+                boundary = ndimage.binary_dilation(brain_mask, iterations=1) ^ brain_mask
+                y, x = np.where(boundary)
+                if len(y) > 0:
+                    axes2[j].scatter(x, y, s=1, c='red', alpha=0.8)
+                    
+                axes2[j].set_title(f"{view_name.capitalize()} - Mask Boundary")
+                axes2[j].axis('off')
+            
+            plt.tight_layout()
+            plt.savefig(os.path.join(output_dir, f"mask_boundary_{patient_id}.png"), dpi=300, bbox_inches='tight')
+            plt.close(fig2)
+    
+    # Create histogram of zero percentages
+    if zero_percentages:
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+        
+        # Histogram
+        ax1.hist(zero_percentages, bins=20, edgecolor='black', alpha=0.7, color='skyblue')
+        ax1.axvline(np.mean(zero_percentages), color='red', linestyle='--', linewidth=2, label=f'Mean: {np.mean(zero_percentages):.2f}%')
+        ax1.axvline(np.median(zero_percentages), color='orange', linestyle='--', linewidth=2, label=f'Median: {np.median(zero_percentages):.2f}%')
+        ax1.set_xlabel('Percentage of Zero Voxels')
+        ax1.set_ylabel('Number of Samples')
+        ax1.set_title(f'Distribution of Zero Voxel Percentages (n={valid_samples} samples)')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        
+        # Box plot
+        ax2.boxplot(zero_percentages, vert=False, patch_artist=True,
+                   boxprops=dict(facecolor='lightblue', alpha=0.7),
+                   medianprops=dict(color='red', linewidth=2))
+        ax2.set_xlabel('Percentage of Zero Voxels')
+        ax2.set_title('Box Plot of Zero Voxel Percentages')
+        ax2.grid(True, alpha=0.3)
         
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"mask_boundary_{patient_id}.png"), dpi=300, bbox_inches='tight')
-        plt.close(fig2)
+        plt.savefig(os.path.join(output_dir, 'zero_voxels_distribution.png'), dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        
+        # Calculate statistics
+        mean_zero = np.mean(zero_percentages)
+        median_zero = np.median(zero_percentages)
+        std_zero = np.std(zero_percentages)
+        min_zero = np.min(zero_percentages)
+        max_zero = np.max(zero_percentages)
+        q25_zero = np.percentile(zero_percentages, 25)
+        q75_zero = np.percentile(zero_percentages, 75)
+        
+        # Analysis and recommendations
+        print("\n" + "="*80)
+        print("BRAIN MASKING ANALYSIS RESULTS")
+        print("="*80)
+        print(f"Analyzed {valid_samples} samples from the dataset")
+        print()
+        print("ZERO VOXEL STATISTICS:")
+        print(f"  Mean:     {mean_zero:.2f}%")
+        print(f"  Median:   {median_zero:.2f}%")
+        print(f"  Std Dev:  {std_zero:.2f}%")
+        print(f"  Min:      {min_zero:.2f}%")
+        print(f"  Max:      {max_zero:.2f}%")
+        print(f"  Q25:      {q25_zero:.2f}%")
+        print(f"  Q75:      {q75_zero:.2f}%")
+        print()
+        
+        # Masking quality assessment
+        print("MASKING QUALITY ASSESSMENT:")
+        print("-" * 40)
+        
+        # Expected range for properly masked brain images
+        expected_min = 65  # Conservative lower bound
+        expected_max = 90  # Liberal upper bound
+        
+        masking_quality = "UNKNOWN"
+        recommendations = []
+        
+        if mean_zero < expected_min:
+            masking_quality = "LIKELY INSUFFICIENT"
+            recommendations.append("• Masking appears too liberal - background regions may be included")
+            recommendations.append("• Consider using a more restrictive brain extraction algorithm")
+            recommendations.append("• Check if skull stripping was properly applied")
+        elif mean_zero > expected_max:
+            masking_quality = "LIKELY TOO AGGRESSIVE"
+            recommendations.append("• Masking appears too conservative - brain tissue may be excluded")
+            recommendations.append("• Consider using a more liberal brain extraction algorithm")
+            recommendations.append("• Check for over-erosion of brain boundaries")
+        else:
+            if std_zero < 5:
+                masking_quality = "GOOD - CONSISTENT"
+                recommendations.append("• Masking appears appropriate and consistent across samples")
+                recommendations.append("• Zero voxel percentages are within expected range")
+            elif std_zero > 10:
+                masking_quality = "INCONSISTENT"
+                recommendations.append("• High variability in masking quality across samples")
+                recommendations.append("• Some samples may be poorly masked")
+                recommendations.append("• Consider reviewing individual cases with extreme values")
+            else:
+                masking_quality = "GOOD - MODERATE VARIATION"
+                recommendations.append("• Masking appears generally appropriate")
+                recommendations.append("• Some natural variation in brain sizes accounts for the spread")
+        
+        # Additional checks
+        outliers_low = np.sum(np.array(zero_percentages) < (mean_zero - 2*std_zero))
+        outliers_high = np.sum(np.array(zero_percentages) > (mean_zero + 2*std_zero))
+        
+        print(f"Overall Assessment: {masking_quality}")
+        print()
+        
+        if outliers_low > 0 or outliers_high > 0:
+            print(f"OUTLIERS DETECTED:")
+            print(f"  {outliers_low} samples with unusually low zero percentages (< {mean_zero - 2*std_zero:.2f}%)")
+            print(f"  {outliers_high} samples with unusually high zero percentages (> {mean_zero + 2*std_zero:.2f}%)")
+            recommendations.append("• Review outlier samples for masking artifacts")
+            print()
+        
+        print("RECOMMENDATIONS:")
+        for rec in recommendations:
+            print(rec)
+        
+        # Save detailed statistics to CSV
+        stats_df = pd.DataFrame(sample_stats)
+        stats_df.to_csv(os.path.join(output_dir, 'masking_statistics.csv'), index=False)
+        
+        print()
+        print(f"Detailed results saved to: {output_dir}")
+        print(f"- Individual sample visualizations (first 5 samples)")
+        print(f"- Zero voxel distribution histogram")
+        print(f"- Detailed statistics CSV file")
+        print("="*80)
+        
+        return {
+            'mean_zero_percent': mean_zero,
+            'median_zero_percent': median_zero,
+            'std_zero_percent': std_zero,
+            'quality_assessment': masking_quality,
+            'valid_samples': valid_samples,
+            'zero_percentages': zero_percentages
+        }
+    else:
+        print("No valid samples found for analysis")
+        return None
     
-    logging.info(f"Saved mask verification images for {n_samples} patients to: {output_dir}")
-    return output_dir
 
 def process_single_model(csv_path, model_path, test_data_dir, base_output_dir, device, methods_to_run=['all'], atlas_path=None, indices_path=None, individual_patients=False):
     """Process a single model for XAI visualization"""
