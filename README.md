@@ -19,11 +19,10 @@ is being buit for the entire community of radiology researchers across all unive
 
 ## Citation
 
-If you use this software, please cite it as below:
+If you use this software in your research, please cite it. You can find the citation information by clicking the "Cite this repository" button in the sidebar on the right.
 
-```
-Amiri, S., Kok, P., Moore, C. M., Crocioni, G., Dijsselhof, M., Mutsaerts, H. J., Petr, J., & Bodor, D. (2025). cvasl (Version 1.1.0) [Computer software]. https://doi.org/10.5281/zenodo.618300539
-```
+<!-- CITE-START -->
+<!-- CITE-END -->
 
 ## License
 
