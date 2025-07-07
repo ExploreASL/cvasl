@@ -8,6 +8,11 @@ description = "A package for analysis of MRI"
 authors = [
   { name = "A team including the NLeSC and the Amsterdam Medical Center", email = "s.amiri@esciencecenter.nl" }
 ]
+maintainers = [
+  { name = "Saba Amiri", email = "s.amiri@esciencecenter.nl"},
+  { name = "Peter Kok", email = "p.kok@esciencecenter.nl"},
+  { name = "Mathijs Dijsselhof", email = "m.b.dijsselhof@amsterdamumc.nl"},
+]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
@@ -41,6 +46,7 @@ dependencies = [
     "scipy>=1.5.4",
     "seaborn",
     "simpleitk>=2.0.1",
+    "statsmodels>0.14.2",
     "tqdm>=4.59",
     "umap-learn>=0.5.1",
     "yellowbrick>=1.3",
