@@ -2,6 +2,14 @@ cff-version: 1.1.0
 message: "If you use this software, you should cite it."
 authors:
   - affiliation: "Netherlands eScience Center"
+    family-names: Amiri
+    given-names: Saba
+    orcid: "https://orcid.org/0000-0003-0909-240X"
+  - affiliation: "Netherlands eScience Center"
+    family-names: Kok
+    given-names: Peter
+    orcid: "https://orcid.org/0000-0002-6630-7326"
+  - affiliation: "Netherlands eScience Center"
     family-names: Moore
     given-names: Candace Makeda
     orcid: "https://orcid.org/0000-0003-1672-7565"
@@ -9,10 +17,6 @@ authors:
     family-names: Crocioni
     given-names: Giulia
     orcid: "https://orcid.org/0000-0002-0823-0121"
-  - affiliation: "Netherlands eScience Center"
-    family-names: Bodor
-    given-names: Dani
-    orcid: "https://orcid.org/0000-0003-2109-2349"
   - affiliation: "Amsterdam University Medical Centers, location VUmc"
     family-names: Dijsselhof
     given-names: Mathijs
@@ -20,8 +24,16 @@ authors:
   - affiliation: "Amsterdam University Medical Centers, location VUmc"
     family-names: Mutsaerts
     given-names: Henk JMM
-    orcid: "https://orcid.org/0000-0003-0894-0307"
-
+    orcid: "https://orcid.org/0000-0003-0894-0307" 
+  - affiliation: "Helmholtz-Zentrum Dresden-Rossendorf, Institute of Radiopharmaceutical Cancer Research"
+    family-names: Petr
+    given-names: Jan
+    orcid: "https://orcid.org/0000-0002-3201-6002"
+  - affiliation: "Netherlands eScience Center"
+    family-names: Bodor
+    given-names: Dani
+    orcid: "https://orcid.org/0000-0003-2109-2349"
+  
 keywords:
   - arterial spin labelling
   - MRI
@@ -29,9 +41,13 @@ keywords:
   - Python
   - brain age
   - cerebrovascular
+  - deep learning
+  - neuroimaging
+  - neuroinformatics
+
 license: Apache-2.0
 
-repository-code: "https://github.com/brainspinner/cvasl"
+repository-code: "https://github.com/ExploreASL/cvasl"
 title: "cvasl"
-version: "0.0.1"
-date-released: 20/04/2023
+version: "1.1.0"
+date-released: 07/07/2025

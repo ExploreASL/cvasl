@@ -17,6 +17,18 @@ This library
 supports the ongoing research at University of Amsterdam Medical Center on brain ageing, but
 is being buit for the entire community of radiology researchers across all university and academic medical centers and beyond.
 
+## Citation
+
+If you use this software, please cite it as below:
+
+```
+Amiri, S., Kok, P., Moore, C. M., Crocioni, G., Dijsselhof, M., Mutsaerts, H. J., Petr, J., & Bodor, D. (2025). cvasl (Version 1.1.0) [Computer software]. https://doi.org/10.5281/zenodo.618300539
+```
+
+## License
+
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
+
 
 # Command-Line Interface
 

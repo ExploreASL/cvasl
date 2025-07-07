@@ -1,0 +1,19 @@
+name: Update README citation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'CITATION.cff'
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update README
+        uses: weareutrecht/citation-readme@v1
+        with:
+          cff-file: "CITATION.cff"
+          readme-file: "README.md"
