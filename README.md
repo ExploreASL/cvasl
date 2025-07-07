@@ -5,7 +5,7 @@
 [![DOI](https://zenodo.org/badge/618300539.svg)](https://zenodo.org/badge/latestdoi/618300539)
 [![PyPI- to be made, placeholder](https://img.shields.io/pypi/v/cvasl.svg)](https://pypi.python.org/pypi/cvasl/)
 [![Sanity](https://github.com/ExploreASL/cvasl/actions/workflows/on-commit.yml/badge.svg)](https://github.com/ExploreASL/cvasl/actions/workflows/on-commit.yml)
-[![Sanity](https://github.com/ExploreASL/cvasl/actions/workflows/on-tag.yml/badge.svg)](https://github.com/ExploreASL/cvasl/actions/workflows/on-tag.yml)
+
 
 **cvasl** is an open source collaborative python library for analysis
 of brain MRIs. Many functions relate to arterial spin labeled sequences.
