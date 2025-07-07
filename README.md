@@ -22,7 +22,19 @@ is being buit for the entire community of radiology researchers across all unive
 If you use this software in your research, please cite it. You can find the citation information by clicking the "Cite this repository" button in the sidebar on the right.
 
 <!-- CITE-START -->
+<!-- This section is automatically generated. Do not edit manually. -->
 <!-- CITE-END -->
+
+@software{Amiri_cvasl_2025,
+author = {Amiri, Saba and Kok, Peter and Moore, Candace Makeda and Crocioni, Giulia and Dijsselhof, Mathijs and Mutsaerts, Henk JMM and Petr, Jan and Bodor, Dani},
+license = {Apache-2.0},
+month = jul,
+title = {{cvasl}},
+url = {https://github.com/ExploreASL/cvasl},
+version = {1.1.0},
+year = {2025}
+}
+
 
 ## License
 
