@@ -36,7 +36,7 @@ datasets = encode_cat_features(datasets,features_to_map)
 method = 'neurocombat' 
 
 
-if method == 'neurocombat':
+if method == 'neuroharmonize':
 
     features_to_harmonize = ['aca_b_cov', 'mca_b_cov', 'pca_b_cov', 'totalgm_b_cov', 'aca_b_cbf', 'mca_b_cbf', 'pca_b_cbf', 'totalgm_b_cbf']
     covariates = ['age', 'sex',  'icv', 'site']
@@ -59,8 +59,7 @@ elif method == 'covbat':
 
 elif method == 'neurocombat':
     
-    features_to_harmonize = ['ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV',
-        'ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF',]
+    features_to_harmonize = ['ACA_B_CoV', 'MCA_B_CoV', 'PCA_B_CoV', 'TotalGM_B_CoV','ACA_B_CBF', 'MCA_B_CBF', 'PCA_B_CBF', 'TotalGM_B_CBF']
     discrete_covariates= ['sex']
     continuous_covariates=  ['age']
     site_indicator = 'site'

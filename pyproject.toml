@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "cvasl"
 description = "A package for analysis of MRI"
 authors = [
-  { name = "A team including the NLeSC and the Amsterdam Medical Center", email = "c.moore@esciencecenter.nl" }
+  { name = "A team including the NLeSC and the Amsterdam Medical Center", email = "s.amiri@esciencecenter.nl" }
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",

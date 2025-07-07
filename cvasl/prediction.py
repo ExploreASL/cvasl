@@ -6,11 +6,6 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn import metrics
 import warnings
 from sklearn.preprocessing import StandardScaler
-from sklearn.base import clone
-from cvasl.dataset import *
-import copy
-
-
 
 class PredictBrainAge:
 
@@ -92,13 +87,12 @@ class PredictBrainAge:
 
         self.model_name = model_name
         self.model_file_name = model_file_name
-        self.raw_model = model
-        self.model = clone(model)
+        self.model = model
         self.patient_identifier = patient_identifier
-        self.datasets = [copy.deepcopy(_d) for _d in datasets]
-        self.datasets_validation = [copy.deepcopy(_d) for _d in datasets_validation] if datasets_validation is not None else None
-        self.data = pd.concat([_d.data for _d in self.datasets])
-        self.data_validation = pd.concat([_d.data for _d in self.datasets_validation]) if self.datasets_validation is not None else None
+        self.datasets = datasets
+        self.datasets_validation = datasets_validation
+        self.data = pd.concat([_d.data for _d in datasets])
+        self.data_validation = pd.concat([_d.data for _d in datasets_validation]) if datasets_validation is not None else None
         self.features = features
         self.target = target
         self.site_indicator = site_indicator
@@ -147,7 +141,6 @@ class PredictBrainAge:
 
     def _train_predict_and_evaluate(self, i, X_train, y_train, X_test, y_test, X_val, y_val, test_index):
         """Trains model, makes predictions, and evaluates metrics for a single fold."""
-        self.model = clone(self.raw_model)
         self.model.fit(X_train, y_train)
         y_pred = self.model.predict(X_test)
         y_pred_val = self.model.predict(X_val) if X_val is not None else None
@@ -200,7 +193,7 @@ class PredictBrainAge:
         
         return predictions_data, predictions_data_val
 
-    def train_and_evaluate(self):
+    def predict(self):
         """
         Performs brain age prediction using StratifiedShuffleSplit cross-validation.
 
@@ -217,7 +210,7 @@ class PredictBrainAge:
 
         sss = StratifiedShuffleSplit(n_splits=self.splits, test_size=self.test_size_p, random_state=self.random_state)
 
-        X = self.data[self.features].values 
+        X = self.data[self.features].values # Access values directly for sklearn
         y = self.data[self.target].values
         X_val = self.data_validation[self.features].values if self.data_validation is not None else None # Access values directly for sklearn
         y_val = self.data_validation[self.target].values if self.data_validation is not None else None
@@ -230,44 +223,20 @@ class PredictBrainAge:
                 X_scaled, y, self.data['fuse_bin'], train_index, test_index)
 
             metrics_data, metric_data_val, predictions_data, predictions_data_val = self._train_predict_and_evaluate(
-            i, X_train, y_train, X_test, y_test, X_val_scaled, y_val, test_index)
+            i, X_train, y_train, X_test, y_test, X_val_scaled, y_val, test_index) # Added test_index
 
             all_metrics.append(metrics_data)
-            if metric_data_val is not None:
+            if metric_data_val:
                 all_metrics_val.append(metric_data_val)
             all_predictions.append(predictions_data)
-            if predictions_data_val is not None:
+            if predictions_data_val:
                 all_predictions_val.append(predictions_data_val)
 
-            models.append((self.model, X_train[:, 0]))
+            models.append((self.model, X_train[:, 0])) # Store the model and a sample feature for potential later analysis
 
-        self.model = clone(self.raw_model)
-        self.model.fit(X_scaled, y)
-        
         metrics_df = pd.DataFrame(all_metrics)
         metrics_df_val = pd.DataFrame(all_metrics_val) if self.data_validation is not None else None
         predictions_df = pd.concat(all_predictions)
         predictions_df_val = pd.concat(all_predictions_val) if self.data_validation is not None else None
 
         return metrics_df, metrics_df_val, predictions_df, predictions_df_val, models
-    
-    def predict(self, val_dataset=None):
-        """
-        Predicts brain age using the trained model on a new MRIdataset.
-
-        Args:
-            val_dataset (MRIdataset): The MRIdataset object for prediction.
-
-        Returns:
-            pd.DataFrame: DataFrame containing predictions.
-        """
-        if not isinstance(val_dataset, MRIdataset):
-            raise TypeError("MRIDataset must be an instance of MRIdataset.")
-        
-        X = val_dataset.data[self.features].values
-        X_scaled = StandardScaler().fit_transform(X)
-        y_pred = self.model.predict(X_scaled)
-        
-        val_dataset.prepare_for_export()
-        val_dataset.data['age_predicted'] = y_pred
-        return val_dataset

@@ -3,20 +3,7 @@ sys.path.insert(0, '../../')
 sys.path.insert(0, '../')
 import pandas as pd
 from scipy import stats
-import warnings
-import csv
-from datetime import datetime
-import numpy as np
-
-def read_file_auto(filepath):
-    # Open the file and read the first line to detect the delimiter
-    with open(filepath, 'r') as file:
-        first_line = file.readline()
-        sniffer = csv.Sniffer()
-        delimiter = sniffer.sniff(first_line).delimiter
-
-    # Read the file with the detected delimiter
-    return pd.read_csv(filepath, delimiter=delimiter)
+import warnings        
 
 def encode_cat_features(dff,cat_features_to_encode):
 
@@ -33,7 +20,7 @@ def encode_cat_features(dff,cat_features_to_encode):
             data[feature] = data[feature].map(mapping)
 
     for _d in dff:
-        _d.data = data[data['synthetic_site_id'] == _d.synthetic_site_id]
+        _d.data = data[data['site'] == _d.site_id]
         _d.feature_mappings = feature_mappings
         _d.reverse_mappings = reverse_mappings
         _d.cat_features_to_encode = cat_features_to_encode
@@ -87,12 +74,9 @@ class MRIdataset:
         if isinstance(path, list):
             self.data = pd.concat([pd.read_csv(_p) for _p in path])
         else:
-            self.data = read_file_auto(path)
+            self.data = pd.read_csv(path)
 
         self.site_id = site_id
-        self.true_site_id = str(list(self.data.Site.unique())[0])
-        self.synthetic_site_id =  self.true_site_id + datetime.now().strftime("_%Y%m%d_%H%M%S.%f") + str(np.random.randint(0, 99999))
-        self.data["synthetic_site_id"] = self.synthetic_site_id
         self.data["Site"] = self.site_id
         self.feature_mappings = {}
         self.reverse_mappings = {}
@@ -241,7 +225,7 @@ class MRIdataset:
 
     def prepare_for_export(self):
         self.restore_patient_ids()
-        self.data = self.data.merge(self.dropped_features,on=self.patient_identifier) if self.dropped_features is not None else self.data
+        self.data = self.data.merge(self.dropped_features,on=self.patient_identifier)
         for _c in ['index','Index' ,'ID','unnamed: 0']:
             if _c in self.data.columns:
                 self.data = self.data.drop(columns=[_c])
@@ -249,13 +233,9 @@ class MRIdataset:
         _tc = [_c.lower() for _c in self.columns_order]
         self.data = self.data[_tc]
         self.data.columns = self.columns_order
-        
         for _c in ['index','Index' ,'ID','unnamed: 0']:
-            if _c in self.data.columns and _c not in self.columns_order:
+            if _c in self.data.columns:
                 self.data = self.data.drop(columns=[_c])
-        self.data['Site'] = self.true_site_id
-        self.data = self.data.drop(columns=['synthetic_site_id'],axis=1)
-        
 
 
     def _extended_summary_statistics(self):
