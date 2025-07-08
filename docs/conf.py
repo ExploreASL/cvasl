@@ -32,7 +32,7 @@ try:
     ]).strip().decode()
 except subprocess.CalledProcessError as e:
     print(e.output)
-    tag = 'v0.0.0'
+    tag = 'v0.1.1'
 
 release = tag[1:]
 

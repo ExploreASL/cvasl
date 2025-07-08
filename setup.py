@@ -34,7 +34,7 @@ try:
         stderr=subprocess.DEVNULL,
     ).strip().decode()
 except subprocess.CalledProcessError as e:
-    tag = 'v0.0.0'
+    tag = 'v0.1.1'
 
 version = tag[1:]
 
