@@ -60,10 +60,11 @@ dev = [
     "nbmake",
     "pycodestyle", 
     "pytest",
+    "build",
 ]
 docs = [
-     "sphinx",
-     "piccolo_theme",
+    "sphinx",
+    "piccolo_theme",
 ]
 
 [project.urls]
