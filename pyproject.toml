@@ -42,7 +42,6 @@ dependencies = [
     "pandas>=1.2.0",
     "patsy",
     "pyxdf",
-    "rpy2<3.5.17", # 3.5.17 only has a source distribution on pypi which doesn't build for some reason
     "scikit-image",
     "scikit-learn>=0.23.2",
     "scipy>=1.5.4",
