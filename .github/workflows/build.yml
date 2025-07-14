@@ -38,9 +38,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install .[dev,docs]
-      # - name: Run tests
-      #   run: |
-      #     pytest
+      - name: Run tests
+        run: |
+          pytest
       - name: Verify that we can build the package
         run: python -m build
 
@@ -80,8 +80,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install .[dev,docs]
-      # - name: Run tests
-      #   run: |
-      #     pytest
+      - name: Run tests
+        run: |
+          pytest
       - name: Verify that we can build the package
         run: python -m build
