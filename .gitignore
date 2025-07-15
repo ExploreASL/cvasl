@@ -78,6 +78,9 @@ venv.bak/
 .spyderproject
 .spyproject
 
+_version.py
+.python-version
+uv.lock
 
 /site
 /historical_notebooks
