@@ -40,7 +40,8 @@ jobs:
           pip install .[dev,docs]
       - name: Run tests
         run: |
-          pytest
+          pytest -v --tb=short
+        timeout-minutes: 10
       - name: Verify that we can build the package
         run: python -m build
 
@@ -77,11 +78,18 @@ jobs:
       - name: Install R and system dependencies
         run: |
           conda install r-base rpy2 -c conda-forge
+      - name: Configure R environment (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "R_HOME=$CONDA_PREFIX/lib/R" >> $GITHUB_ENV
+          echo "R_USER=$CONDA_PREFIX/lib/R/library" >> $GITHUB_ENV
+          echo "$CONDA_PREFIX/lib/R/bin" >> $GITHUB_PATH
       - name: Install Python dependencies
         run: |
           pip install .[dev,docs]
       - name: Run tests
         run: |
-          pytest
+          pytest -v --tb=short
+        timeout-minutes: 10
       - name: Verify that we can build the package
         run: python -m build
