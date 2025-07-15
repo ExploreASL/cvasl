@@ -78,6 +78,10 @@ jobs:
       - name: Install R and system dependencies
         run: |
           conda install r-base rpy2 -c conda-forge
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          conda install m2w64-toolchain -c msys2
       - name: Configure R environment (Windows)
         if: runner.os == 'Windows'
         run: |
