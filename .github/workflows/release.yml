@@ -1,0 +1,145 @@
+name: Release to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  contents: read
+  id-token: write  # For trusted publishing to PyPI
+
+jobs:
+  build:
+    name: Build distribution packages
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check distribution packages
+      run: |
+        python -m pip install twine
+        python -m twine check dist/*
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+        retention-days: 7
+
+  test-install:
+    name: Test installation
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+    
+    - name: Test wheel installation
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install dist/*.whl
+        python -c "import cvasl; print(f'Successfully imported cvasl version {cvasl.__version__}')"
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [build, test-install]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+    
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+  create-github-release:
+    name: Create GitHub Release
+    needs: [build, test-install]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+    
+    - name: Extract release notes
+      id: extract-notes
+      run: |
+        # Extract version from tag
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+        # Create release notes (you can customize this)
+        cat > release_notes.md << EOF
+        ## Release $VERSION
+        
+        ### What's Changed
+        - Package built with Python 3.11
+        - See [CHANGELOG.md](CHANGELOG.md) for detailed changes
+        
+        ### Installation
+        \`\`\`bash
+        pip install cvasl==$VERSION
+        \`\`\`
+        
+        ### Files
+        - \`cvasl-$VERSION.tar.gz\` - Source distribution
+        - \`cvasl-$VERSION-py3-none-any.whl\` - Universal wheel
+        EOF
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release v${{ steps.extract-notes.outputs.version }}
+        body_path: release_notes.md
+        files: |
+          dist/*.tar.gz
+          dist/*.whl
+        draft: false
+        prerelease: ${{ contains(github.ref, 'rc') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
