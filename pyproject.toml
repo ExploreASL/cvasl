@@ -60,6 +60,7 @@ dev = [
     "nbmake",
     "pycodestyle", 
     "pytest",
+    "pytest-datadir>=1.7.2",
     "build",
 ]
 docs = [

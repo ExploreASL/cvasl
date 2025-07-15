@@ -108,6 +108,7 @@ open_work/internal_results/*
 harmonization_paper/Testing/*
 # overlook all potentially patient related results
 *.csv
+!/tests/data/*.csv
 !researcher_interface/sample_sep_values/showable_standard.csv
 *.tsv
 *.png
