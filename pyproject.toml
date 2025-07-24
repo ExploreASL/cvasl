@@ -44,7 +44,7 @@ dependencies = [
     "pandas>=1.2.0",
     "patsy",
     "pingouin",
-    "pytorch-grad-cam",
+    "grad-cam",
     "pyxdf",
     "scikit-image",
     "scikit-learn>=0.23.2",
