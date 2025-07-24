@@ -19,7 +19,7 @@ import torch
 import logging
 import os
 from sklearn.metrics import mean_squared_error
-from data import BrainAgeDataset
+from .data import BrainAgeDataset
 from itertools import combinations
 from scipy.stats import spearmanr  # Import correlation functions
 from statsmodels.stats.multitest import multipletests
