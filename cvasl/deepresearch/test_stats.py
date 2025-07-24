@@ -23,7 +23,6 @@ from .data import BrainAgeDataset
 from itertools import combinations
 from scipy.stats import spearmanr  # Import correlation functions
 from statsmodels.stats.multitest import multipletests
-# Set up logging
 import seaborn as sns
 from utils import wrap_title
 import pingouin as pg
