@@ -2,6 +2,7 @@ import pandas as pd
 import sys
 import numpy as np
 from cvasl.mriharmonize import *
+from cvasl.dataset import MRIdataset, encode_cat_features
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
@@ -101,7 +102,7 @@ for model in [ExtraTreesRegressor(n_estimators=100,random_state=np.random.randin
         metrics_df_all.append(metrics_df)
         metrics_df_val_all.append(metrics_df_val)
         
-        #print(f'Trial {_it+1} completed') 
+        print(f'Trial {_it+1} completed') 
 
     #now return the mean of each column of metrics_df_val
     metrics_df_val = pd.concat(metrics_df_val_all)
