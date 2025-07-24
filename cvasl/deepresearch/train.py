@@ -13,16 +13,16 @@ import logging
 import wandb
 import argparse
 
-from data import BrainAgeDataset
-from utils import create_demographics_table, create_prediction_chart
-from models.cnn import Large3DCNN
-from models.densenet3d import DenseNet3D
-from models.efficientnet3d import EfficientNet3D
-from models.improvedcnn3d import Improved3DCNN
-from models.resnet3d import ResNet3D
-from models.resnext3d import ResNeXt3D
-from models.vit3d import VisionTransformer3D
-from models.loss import BrainAgeLoss
+from .data import BrainAgeDataset
+from .utils import create_demographics_table, create_prediction_chart
+from .models.cnn import Large3DCNN
+from .models.densenet3d import DenseNet3D
+from .models.efficientnet3d import EfficientNet3D
+from .models.improvedcnn3d import Improved3DCNN
+from .models.resnet3d import ResNet3D
+from .models.resnext3d import ResNeXt3D
+from .models.vit3d import VisionTransformer3D
+from .models.loss import BrainAgeLoss
 from torch.cuda.amp import autocast, GradScaler
 
 import datetime

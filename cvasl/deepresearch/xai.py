@@ -38,21 +38,21 @@ from pytorch_grad_cam import (
     LayerCAM
 )
 import matplotlib.colors as mcolors
-from models.cnn import Large3DCNN
-from models.densenet3d import DenseNet3D
-from models.efficientnet3d import EfficientNet3D
-from models.improvedcnn3d import Improved3DCNN
-from models.resnet3d import ResNet3D
-from models.resnext3d import ResNeXt3D
-from models.resnext3d import SEBlock3D
+from .models.cnn import Large3DCNN
+from .models.densenet3d import DenseNet3D
+from .models.efficientnet3d import EfficientNet3D
+from .models.improvedcnn3d import Improved3DCNN
+from .models.resnet3d import ResNet3D
+from .models.resnext3d import ResNeXt3D
+from .models.resnext3d import SEBlock3D
 
-from data import BrainAgeDataset
+from .data import BrainAgeDataset
 from scipy.stats import pearsonr
 import seaborn as sns
 from matplotlib.colors import ListedColormap
 from scipy.stats import pearsonr
 from scipy.ndimage import zoom
-# Set up logging
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set a seed for reproducibility
