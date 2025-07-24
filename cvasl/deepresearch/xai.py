@@ -55,7 +55,6 @@ from scipy.ndimage import zoom
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Set a seed for reproducibility
 torch.manual_seed(42)
 np.random.seed(42)
 
