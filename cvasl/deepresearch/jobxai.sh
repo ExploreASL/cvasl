@@ -128,7 +128,7 @@ for i in "${!test_csv_array[@]}"; do
     dataset_name=$(basename "$test_csv" .csv)
     
     echo "Processing dataset: $dataset_name"
-    python xai3.py \
+    python xai.py \
         --models_dir "$MODEL_DIR" \
         --test_csv "$test_csv" \
         --test_data_dir "$test_dir" \
