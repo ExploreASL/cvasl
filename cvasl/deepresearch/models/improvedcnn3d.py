@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from .resnext3d import SEBlock3D
 
-class PreActResBlock3D(nn.Module):  # Define outside the class
+class PreActResBlock3D(nn.Module):
     """Pre-activation ResNet3D Block with Bottleneck and SE."""
 
     def __init__(self, in_channels, out_channels, stride=1):

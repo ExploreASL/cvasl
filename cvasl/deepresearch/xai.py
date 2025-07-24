@@ -1,57 +1,33 @@
 import os
-import pandas as pd
-import nibabel as nib
+
+import matplotlib
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from sklearn.preprocessing import LabelEncoder
-from pytorch_grad_cam import GradCAM, HiResCAM, GradCAMPlusPlus, XGradCAM, AblationCAM, LayerCAM, EigenGradCAM
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-import matplotlib
+from pytorch_grad_cam import GradCAM, HiResCAM, LayerCAM
+from torch.utils.data import DataLoader
+
 matplotlib.use('Agg')
-import gc
-import matplotlib.pyplot as plt
-import logging
-import csv
-from tqdm import tqdm
-import re
-import gc
-from typing import List, Tuple, Optional
-from functools import partial
 import argparse
+import gc
+import logging
+import re
 from math import ceil
+
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 torch.backends.cudnn.benchmark = True  # Optimizes CUDA operations
 torch.cuda.empty_cache()
 import traceback
-import cv2
-import scipy
 
-from pytorch_grad_cam import (
-    GradCAM,
-    HiResCAM,
-    ScoreCAM,
-    GradCAMPlusPlus,
-    XGradCAM,
-    AblationCAM,
-    EigenGradCAM,
-    LayerCAM
-)
-import matplotlib.colors as mcolors
-from .models.cnn import Large3DCNN
-from .models.densenet3d import DenseNet3D
-from .models.efficientnet3d import EfficientNet3D
-from .models.improvedcnn3d import Improved3DCNN
-from .models.resnet3d import ResNet3D
-from .models.resnext3d import ResNeXt3D
-from .models.resnext3d import SEBlock3D
+import cv2
+from matplotlib.colors import ListedColormap
+from pytorch_grad_cam import GradCAM, HiResCAM, LayerCAM
 
 from .data import BrainAgeDataset
-from scipy.stats import pearsonr
-import seaborn as sns
-from matplotlib.colors import ListedColormap
-from scipy.stats import pearsonr
-from scipy.ndimage import zoom
+from .models.resnext3d import SEBlock3D
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -792,9 +768,10 @@ def verify_brain_masking(dataset, output_dir=None, num_samples=50):
         output_dir: Directory to save the verification plots (defaults to './mask_verification')
         num_samples: Number of samples to check (default 50)
     """
+    import os
+
     import matplotlib.pyplot as plt
     import numpy as np
-    import os
     from matplotlib.colors import ListedColormap
     
     if output_dir is None:

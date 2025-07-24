@@ -1,9 +1,12 @@
 import sys
+
 sys.path.insert(0, '../../')
 sys.path.insert(0, '../')
+import warnings
+
 import pandas as pd
 from scipy import stats
-import warnings        
+
 
 def encode_cat_features(dff,cat_features_to_encode):
 

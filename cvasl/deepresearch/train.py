@@ -1,31 +1,30 @@
-import os
-import pandas as pd
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import GroupShuffleSplit
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from scipy.stats import pearsonr
-import logging
-import wandb
 import argparse
+import datetime
+import logging
+import os
+
+import numpy as np
+import pandas as pd
+import torch
+import torch.optim as optim
+import wandb
+from scipy.stats import pearsonr
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import GroupShuffleSplit, train_test_split
+from torch.cuda.amp import GradScaler, autocast
+from torch.utils.data import DataLoader
 
 from .data import BrainAgeDataset
-from .utils import create_demographics_table, create_prediction_chart
 from .models.cnn import Large3DCNN
 from .models.densenet3d import DenseNet3D
 from .models.efficientnet3d import EfficientNet3D
 from .models.improvedcnn3d import Improved3DCNN
+from .models.loss import BrainAgeLoss
 from .models.resnet3d import ResNet3D
 from .models.resnext3d import ResNeXt3D
 from .models.vit3d import VisionTransformer3D
-from .models.loss import BrainAgeLoss
-from torch.cuda.amp import autocast, GradScaler
+from .utils import create_demographics_table, create_prediction_chart
 
-import datetime
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("high")
 
@@ -46,9 +45,10 @@ def verify_brain_masking(dataset, output_dir=None, num_samples=5):
         output_dir: Directory to save the verification plots (defaults to './mask_verification')
         num_samples: Number of samples to check
     """
+    import os
+
     import matplotlib.pyplot as plt
     import numpy as np
-    import os
     from matplotlib.colors import ListedColormap
     
     if output_dir is None:

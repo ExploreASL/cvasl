@@ -1,11 +1,14 @@
 import sys
+
 sys.path.insert(0, '../../')
 sys.path.insert(0, '../')
-import pandas as pd
-from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn import metrics
 import warnings
+
+import pandas as pd
+from sklearn import metrics
+from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.preprocessing import StandardScaler
+
 
 class PredictBrainAge:
 
