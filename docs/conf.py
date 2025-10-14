@@ -11,10 +11,8 @@
 # documentation root, use os.path.abspath to make it absolute, under development
 
 import sys, subprocess
-import os
 
 
-sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'cvasl'
