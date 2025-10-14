@@ -74,14 +74,15 @@ class AutoCombat:
             empirical_bayes,
         )
 
-        self.data_subset = data_subset
-        self.features_to_harmonize = features_to_harmonize
+        self.data_subset = [d.lower() for d in data_subset]
+        self.features_to_harmonize = [f.lower() for f in features_to_harmonize]
         # Ensure site_indicator is a list of strings for consistency in processing
-        self.site_indicator = site_indicator if isinstance(site_indicator, list) else [site_indicator]
-        self.discrete_covariates = discrete_covariates if discrete_covariates is not None else []
-        self.continuous_covariates = continuous_covariates if continuous_covariates is not None else []
-        self.discrete_cluster_features = discrete_cluster_features if discrete_cluster_features is not None else []
-        self.continuous_cluster_features = continuous_cluster_features if continuous_cluster_features is not None else []
+        site_indicator_list = site_indicator if isinstance(site_indicator, list) else [site_indicator]
+        self.site_indicator = [s.lower() for s in site_indicator_list]
+        self.discrete_covariates = [d.lower() for d in discrete_covariates] if discrete_covariates is not None else []
+        self.continuous_covariates = [c.lower() for c in continuous_covariates] if continuous_covariates is not None else []
+        self.discrete_cluster_features = [d.lower() for d in discrete_cluster_features] if discrete_cluster_features is not None else []
+        self.continuous_cluster_features = [c.lower() for c in continuous_cluster_features] if continuous_cluster_features is not None else []
         self.metric = metric
         self.features_reduction = features_reduction
         self.feature_reduction_dimensions = feature_reduction_dimensions
@@ -783,11 +784,11 @@ class NeuroHarmonize:
         if not isinstance(empirical_bayes, bool):
             raise TypeError("empirical_bayes must be a boolean")
 
-        self.features_to_harmonize = features_to_harmonize
-        self.covariates = covariates
-        self.smooth_terms = smooth_terms
+        self.features_to_harmonize = [f.lower() for f in features_to_harmonize]
+        self.covariates = [c.lower() for c in covariates]
+        self.smooth_terms = [s.lower() for s in smooth_terms]
         self.empirical_bayes = empirical_bayes
-        self.site_indicator = site_indicator
+        self.site_indicator = site_indicator.lower()
 
     def _prepare_data_for_harmonization(self, mri_datasets):
         """
@@ -918,10 +919,10 @@ class ComscanNeuroCombat:
             mean_only,
         )
 
-        self.features_to_harmonize = features_to_harmonize
-        self.site_indicator = [site_indicator]  # NeuroCombat expects site to be a list
-        self.discrete_covariates = discrete_covariates if discrete_covariates is not None else []
-        self.continuous_covariates = continuous_covariates if continuous_covariates is not None else []
+        self.features_to_harmonize = [f.lower() for f in features_to_harmonize]
+        self.site_indicator = [site_indicator.lower()]  # NeuroCombat expects site to be a list
+        self.discrete_covariates = [d.lower() for d in discrete_covariates] if discrete_covariates is not None else []
+        self.continuous_covariates = [c.lower() for c in continuous_covariates] if continuous_covariates is not None else []
         self.empirical_bayes = empirical_bayes
         self.parametric = parametric
         self.mean_only = mean_only
@@ -1384,8 +1385,8 @@ class CombatPlusPlus:
 
         self.features_to_harmonize = [f.lower() for f in features_to_harmonize]
         self.intermediate_results_path = intermediate_results_path
-        self.discrete_covariates = discrete_covariates
-        self.continuous_covariates = continuous_covariates
+        self.discrete_covariates = [d.lower() for d in discrete_covariates]
+        self.continuous_covariates = [c.lower() for c in continuous_covariates]
         self.patient_identifier = patient_identifier.lower()
         self.site_indicator = site_indicator.lower()
         self.discrete_covariates_to_remove = [dcr.lower() for dcr in discrete_covariates_to_remove]
