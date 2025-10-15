@@ -1284,6 +1284,9 @@ class RELIEF:
         
         curr_path = os.getcwd()
         
+        # Get the number of datasets dynamically
+        num_datasets = len(mri_datasets)
+        
         relief_r_driver = f"""
             rm(list = ls())
             source('{curr_path}/CVASL_RELIEF.R')            
@@ -1294,51 +1297,52 @@ class RELIEF:
             library(denoiseR)
             install.packages("RcppCNPy", dependencies = TRUE, quiet = TRUE)
             library(RcppCNPy)
-            data5 <- npyLoad("{self.intermediate_results_path}/dat_var_for_RELIEF5.npy")
-            covars5 <- read.csv('{self.intermediate_results_path}/bath_and_mod_forRELIEF5.csv')
-            covars_only5  <- covars5[,-(1:2)]   
-            covars_only_matrix5 <-data.matrix(covars_only5)
+            data <- npyLoad("{self.intermediate_results_path}/dat_var_for_RELIEF.npy")
+            covars <- read.csv('{self.intermediate_results_path}/bath_and_mod_forRELIEF.csv')
+            covars_only  <- covars[,-(1:2)]   
+            covars_only_matrix <-data.matrix(covars_only)
             relief.harmonized = relief(
-                dat=data5,
-                batch=covars5$batch,
-                mod=covars_only_matrix5
+                dat=data,
+                batch=covars$batch,
+                mod=covars_only_matrix
             )
-            outcomes_harmonized5 <- relief.harmonized$dat.relief
-            write.csv(outcomes_harmonized5, "{self.intermediate_results_path}/relief1_for5_results.csv")
+            outcomes_harmonized <- relief.harmonized$dat.relief
+            write.csv(outcomes_harmonized, "{self.intermediate_results_path}/relief_results.csv")
         """
 
-        all_togetherF, ftF, btF, feature_dictF, len1, len2, len3, len4, len5 = self._prepare_data_for_harmonization(
+        all_togetherF, ftF, btF, feature_dictF, *lens = self._prepare_data_for_harmonization(
             mri_datasets
         )
 
-        all_togetherF.to_csv(f'{self.intermediate_results_path}/all_togeherf5.csv')
-        ftF.to_csv(f'{self.intermediate_results_path}/ftF_top5.csv')
-        data = np.genfromtxt(f'{self.intermediate_results_path}/ftF_top5.csv', delimiter=",", skip_header=1)
-        data = data[:, 1:]
-        np.save(f'{self.intermediate_results_path}/dat_var_for_RELIEF5.npy', data)
+        all_togetherF.to_csv(f'{self.intermediate_results_path}/all_togeherf.csv')
+        ftF.to_csv(f'{self.intermediate_results_path}/ftF_top.csv')
+        data = np.genfromtxt(f'{self.intermediate_results_path}/ftF_top.csv', delimiter=",", skip_header=1)
+        # Handle both 1D (single feature) and 2D (multiple features) cases
+        if data.ndim == 1:
+            data = data[1:]  # Remove first element (index column) for 1D array
+            data = data.reshape(1, -1)  # Reshape to 2D for consistency
+        else:
+            data = data[:, 1:]  # Remove first column (index column) for 2D array
+        np.save(f'{self.intermediate_results_path}/dat_var_for_RELIEF.npy', data)
 
-        first_columns_as_one = [1] * len1
-        second_columns_as_two = [2] * len2
-        third_columns_as_three = [3] * len3
-        fourth_columns_as_four = [4] * len4
-        fifth_columns_as_five = [5] * len5
+        # Dynamically create batch assignments for each dataset
+        batch_lists = []
+        for i, dataset_len in enumerate(lens, start=1):
+            batch_lists.append([i] * dataset_len)
+        
         covars = {
-            'batch': first_columns_as_one
-            + second_columns_as_two
-            + third_columns_as_three
-            + fourth_columns_as_four
-            + fifth_columns_as_five
+            'batch': [batch for batch_list in batch_lists for batch in batch_list]
         }
         for _c in self.covariates:
             covars[_c] = all_togetherF.loc[_c, :].values.tolist()
         covars = pd.DataFrame(covars)
-        covars.to_csv(f'{self.intermediate_results_path}/bath_and_mod_forRELIEF5.csv')
+        covars.to_csv(f'{self.intermediate_results_path}/bath_and_mod_forRELIEF.csv')
         topperF = self._make_topper(btF, self.covariates)
 
         r = robjects.r
         r(relief_r_driver)
         bottom = pd.read_csv(
-            f'{self.intermediate_results_path}/relief1_for5_results.csv', index_col=0
+            f'{self.intermediate_results_path}/relief_results.csv', index_col=0
         ).reset_index(drop=False).rename(columns={"index": "char"})
         bottom.columns = topperF.columns
         back_together = pd.concat([topperF, bottom])
