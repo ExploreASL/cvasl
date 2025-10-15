@@ -418,17 +418,27 @@ class Covbat:
         except Exception as e:
             raise RuntimeError(f"Error during CovBat harmonization: {e}")
 
-        harmonized_data = harmonized_data[
-            len(self.covariates) :
-        ]  # Remove estimated model parameters from the output
-        feature_cols = [col for col in harmonized_data.index if col not in (self.site_indicator)]
-        harmonized_data = harmonized_data.loc[feature_cols]
-
-        harmonized_data = pd.concat(
-            [dat_ALLFIVE.head(len(self.covariates) + 1), harmonized_data]
-        )
+        # Harmonized_data has features as rows, patients as columns
+        # Skip the first len(self.covariates) rows which are the model parameters
+        harmonized_data = harmonized_data[len(self.covariates):]
+        
+        # Keep only the harmonized feature rows, excluding site_indicator and covariates
+        # (CovBat may include these in its output)
+        feature_rows_to_keep = [row for row in harmonized_data.index 
+                                if row not in self.covariates and row != self.site_indicator]
+        harmonized_data = harmonized_data.loc[feature_rows_to_keep]
+        
+        # Get the covariate and site indicator rows from the original data
+        covariate_and_site_rows = dat_ALLFIVE.loc[self.covariates + [self.site_indicator]]
+        
+        # Combine covariates/site with harmonized features
+        harmonized_data = pd.concat([covariate_and_site_rows, harmonized_data])
+        
+        # Transpose back so that rows are patients and columns are features
         harmonized_data = harmonized_data.T
         harmonized_data = harmonized_data.reset_index()
+        harmonized_data = harmonized_data.rename(columns={'index': self.patient_identifier})
+        
         return harmonized_data
 
     def _reintegrate_harmonized_data(self, mri_datasets, harmonized_data, semi_features):
@@ -452,7 +462,14 @@ class Covbat:
         for i, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
             adjusted_data = harmonized_data[harmonized_data[self.site_indicator] == site_value].copy() # copy to avoid set on copy
-            adjusted_data = pd.merge(adjusted_data, semi_features[i], on=self.patient_identifier, how='left') # Explicit left merge to preserve harmonized data
+            
+            # Drop overlapping columns from semi_features to avoid _x/_y suffixes during merge
+            # Keep only columns that aren't already in adjusted_data (except patient_identifier which is the merge key)
+            cols_to_keep = [col for col in semi_features[i].columns 
+                           if col not in adjusted_data.columns or col == self.patient_identifier]
+            semi_features_filtered = semi_features[i][cols_to_keep]
+            
+            adjusted_data = pd.merge(adjusted_data, semi_features_filtered, on=self.patient_identifier, how='left') # Explicit left merge to preserve harmonized data
             dataset.data = adjusted_data.reset_index(drop=True)
         return mri_datasets
 
