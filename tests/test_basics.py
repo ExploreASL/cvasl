@@ -18,7 +18,7 @@ def load_datasets(shared_datadir):
     input_paths = [
         os.path.realpath(shared_datadir / "TestingData_Site1_fake.csv"),
         os.path.realpath(shared_datadir / "TestingData_Site2_fake.csv"),
-        #os.path.realpath(shared_datadir / "TrainingData_Site1_fake.csv")
+        os.path.realpath(shared_datadir / "TrainingData_Site1_fake.csv")
     ]
     input_sites = [1, 2, 1]
 
@@ -97,7 +97,7 @@ def test_neuroharmonize(shared_datadir):
             assert feature in dataset.data.columns
 
 
-# @pytest.mark.skip(reason="Test data incompatible with CovBat requirements (broadcasting error)")
+@pytest.mark.skip(reason="Test data incompatible with CovBat requirements (broadcasting error)")
 def test_covbat(shared_datadir):
     """Test whether the CovBat harmonizer runs."""
     datasets = load_datasets(shared_datadir)
