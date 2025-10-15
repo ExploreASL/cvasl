@@ -1631,7 +1631,9 @@ class NestedComBat:
 
         self.features_to_harmonize = [f.lower() for f in features_to_harmonize]
         self.batch_list_harmonisations = [b.lower() for b in batch_list_harmonisations]
-        self.site_indicator = [s.lower() for s in site_indicator]
+        # Ensure site_indicator is a list of strings for consistency
+        site_indicator_list = site_indicator if isinstance(site_indicator, list) else [site_indicator]
+        self.site_indicator = [s.lower() for s in site_indicator_list]
         self.discrete_covariates = [d.lower() for d in discrete_covariates]
         self.continuous_covariates = [c.lower() for c in continuous_covariates]
         self.intermediate_results_path = intermediate_results_path
@@ -1649,8 +1651,10 @@ class NestedComBat:
             raise TypeError("features_to_harmonize must be a list.")
         if not isinstance(batch_list_harmonisations, list):
             raise TypeError("batch_list_harmonisations must be a list.")
-        if not isinstance(site_indicator, list):
-            raise TypeError("site_indicator must be a list.")
+        if not isinstance(site_indicator, (str, list)):
+            raise TypeError("site_indicator must be a string or a list.")
+        if isinstance(site_indicator, list) and not all(isinstance(item, str) for item in site_indicator):
+            raise TypeError("All items in site_indicator list must be strings.")
         if not isinstance(discrete_covariates, list):
             raise TypeError("discrete_covariates must be a list.")
         if not isinstance(continuous_covariates, list):
