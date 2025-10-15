@@ -1424,6 +1424,9 @@ class CombatPlusPlus:
 
     def _generate_r_script_driver(self):
         """Generates the R script driver string for CombatPlusPlus."""
+        # Get the directory where this module is located (where R scripts are stored)
+        module_dir = os.path.dirname(os.path.abspath(__file__))
+        
         disc_covariates_str = ','.join(repr(x) for x in self.discrete_covariates)
         cont_covariates_str = ','.join(repr(x) for x in self.continuous_covariates)
         disc_covariates_remove_str = ','.join(repr(x) for x in self.discrete_covariates_to_remove)
@@ -1436,8 +1439,8 @@ class CombatPlusPlus:
             install.packages("matrixStats", dependencies = TRUE, quiet = TRUE)
         }}
         library(matrixStats)
-        source('{os.getcwd()}/combatPP.R') #as pluscombat
-        source("{os.getcwd()}/utils.R")
+        source('{module_dir}/combatPP.R') #as pluscombat
+        source("{module_dir}/utils.R")
 
         fused_dat <- read.csv('{self.intermediate_results_path}/_tmp_combined_dataset.csv')
         cont_features = c({cont_covariates_str})
@@ -1451,11 +1454,22 @@ class CombatPlusPlus:
 
         cont_features_to_remove = c({cont_covariates_remove_str})
         disc_features_to_remove = c({disc_covariates_remove_str})
-        cont_mat_to_remove <- sapply(fused_dat[cont_features_to_remove], function(x) as.numeric(unlist(x)))
-        disc_mat_to_remove <- sapply(fused_dat[disc_features_to_remove], function(x) {{
-            x <- as.numeric(unlist(x))
-            as.factor(x)
-        }})
+        
+        # Handle empty covariate lists properly
+        if (length(cont_features_to_remove) > 0) {{
+            cont_mat_to_remove <- sapply(fused_dat[cont_features_to_remove], function(x) as.numeric(unlist(x)))
+        }} else {{
+            cont_mat_to_remove <- NULL
+        }}
+        
+        if (length(disc_features_to_remove) > 0) {{
+            disc_mat_to_remove <- sapply(fused_dat[disc_features_to_remove], function(x) {{
+                x <- as.numeric(unlist(x))
+                as.factor(x)
+            }})
+        }} else {{
+            disc_mat_to_remove <- NULL
+        }}
 
         if (is.null(cont_mat_to_remove) && is.null(disc_mat_to_remove)) {{
             mod_to_remove <- NULL

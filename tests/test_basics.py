@@ -208,7 +208,6 @@ def test_relief(shared_datadir):
     assert len(harmonized_data) == len(datasets)
 
 
-@pytest.mark.skip(reason="R file path issue in CombatPlusPlus implementation needs debugging")
 @pytest.mark.skipif(
     not hasattr(pytest, 'R_AVAILABLE') or not getattr(pytest, 'R_AVAILABLE', False),
     reason="R dependencies (rpy2) not available"
