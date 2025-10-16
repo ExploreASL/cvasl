@@ -236,8 +236,8 @@ class PredictBrainAge:
             models.append((self.model, X_train[:, 0])) # Store the model and a sample feature for potential later analysis
 
         metrics_df = pd.DataFrame(all_metrics)
-        metrics_df_val = pd.DataFrame(all_metrics_val) if self.data_validation is not None else None
+        metrics_df_val = pd.DataFrame(all_metrics_val) if all_metrics_val else None
         predictions_df = pd.concat(all_predictions)
-        predictions_df_val = pd.concat(all_predictions_val) if self.data_validation is not None else None
+        predictions_df_val = pd.concat(all_predictions_val) if all_predictions_val else None
 
         return metrics_df, metrics_df_val, predictions_df, predictions_df_val, models
