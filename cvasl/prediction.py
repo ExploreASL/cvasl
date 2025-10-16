@@ -227,10 +227,10 @@ class PredictBrainAge:
             i, X_train, y_train, X_test, y_test, X_val_scaled, y_val, test_index) # Added test_index
 
             all_metrics.append(metrics_data)
-            if metric_data_val:
+            if metric_data_val is not None:
                 all_metrics_val.append(metric_data_val)
             all_predictions.append(predictions_data)
-            if predictions_data_val:
+            if predictions_data_val is not None:
                 all_predictions_val.append(predictions_data_val)
 
             models.append((self.model, X_train[:, 0])) # Store the model and a sample feature for potential later analysis
