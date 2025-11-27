@@ -226,15 +226,13 @@ class AutoCombat:
         harmonized_df = harmonized_df[original_order]
 
 
+        # Split data back using positional slicing based on original dataset lengths
+        start_idx = 0
         for dataset in mri_datasets:
-            site_value = dataset.site_id # Assuming dataset.site_id is a single value
-            # Assuming site_indicator is a list of columns, and we use the first one for filtering for now - THIS MIGHT NEED ADJUSTMENT BASED ON HOW SITE_ID and site_indicator are related.
-            site_column_to_filter = self.site_indicator[0] if self.site_indicator else None # Use the first site indicator column for filtering
-            if site_column_to_filter and site_column_to_filter in harmonized_df.columns:
-                adjusted_data = harmonized_df[harmonized_df[site_column_to_filter] == dataset.site_id].copy()
-                dataset.data = adjusted_data.reset_index(drop=True)
-            else:
-                dataset.data = harmonized_df.copy() # If no site_indicator or column not found, assign the entire harmonized data (check if this is the desired fallback)
+            end_idx = start_idx + len(dataset.data)
+            adjusted_data = harmonized_df.iloc[start_idx:end_idx].copy()
+            dataset.data = adjusted_data.reset_index(drop=True)
+            start_idx = end_idx
         return mri_datasets
 
 
@@ -461,6 +459,13 @@ class Covbat:
         """
         for i, dataset in enumerate(mri_datasets):
             site_value = dataset.site_id
+            # data_length = mri_datasets[i].data.shape[0]
+            # if i == 0:
+            #     adjusted_data = harmonized_data[:data_length]
+            #     previous_length = data_length
+            # else:
+            #     adjusted_data = harmonized_data[previous_length:previous_length + data_length]
+            #     previous_length = adjusted_data.shape[0]
             adjusted_data = harmonized_data[harmonized_data[self.site_indicator] == site_value].copy() # copy to avoid set on copy
             
             # Drop overlapping columns from semi_features to avoid _x/_y suffixes during merge
@@ -693,10 +698,10 @@ class NeuroCombat:
             harmonized_datasets.append(harmonized_data)
             start = end
 
-        harmonized_data_concat = pd.concat([_d for _d in harmonized_datasets])
+        # Assign harmonized data back to each dataset directly (already split by length above)
         for i, dataset in enumerate(mri_datasets):
-            site_value = dataset.site_id
-            adjusted_data = harmonized_data_concat[harmonized_data_concat[self.site_indicator] == site_value].copy() # copy to avoid set on copy
+            adjusted_data = harmonized_datasets[i].copy()
+            # Merge with semi_features to add back any missing columns
             adjusted_data = pd.merge(adjusted_data, semi_features[i].drop(self.discrete_covariates + self.continuous_covariates + ['index'],axis = 1, errors='ignore'), on=self.patient_identifier, how='left') # Explicit left merge, errors='ignore'
             for _c in ocols:
                 if _c + '_y' in adjusted_data.columns and _c + '_x' in adjusted_data.columns:
@@ -859,9 +864,13 @@ class NeuroHarmonize:
             [harmonized_df, all_data[non_harmonized].reset_index(drop=True)], axis=1,
         )
 
+        # Split data back using positional slicing based on original dataset lengths
+        start_idx = 0
         for mri_dataset in mri_datasets:
-            mri_dataset.data = harmonized_df[harmonized_df["SITE"] == mri_dataset.site_id]
+            end_idx = start_idx + len(mri_dataset.data)
+            mri_dataset.data = harmonized_df.iloc[start_idx:end_idx].copy()
             mri_dataset.data = mri_dataset.data.drop(columns=["SITE", "index"], errors='ignore')
+            start_idx = end_idx
         return mri_datasets
 
     def harmonize(self, mri_datasets):
@@ -1063,10 +1072,13 @@ class ComscanNeuroCombat:
         original_order = list(original_data.columns)
         harmonized_df = harmonized_df[original_order]
 
+        # Split data back using positional slicing based on original dataset lengths
+        start_idx = 0
         for dataset in mri_datasets:
-            site_value = dataset.site_id
-            adjusted_data = harmonized_df[harmonized_df[self.site_indicator[0]] == site_value].copy()
+            end_idx = start_idx + len(dataset.data)
+            adjusted_data = harmonized_df.iloc[start_idx:end_idx].copy()
             dataset.data = adjusted_data.reset_index(drop=True)
+            start_idx = end_idx
         return mri_datasets
 
     def harmonize(self, mri_datasets):

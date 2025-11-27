@@ -20,6 +20,7 @@ def load_datasets(shared_datadir):
         os.path.realpath(shared_datadir / "TestingData_Site2_fake.csv"),
         os.path.realpath(shared_datadir / "TrainingData_Site1_fake.csv")
     ]
+    # Using duplicate site_id (1, 2, 1) to test that harmonizers handle multiple datasets from the same site correctly
     input_sites = [1, 2, 1]
 
     mri_datasets = [
