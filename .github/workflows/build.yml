@@ -39,6 +39,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install .[dev,docs]
+          # Install rpy2 without R (R-based harmonizers will fail gracefully at runtime)
+          pip install rpy2 || true
       - name: Run tests
         run: |
           pytest -v --tb=short
@@ -93,6 +95,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install .[dev,docs]
+          # Install rpy2 without R (R-based harmonizers will fail gracefully at runtime)
+          pip install rpy2 || true
       - name: Run tests
         run: |
           pytest -v --tb=short

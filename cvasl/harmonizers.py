@@ -3,7 +3,15 @@ import sys
 import numpy as np
 import pandas as pd
 import patsy
-import rpy2.robjects as robjects
+
+# Import rpy2 only when needed (for R-based harmonizers)
+try:
+    import rpy2.robjects as robjects
+    HAS_RPY2 = True
+except ImportError:
+    robjects = None
+    HAS_RPY2 = False
+
 from neuroHarmonize import harmonizationLearn
 from sklearn.preprocessing import LabelEncoder
 
@@ -1304,6 +1312,12 @@ class RELIEF:
         list
             List of MRIdataset objects with harmonized data.
         """
+        if not HAS_RPY2:
+            raise ImportError(
+                "RELIEF harmonizer requires rpy2 to be installed. "
+                "Please install it with: pip install rpy2"
+            )
+        
         if not isinstance(mri_datasets, list):
             raise TypeError("mri_datasets must be a list.")
         if not all(hasattr(dataset, 'data') and hasattr(dataset, 'site_id') for dataset in mri_datasets):
@@ -1585,6 +1599,12 @@ class CombatPlusPlus:
         list or None
             List of MRIdataset objects with harmonized data, or None if no features to harmonize.
         """
+        if not HAS_RPY2:
+            raise ImportError(
+                "CombatPlusPlus harmonizer requires rpy2 to be installed. "
+                "Please install it with: pip install rpy2"
+            )
+        
         if not isinstance(mri_datasets, list):
             raise TypeError("mri_datasets must be a list.")
         if not all(hasattr(dataset, 'data') and hasattr(dataset, 'site_id') for dataset in mri_datasets):
