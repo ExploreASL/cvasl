@@ -8,7 +8,9 @@ import patsy
 try:
     import rpy2.robjects as robjects
     HAS_RPY2 = True
-except ImportError:
+except (ImportError, ValueError):
+    # ImportError: rpy2 not installed
+    # ValueError: rpy2 installed but R not available (r_home is None)
     robjects = None
     HAS_RPY2 = False
 
