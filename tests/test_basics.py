@@ -98,7 +98,6 @@ def test_neuroharmonize(shared_datadir):
             assert feature in dataset.data.columns
 
 
-@pytest.mark.skip(reason="Test data incompatible with CovBat requirements (broadcasting error)")
 def test_covbat(shared_datadir):
     """Test whether the CovBat harmonizer runs."""
     datasets = load_datasets(shared_datadir)
@@ -318,7 +317,6 @@ def test_harmonizer_preserves_patient_ids(shared_datadir):
         assert original_id_set == harmonized_id_set, "Patient IDs should be preserved"
 
 
-@pytest.mark.skip(reason="Row count mismatch indicates data handling issue needs investigation")
 def test_harmonizer_output_shape(shared_datadir):
     """Test that harmonized data has the expected shape."""
     datasets = load_datasets(shared_datadir)
