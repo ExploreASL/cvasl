@@ -842,7 +842,7 @@ class NeuroHarmonize:
         all_data = pd.concat([dataset.data for dataset in mri_datasets])
         features_data = all_data[self.features_to_harmonize]
         covariates_data = all_data[self.covariates]
-        covariates_data = covariates_data.rename(columns={self.site_indicator: "SITE"})
+        covariates_data["SITE"] = all_data[self.site_indicator]
         return features_data, covariates_data
 
     def _reintegrate_harmonized_data(self, mri_datasets, harmonized_data, covariates_data, all_data):
