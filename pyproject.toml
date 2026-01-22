@@ -41,7 +41,7 @@ dependencies = [
     "nipy",
     "numpy<2",
     "opencv-python",
-    "pandas>=1.2.0",
+    "pandas>=1.2.0,<3",
     "patsy",
     "pingouin",
     "grad-cam",

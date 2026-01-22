@@ -125,7 +125,11 @@ def OPNestedComBat(
         for item in order:
             f.write("%s\n" % item)
 
-    output_df = pd.DataFrame.from_records(n_dat.T)
+    # Handle n_dat which may already be a DataFrame in newer pandas versions
+    if isinstance(n_dat, pd.DataFrame):
+        output_df = n_dat.T
+    else:
+        output_df = pd.DataFrame.from_records(n_dat.T)
     output_df.columns = dat.index
     if return_estimates:
         return output_df, final_estimate
