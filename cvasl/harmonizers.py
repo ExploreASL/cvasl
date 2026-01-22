@@ -712,10 +712,10 @@ class NeuroCombat:
         for i, dataset in enumerate(mri_datasets):
             adjusted_data = harmonized_datasets[i].copy()
             # Merge with semi_features to add back any missing columns
-            adjusted_data = pd.merge(adjusted_data, semi_features[i].drop(self.discrete_covariates + self.continuous_covariates + ['index'],axis = 1, errors='ignore'), on=self.patient_identifier, how='left') # Explicit left merge, errors='ignore'
+            adjusted_data = pd.merge(adjusted_data, semi_features[i].drop(self.discrete_covariates + self.continuous_covariates + ['index'], errors='ignore'), on=self.patient_identifier, how='left') # Explicit left merge, errors='ignore'
             for _c in ocols:
                 if _c + '_y' in adjusted_data.columns and _c + '_x' in adjusted_data.columns:
-                    adjusted_data.drop(columns=[_c+'_y'],axis=1, inplace=True)
+                    adjusted_data.drop(columns=[_c+'_y'], inplace=True)
                     adjusted_data.rename(columns={_c + '_x': _c}, inplace=True)
 
             dataset.data = adjusted_data.reset_index(drop=True) # reset index for clean datasets
