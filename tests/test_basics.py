@@ -20,9 +20,7 @@ def load_datasets(shared_datadir):
         os.path.realpath(shared_datadir / "TestingData_Site2_fake.csv"),
         os.path.realpath(shared_datadir / "TrainingData_Site1_fake.csv")
     ]
-    # Using unique site_ids to avoid singular matrix issues in neuroharmonize
-    # (the third file is also from site 1 but we assign it site 3 to ensure uniqueness)
-    input_sites = [1, 2, 3]
+    input_sites = [1, 2, 1]
 
     mri_datasets = [
         MRIdataset(input_path, input_site, "participant_id", features_to_drop=[])
