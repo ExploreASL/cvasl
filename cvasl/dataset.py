@@ -10,11 +10,7 @@ def encode_cat_features(dff,cat_features_to_encode):
 
     feature_mappings = {}
     reverse_mappings = {}
-    
-    # Track the original lengths to split data back correctly
-    dataset_lengths = [len(_d.data) for _d in dff]
-    
-    data = pd.concat([_d.data for _d in dff], ignore_index=True)
+    data = pd.concat([_d.data for _d in dff])
 
     for feature in cat_features_to_encode:
         if feature in data.columns:
@@ -24,15 +20,11 @@ def encode_cat_features(dff,cat_features_to_encode):
             reverse_mappings[feature] = {v: k for k, v in mapping.items()}
             data[feature] = data[feature].map(mapping)
 
-    # Split data back using original dataset lengths
-    start_idx = 0
-    for i, _d in enumerate(dff):
-        end_idx = start_idx + dataset_lengths[i]
-        _d.data = data.iloc[start_idx:end_idx].reset_index(drop=True)
+    for _d in dff:
+        _d.data = data[data['site'] == _d.site_id]
         _d.feature_mappings = feature_mappings
         _d.reverse_mappings = reverse_mappings
         _d.cat_features_to_encode = cat_features_to_encode
-        start_idx = end_idx
     return dff
 
 class MRIdataset:
