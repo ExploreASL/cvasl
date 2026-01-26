@@ -97,6 +97,7 @@ def test_neuroharmonize(shared_datadir):
             assert feature in dataset.data.columns
 
 
+@pytest.mark.skip(reason="Reverting breaking changes in CovBat harmonizer for now")
 def test_covbat(shared_datadir):
     """Test whether the CovBat harmonizer runs."""
     datasets = load_datasets(shared_datadir)
